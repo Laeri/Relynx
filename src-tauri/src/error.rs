@@ -1,19 +1,19 @@
 use rspc;
 use rspc::Type;
 use serde::{Deserialize, Serialize};
-use std::error::Error;
 
 #[derive(Serialize, Deserialize, Type, Clone, Debug)]
 pub struct FrontendError {
     kind: DisplayErrorKind,
     message: Option<String>,
-    #[serde(skip)]
-    source: Option<Box<dyn Error>>
 }
 
 impl FrontendError {
     pub fn new(kind: DisplayErrorKind) -> Self {
-        FrontendError { kind, message: None, source: None }
+        FrontendError {
+            kind,
+            message: None,
+        }
     }
 }
 
@@ -32,31 +32,24 @@ impl std::fmt::Display for FrontendError {
     }
 }
 
+
+// @TODO: error with a cause
 impl std::error::Error for FrontendError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        
-    }
-    /* fn cause(&self) -> Option<&dyn std::error::Error> {
         None
     }
-
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        None
-    }
-
-    fn description(&self) -> &str {
-
-    } */
 }
 
 impl From<FrontendError> for rspc::Error {
-    fn from(display_error: FrontendError) -> Self {
-        let msg = format!("Error: {:?}", display_error);
-
+    fn from(frontend_error: FrontendError) -> Self {
         rspc::Error::with_cause::<FrontendError>(
             rspc::ErrorCode::InternalServerError,
-            msg.into(),
-            display_error,
+            frontend_error
+                .message
+                .as_ref()
+                .unwrap_or(&String::new())
+                .clone(),
+            frontend_error,
         )
     }
 }

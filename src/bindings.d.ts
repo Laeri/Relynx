@@ -2,7 +2,7 @@
 
 export type Procedures = {
     queries: 
-        { key: "load_workspace", input: string, result: Workspace },
+        { key: "load_workspace", input: never, result: Workspace },
     mutations: never,
     subscriptions: never
 };

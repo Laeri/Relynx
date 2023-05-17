@@ -1,7 +1,74 @@
-.logo.vite:hover {
-  filter: drop-shadow(0 0 2em #747bff);
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    width: 100vw;
 }
 
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafb);
+#root {
+    width: 100%;
+    height: 100%;
 }
+#App {
+    display: flex;
+    justify-content: space-between;
+    align-items: stretch;
+    height: 100%;
+    width: 100%;
+}
+
+main {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+nav {
+    background: #2a323d;
+    color: rgba(255, 255, 255, 0.87);
+    border: 1px solid #3f4b5b;
+    margin:0;
+    box-shadow: none;
+    flex-basis: 30%;
+    max-width: 30%;
+    overflow-y: auto;
+}
+
+
+.mt-2 {
+    margin-top: 5px;
+}
+
+.ml-2 {
+    margin-left: 5px;
+}
+
+.ml-8 {
+    margin-left: 20px;
+}
+
+
+.resultText-container {
+    width: 100%;
+}
+
+.resultText-area {
+    width: 100%;
+    max-height: 300px;
+}
+
+.json-body {
+    overscroll-behavior: contain;
+    max-height: 400px;
+}
+
+main {
+    overflow-y: auto;
+}
+
+.main-card {
+    width: 33%;
+}
+

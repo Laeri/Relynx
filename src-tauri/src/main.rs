@@ -22,23 +22,22 @@ fn router() -> Arc<Router<Context>> {
         // change the bindings filename to your liking
         .config(rspc::Config::new().export_ts_bindings("../src/bindings.d.ts"))
         //.query("greet", |t| t(|_, name: String| greet(&name)))
-        .query("load_workspace", |t| t(|_, _name: String| load_workspace()))
+        .query("load_workspace", |t| t(|_, ()| load_workspace()))
         .build();
     Arc::new(router)
 }
 
 fn main() {
-   let rt = tokio::runtime::Runtime::new().unwrap();
+    let rt = tokio::runtime::Runtime::new().unwrap();
     let _guard = rt.enter();
-
 
     tauri::Builder::default()
         .plugin(rspc::integrations::tauri::plugin(router(), || Context))
-        .plugin(tauri_plugin_log::Builder::default().targets([
-            LogTarget::LogDir,
-            LogTarget::Stdout,
-            LogTarget::Webview,
-        ]).build())
+        .plugin(
+            tauri_plugin_log::Builder::default()
+                .targets([LogTarget::LogDir, LogTarget::Stdout, LogTarget::Webview])
+                .build(),
+        )
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
