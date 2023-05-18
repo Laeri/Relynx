@@ -6183,3 +6183,39 @@
     margin-left: 8px;
 }
 
+
+/* Fix dialog -> @REFACTOR can probably be removed if we use a newer theme */
+.p-dialog-mask {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* fix close icon */
+.p-dialog-header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.p-dialog-header-icons {
+  position: absolute;
+  right: 20px;
+}
+
+.p-dialog.p-component {
+  left: unset;
+  right: unset
+}
