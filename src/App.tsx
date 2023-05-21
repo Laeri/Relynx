@@ -7,6 +7,9 @@ import { OverviewComponent } from "./pages/OverviewComponent";
 import { MemoryRouter, Routes, Route } from "react-router";
 import { Toast } from "primereact/toast";
 import { useRequestModelStore } from "./stores/requestStore";
+import { Navbar } from "./components/Navbar";
+import { ConfirmPopup } from "primereact/confirmpopup";
+import { Container as ModalContainer } from "react-modal-promise";
 
 export interface ToastContext {
   toast: Ref<any>,
@@ -70,11 +73,12 @@ function App() {
   }
 
   return (
-    <div id="App" className="container">
-      <h1>Relynx</h1>
+
+    <div id="App">
+      {/* <h1>Relynx</h1> */}
       <ToastContext.Provider value={toastContext}>
         <MemoryRouter>
-          {/* <Navbar /> */}
+          <Navbar />
 
           <main style={{ padding: '10px 5%', display: 'relative' }}>
             {/*          <div style={{
@@ -96,15 +100,17 @@ function App() {
             </Routes>
           </main>
 
-          {/* <ModalContainer /> */}
         </MemoryRouter>
+
       </ToastContext.Provider>
       {/*Container element for toast rendering: https://primereact.org/toast/*/}
       <Toast ref={toastRef} />
       {/*Container element for confirm popups: https://primereact.org/confirmpopup/*/}
-      {/*       <ConfirmPopup /> */}
+      <ConfirmPopup />
 
+      <ModalContainer />
     </div>
+
   );
 }
 

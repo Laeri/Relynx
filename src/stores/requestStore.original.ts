@@ -1,4 +1,4 @@
-import {models} from "../../wailsjs/go/models";
+
 import {create } from "zustand";
 import {
     newRequestModel, newRequestResult,

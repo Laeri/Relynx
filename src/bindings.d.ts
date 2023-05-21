@@ -2,13 +2,28 @@
 
 export type Procedures = {
     queries: 
-        { key: "load_workspace", input: never, result: Workspace },
+        { key: "add_existing_collections", input: AddExistingCollectionsParams, result: AddCollectionsResult } | 
+        { key: "import_postman_collection", input: ImportPostmanCommandParams, result: ImportCollectionResult } | 
+        { key: "is_directory_empty", input: string, result: boolean } | 
+        { key: "load_workspace", input: never, result: Workspace } | 
+        { key: "remove_collection", input: Collection, result: Workspace } | 
+        { key: "select_directory", input: never, result: string } | 
+        { key: "select_file", input: never, result: string } | 
+        { key: "update_workspace", input: Workspace, result: null },
     mutations: never,
     subscriptions: never
 };
 
 export type Workspace = { collections: Collection[] }
 
+export type ImportCollectionResult = { collection: Collection; import_warnings: ImportWarning[] }
+
+export type AddExistingCollectionsParams = { path: string; workspace: Workspace }
+
 export type Collection = { name: string; path: string; current_env_name: string; description: string; import_warnings: ImportWarning[] }
+
+export type ImportPostmanCommandParams = { workspace: Workspace; import_postman_path: string; import_result_path: string }
+
+export type AddCollectionsResult = { workspace: Workspace; any_collections_found: boolean; num_imported: number; errored_collections: string[] }
 
 export type ImportWarning<> = null

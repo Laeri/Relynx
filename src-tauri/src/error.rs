@@ -19,11 +19,13 @@ impl FrontendError {
 
 #[derive(Serialize, Deserialize, Type, Debug, Clone, Copy)]
 pub enum DisplayErrorKind {
+    Generic,
     LoadWorkspaceError,
     ReadWorkspaceFileError,
     DeserializeWorkspaceError,
     SerializeWorkspaceError,
     SaveWorkspaceError,
+    NoPathChosen
 }
 
 impl std::fmt::Display for FrontendError {
