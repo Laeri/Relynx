@@ -6219,3 +6219,8 @@
   left: unset;
   right: unset
 }
+
+/* Fix popup not centering on element */
+.p-overlaypanel.p-component {
+  position: absolute;
+}
