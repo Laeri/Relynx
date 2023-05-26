@@ -19,35 +19,25 @@ export type Procedures = {
     subscriptions: never
 };
 
-export type LoadRequestsResult = { file_models: RequestFileModel[]; errs: FrontendError[] }
-
-export type ImportPostmanCommandParams = { workspace: Workspace; import_postman_path: string; import_result_path: string }
-
-export type AddExistingCollectionsParams = { path: string; workspace: Workspace }
-
-export type RequestResult = { result: string; status_code: string; total_time: number; total_result_size: number; content_type: string }
+export type RunRequestCommand = { request: RequestModel; environment: Environment | null }
 
 export type Header = { key: string; value: string; active: boolean }
 
-export type EnvVarDescription = { env_var_name: string; description: string; is_secret: boolean }
-
 export type RequestFileModel = { id: string; path: string; requests: RequestModel[] }
-
-export type RunRequestCommand = { request: RequestModel; environment: Environment | null }
 
 export type DisplayErrorKind = "Generic" | "LoadWorkspaceError" | "ReadWorkspaceFileError" | "DeserializeWorkspaceError" | "SerializeWorkspaceError" | "SaveWorkspaceError" | "NoPathChosen" | "ImportPostmanError" | "ParseError"
 
 export type QueryParam = { key: string; value: string; active: boolean }
 
+export type AddExistingCollectionsParams = { path: string; workspace: Workspace }
+
 export type RequestModel = { id: string; name: string; description: string; method: HttpMethod; url: string; query_params: QueryParam[]; headers: Header[]; body: RequestBody; rest_file_path: string; http_version: Replaced<HttpVersion>; settings: RequestSettings }
 
 export type RequestSettings = { no_redirect: boolean | null; no_log: boolean | null; no_cookie_jar: boolean | null; use_os_credentials: boolean | null }
 
-export type Environment = { name: string; variables: EnvironmentVariable[]; secrets: EnvironmentSecret[]; env_var_descriptions: EnvVarDescription[] }
+export type LoadRequestsResult = { file_models: RequestFileModel[]; errs: FrontendError[] }
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" | "TRACE" | "OPTIONS" | "CONNECT" | { CUSTOM: string }
-
-export type SaveRequestCommand = { requests: RequestModel[]; collection: Collection; request_name: string }
 
 export type ImportCollectionResult = { collection: Collection; import_warnings: ImportWarning[] }
 
@@ -57,17 +47,25 @@ export type EnvironmentVariable = { name: string; initial_value: string; current
 
 export type Replaced<T> = { value: T; is_replaced: boolean }
 
+export type Environment = { name: string; variables: EnvironmentVariable[]; secrets: EnvironmentSecret[]; env_var_descriptions: EnvVarDescription[] }
+
 export type ImportWarning = { rest_file_path: string; request_name: string }
 
 export type Workspace = { collections: Collection[] }
 
+export type EnvVarDescription = { env_var_name: string; description: string; is_secret: boolean }
+
 export type RequestBody = "None" | { Multipart: { boundary: string; parts: Multipart[] } } | { Text: { data: DataSource<string> } }
+
+export type ImportPostmanCommandParams = { workspace: Workspace; import_postman_path: string; import_result_path: string }
 
 export type Multipart = { name: string; data: DataSource<string>; fields: DispositionField[]; headers: Header[] }
 
 export type HttpVersion = { major: number; minor: number }
 
 export type DataSource<T> = { Raw: T } | { FromFilepath: T }
+
+export type RequestResult = { result: string; status_code: string; total_time: number; total_result_size: number; content_type: string }
 
 export type EnvironmentSecret = { name: string; initial_value: string; current_value: string; description: string; persist_to_file: boolean }
 
@@ -76,3 +74,5 @@ export type AddCollectionsResult = { workspace: Workspace; any_collections_found
 export type FrontendError = { kind: DisplayErrorKind; message: string | null }
 
 export type DispositionField = { key: string; value: string }
+
+export type SaveRequestCommand = { requests: RequestModel[]; collection: Collection; request_name: string }
