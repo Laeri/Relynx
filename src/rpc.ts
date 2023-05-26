@@ -1,6 +1,6 @@
 import { createClient } from '@rspc/client'
 import { TauriTransport } from '@rspc/tauri'
-import { Procedures, Workspace, Collection, AddCollectionsResult, ImportCollectionResult } from './bindings';
+import { Procedures, Workspace, Collection, AddCollectionsResult, ImportCollectionResult, LoadRequestsResult, RunRequestCommand, RequestResult, RequestModel, SaveRequestCommand } from './bindings';
 
 export const api = createClient<Procedures>({
   transport: new TauriTransport()
@@ -40,10 +40,31 @@ class Backend {
     return api.query(['add_existing_collections', { path, workspace }]);
   }
 
+  loadRequestsForCollection(collection: Collection): Promise<LoadRequestsResult> {
+    return api.query(['load_requests_for_collection', collection])
+  }
+
   importPostmanCollection(workspace: Workspace, import_postman_path: string, import_result_path: string): Promise<ImportCollectionResult> {
     return api.query(['import_postman_collection', { workspace, import_postman_path, import_result_path }]);
   }
 
+  runRequest(runRequestCommand: RunRequestCommand): Promise<RequestResult> {
+    return api.query(['run_request', runRequestCommand]);
+  }
+
+  // @TODO: check if current request one parameter?
+  saveRequest(requests: RequestModel[], collection: Collection, requestName: string): Promise<RequestModel> {
+    let command: SaveRequestCommand = {requests: requests, collection: collection, request_name: requestName};
+    return api.query(['save_request', command]);
+  }
+
+  copyToClipboard(value: string): Promise<null> {
+    return api.query(['copy_to_clipboard', value]);
+  }
+
+  openFileNative(path: string): Promise<null> {
+    return api.query(['open_file_native', path]);
+  }
 }
 
 

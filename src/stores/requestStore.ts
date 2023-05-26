@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { Workspace, Collection } from "../bindings.d";
+import { Workspace, Collection, Environment, RequestModel, RequestResult } from "../bindings.d";
 import { newWorkspace } from "../model/model";
 
 interface RelynxState {
@@ -12,7 +12,18 @@ interface RelynxState {
 
   currentCollection?: Collection,
 
-  setCurrentCollection: (collection?: Collection) => void
+  setCurrentCollection: (collection?: Collection) => void,
+  currentRequest?: RequestModel,
+  currentEnvironment?: Environment,
+  environments: Environment[],
+
+
+  setCurrentEnvironment: (environment?: Environment) => void,
+
+  requestResult?: RequestResult,
+
+  clearRequestResult: () => void,
+
 }
 
 //@TODO: Use immertype Callback = (state: State) => void;
@@ -63,8 +74,21 @@ export const useRequestModelStore = create<RelynxState>((set) => {
       }
     }),
 
+    currentRequest: undefined,
+    currentEnvironment: undefined,
+    environments: [],
+    setCurrentEnvironment: (environment?: Environment) => set((state: RelynxState) => {
+      return {
+        ...state,
+        currentEnvironment: environment
+      }
+    }),
 
+    requestResult: undefined,
 
+    clearRequestResult: () => set((state: RelynxState) => ({
+      ...state, requestResult: undefined
+    })),
   }
 });
 

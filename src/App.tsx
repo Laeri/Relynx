@@ -10,6 +10,8 @@ import { useRequestModelStore } from "./stores/requestStore";
 import { Navbar } from "./components/Navbar";
 import { ConfirmPopup } from "primereact/confirmpopup";
 import { Container as ModalContainer } from "react-modal-promise";
+import { RequestComponent } from './components/RequestComponent';
+import { CollectionOverviewComponent } from './components/CollectionOverviewComponent';
 
 export interface ToastContext {
   toast: Ref<any>,
@@ -94,9 +96,10 @@ function App() {
 
             <Routes>
               <Route element={<OverviewComponent />} path={"/"} />
-              {/* <Route element={<CollectionOverviewComponent />} path={"/collection"} />
-            <Route element={<RequestComponent />} path={"/collection/request"} />
-            <Route element={<EnvironmentComponent />} path={"/collection/environment"} /> */}
+
+              <Route element={<RequestComponent />} path={"/collection/request"} />
+              <Route element={<CollectionOverviewComponent />} path={"/collection"} />
+              {/*<Route element={<EnvironmentComponent />} path={"/collection/environment"} /> */}
             </Routes>
           </main>
 
