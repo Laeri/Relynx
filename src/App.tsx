@@ -1,5 +1,6 @@
 import { createContext, Ref, useContext, useEffect, useRef } from "react";
 import "./App.css";
+import '../node_modules/primeicons/primeicons.css';
 import "./theme.css";
 import { api } from "./rpc";
 import { Workspace } from "./bindings";
