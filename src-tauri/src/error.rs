@@ -1,11 +1,12 @@
+use http_rest_file::model::ParseError;
 use rspc;
 use rspc::Type;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Type, Clone, Debug)]
 pub struct FrontendError {
-    kind: DisplayErrorKind,
-    message: Option<String>,
+    pub kind: DisplayErrorKind,
+    pub message: Option<String>,
 }
 
 impl FrontendError {
@@ -13,6 +14,15 @@ impl FrontendError {
         FrontendError {
             kind,
             message: None,
+        }
+    }
+}
+
+impl Default for FrontendError {
+    fn default() -> Self {
+        FrontendError {
+            kind: DisplayErrorKind::Generic,
+            message: Some("".to_string()),
         }
     }
 }
@@ -25,7 +35,9 @@ pub enum DisplayErrorKind {
     DeserializeWorkspaceError,
     SerializeWorkspaceError,
     SaveWorkspaceError,
-    NoPathChosen
+    NoPathChosen,
+    ImportPostmanError,
+    ParseError,
 }
 
 impl std::fmt::Display for FrontendError {
@@ -33,7 +45,6 @@ impl std::fmt::Display for FrontendError {
         f.write_str("tmp")
     }
 }
-
 
 // @TODO: error with a cause
 impl std::error::Error for FrontendError {
@@ -53,5 +64,14 @@ impl From<FrontendError> for rspc::Error {
                 .clone(),
             frontend_error,
         )
+    }
+}
+
+impl From<ParseError> for FrontendError {
+    fn from(value: ParseError) -> Self {
+        FrontendError {
+            kind: DisplayErrorKind::ParseError,
+            message: Some(value.message),
+        }
     }
 }

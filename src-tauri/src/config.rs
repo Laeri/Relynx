@@ -7,7 +7,6 @@ use directories::ProjectDirs;
 pub const WORKSPACE_FILENAME: &str = "workspace.json";
 pub const COLLECTION_CONFIGFILE: &str = "relynx.collection.json";
 
-
 pub fn get_config_dir() -> Option<std::path::PathBuf> {
     ProjectDirs::from("app", "relynx", "relynx").map(|dirs| dirs.config_dir().to_path_buf())
 }

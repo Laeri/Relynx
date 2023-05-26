@@ -3,11 +3,14 @@
 
 mod config;
 mod error;
+mod import;
 mod model;
 
 use error::{DisplayErrorKind, FrontendError};
+use import::LoadRequestsResult;
 use model::{
-    AddCollectionsResult, Collection, CollectionConfig, ImportCollectionResult, Workspace,
+    AddCollectionsResult, Collection, CollectionConfig, ImportCollectionResult, RequestModel,
+    RequestResult, RunRequestCommand, SaveRequestCommand, Workspace,
 };
 use rspc::Router;
 use serde::{Deserialize, Serialize};
@@ -135,6 +138,11 @@ fn add_existing_collections(
     })
 }
 
+#[tauri::command]
+fn load_requests_for_collection(collection: Collection) -> Result<LoadRequestsResult, rspc::Error> {
+    import::load_requests_for_collection(&collection).map_err(|err| err.into())
+}
+
 #[derive(Serialize, Deserialize, rspc::Type, Debug)]
 struct ImportPostmanCommandParams {
     pub workspace: Workspace,
@@ -155,6 +163,27 @@ fn import_postman_collection(
     import_result_path: String,
 ) -> Result<ImportCollectionResult, rspc::Error> {
     todo!("Implement");
+    //import::postman::import(workspace, import_postman_path, import_result_path).map_err(Into::into)
+}
+
+#[tauri::command]
+fn run_request(request_command: RunRequestCommand) -> Result<RequestResult, rspc::Error> {
+    todo!("implement")
+}
+
+#[tauri::command]
+fn save_request(command: SaveRequestCommand) -> Result<RequestModel, rspc::Error> {
+    todo!("implement")
+}
+
+#[tauri::command]
+fn copy_to_clipboard(string: String) -> Result<(), rspc::Error> {
+    todo!("implement")
+}
+
+#[tauri::command]
+fn open_file_native(spath: String) -> Result<(), rspc::Error> {
+    todo!("implement")
 }
 
 struct Context;
@@ -177,7 +206,12 @@ fn router() -> Arc<Router<Context>> {
             t(|_, workspace: Workspace| update_workspace(workspace))
         })
         .query("add_existing_collections", |t| {
-            t(|_, params: AddExistingCollectionsParams | add_existing_collections(params.path, params.workspace))
+            t(|_, params: AddExistingCollectionsParams| {
+                add_existing_collections(params.path, params.workspace)
+            })
+        })
+        .query("load_requests_for_collection", |t| {
+            t(|_, collection: Collection| load_requests_for_collection(collection))
         })
         .query("import_postman_collection", |t| {
             t(|_, params: ImportPostmanCommandParams| {
@@ -187,6 +221,18 @@ fn router() -> Arc<Router<Context>> {
                     params.import_result_path,
                 )
             })
+        })
+        .query("run_request", |t| {
+            t(|_, command: RunRequestCommand| run_request(command))
+        })
+        .query("save_request", |t| {
+            t(|_, command: SaveRequestCommand| save_request(command))
+        })
+        .query("copy_to_clipboard", |t| {
+            t(|_, string: String| copy_to_clipboard(string))
+        })
+        .query("open_file_native", |t| {
+            t(|_, string: String| open_file_native(string))
         })
         .build();
     Arc::new(router)
