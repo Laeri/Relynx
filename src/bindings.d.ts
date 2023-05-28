@@ -21,13 +21,13 @@ export type Procedures = {
 
 export type AddExistingCollectionsParams = { path: string; workspace: Workspace }
 
+export type ImportPostmanCommandParams = { workspace: Workspace; import_postman_path: string; import_result_path: string }
+
 export type RunRequestCommand = { request: RequestModel; environment: Environment | null }
 
 export type Header = { key: string; value: string; active: boolean }
 
 export type RequestFileModel = { id: string; path: string; requests: RequestModel[] }
-
-export type ImportPostmanCommandParams = { workspace: Workspace; import_postman_path: string; import_result_path: string }
 
 export type QueryParam = { key: string; value: string; active: boolean }
 
@@ -47,7 +47,7 @@ export type EnvironmentVariable = { name: string; initial_value: string; current
 
 export type Replaced<T> = { value: T; is_replaced: boolean }
 
-export type DisplayErrorKind = "Generic" | "LoadWorkspaceError" | "ReadWorkspaceFileError" | "DeserializeWorkspaceError" | "SerializeWorkspaceError" | "SaveWorkspaceError" | "NoPathChosen" | "ImportPostmanError" | "ParseError" | "InvalidOpenPath"
+export type DisplayErrorKind = "Generic" | "LoadWorkspaceError" | "ReadWorkspaceFileError" | "DeserializeWorkspaceError" | "SerializeWorkspaceError" | "SaveWorkspaceError" | "NoPathChosen" | "ImportPostmanError" | "ParseError" | "InvalidOpenPath" | "CopyToClipboardError"
 
 export type Environment = { name: string; variables: EnvironmentVariable[]; secrets: EnvironmentSecret[]; env_var_descriptions: EnvVarDescription[] }
 

@@ -18,7 +18,7 @@ use std::{
     path::PathBuf,
     sync::{Arc, Mutex},
 }; // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
-use tauri::{api::shell, AppHandle, Manager};
+use tauri::{api::shell, AppHandle, ClipboardManager, Manager};
 use tauri_plugin_log::LogTarget;
 use walkdir::WalkDir;
 
@@ -183,7 +183,18 @@ fn save_request(command: SaveRequestCommand) -> Result<RequestModel, rspc::Error
 
 #[tauri::command]
 fn copy_to_clipboard(string: String) -> Result<(), rspc::Error> {
-    todo!("implement")
+    let context = RELYNX_CONTEXT.lock().unwrap();
+    let app_handle = context.app_handle.as_ref().unwrap();
+    let clipboard = &mut app_handle.clipboard_manager();
+    clipboard.write_text(string.clone()).map_err(|err| {
+        // @TODO: handle error
+        eprintln!("Error on writing to clipboard: {:?}", err);
+        FrontendError::new_with_message(
+            DisplayErrorKind::CopyToClipboardError,
+            format!("Cannot copy content: '{:?}' to clipboard", string),
+        )
+        .into()
+    })
 }
 
 #[tauri::command]

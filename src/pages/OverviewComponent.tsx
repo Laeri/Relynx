@@ -24,7 +24,7 @@ export function OverviewComponent(_props: ComponentProps) {
 
 
   const doOpenAddExistingCollectionModal = () => {
-    openAddExistingCollectionModal(toast).then((_result: AddCollectionsResult) => {
+    openAddExistingCollectionModal(workspace, toast).then((_result: void | AddCollectionsResult) => {
       // @TODO: what about errored collections?
     });
   }
@@ -49,7 +49,7 @@ export function OverviewComponent(_props: ComponentProps) {
         <Card title={<><i className={"pi pi-pencil mr-2"} />New Collection</>}
           subTitle={"Create a new collection in an empty folder"} style={cardStyle}
           className={"main-card"}
-          footer={<Button label="New Collection" icon="pi pi-plus" onClick={openCreateCollectionModal}
+          footer={<Button label="New Collection" icon="pi pi-plus" onClick={() => openCreateCollectionModal(workspace)}
             style={{}} />}
         />
         <Card title={<><i className={"pi pi-plus mr-2"} />Add Existing</>}
@@ -64,6 +64,8 @@ export function OverviewComponent(_props: ComponentProps) {
           footer={<Button label={"Import Collection"} icon="pi pi-plus"
             onClick={() => openImportCollectionModal(workspace)} />}
         />
+
+        <Button onClick={() => backend.copyToClipboard("TROLOLO")}>COPY TO CLIPBOARD</Button>
 
       </div>
     </div>

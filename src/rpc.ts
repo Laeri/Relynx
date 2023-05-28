@@ -59,6 +59,7 @@ class Backend {
   }
 
   copyToClipboard(value: string): Promise<null> {
+    console.log('copy to clipboard');
     return api.query(['copy_to_clipboard', value]);
   }
 

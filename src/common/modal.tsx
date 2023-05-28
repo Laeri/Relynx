@@ -20,10 +20,10 @@ export const addCollectionToWorkspace = (newCollection: Collection) => {
   backend.updateWorkspace(updatedWorkspace).catch(catchError(toast));
 }
 
-export const openCreateCollectionModal = (): Promise<Collection | undefined> => {
+export const openCreateCollectionModal = (workspace: Workspace): Promise<Collection | undefined> => {
   const createCollectionModal = create(({ isOpen, onResolve, onReject }) => {
     return <CreateCollectionModal isOpen={isOpen} onResolve={onResolve} onReject={onReject} />
-  })
+  });
 
   return createCollectionModal().then((result?: { collectionName: string, collectionPath: string }) => {
     if (!result) {
@@ -41,22 +41,26 @@ export const openCreateCollectionModal = (): Promise<Collection | undefined> => 
   });
 }
 
-export const openAddExistingCollectionModal = (toast: ToastContext): Promise<{ workspace: Workspace | undefined, any_collections_found: boolean, cancelled: boolean }> => {
+export const openAddExistingCollectionModal = (workspace: Workspace, toast: ToastContext): Promise<void | AddCollectionsResult> => {
   const addCollectionModal = create(({ isOpen, onResolve, onReject }) => {
     return <AddCollectionModal isOpen={isOpen} onResolve={onResolve} onReject={onReject} />
   })
 
-  return addCollectionModal().then((result?: { collectionPath: string }): AddCollectionsResult => {
-    return backend.addExistingCollections(result.collectionPath).then((result: AddCollectionsResult) => {
+  return addCollectionModal().then((result?: { collectionPath: string }): Promise<void | AddCollectionsResult> => {
+    if (!result) {
+      return Promise.resolve();
+    }
+
+    return backend.addExistingCollections(result.collectionPath, workspace).then((result: AddCollectionsResult) => {
       if (!result.any_collections_found) {
         toast.showWarn("No results found", "No collections found that can be imported. Try another location.")
-        return { workspace: result.workspace, any_collections_found: false, cancelled: false }
+        return { workspace: result.workspace, any_collections_found: false, num_imported: 0, errored_collections: result.errored_collections } as AddCollectionsResult
       }
       if (!result.workspace) {
         toast.showError("", "Could not add collections to workspace.")
-        return { workspace: result.workspace, any_collections_found: result.any_collections_found, cancelled: false }
+        return { workspace: result.workspace, any_collections_found: result.any_collections_found, num_imported: 0, errored_collections: result.errored_collections } as AddCollectionsResult
       }
-      useRequestModelStore.getState().updateWorkspace(result.workspace)
+      useRequestModelStore.getState().updateWorkspace(result.workspace);
       if (result.errored_collections && result.errored_collections.length > 0) {
         let paths = result.errored_collections // @TODO import .map((erroredCollection: ErroredCollectionResult) => erroredCollection.Path)
         toast.showError("Error importing collections", `${paths.join(',')} could not be added successfully`)
@@ -64,7 +68,7 @@ export const openAddExistingCollectionModal = (toast: ToastContext): Promise<{ w
       } else {
         toast.showSuccess("Collections Imported", `${result.num_imported} collections have been added`)
       }
-      return { workspace: result.workspace, any_collections_found: result.any_collections_found, cancelled: false }
+      return Promise.resolve(result)
     }).catch((err: any) => {
       catchError(ExternalToast)(err);
     });

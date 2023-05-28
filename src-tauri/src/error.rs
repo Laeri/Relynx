@@ -45,7 +45,8 @@ pub enum DisplayErrorKind {
     NoPathChosen,
     ImportPostmanError,
     ParseError,
-    InvalidOpenPath
+    InvalidOpenPath,
+    CopyToClipboardError
 }
 
 impl std::fmt::Display for FrontendError {
