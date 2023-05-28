@@ -16,6 +16,13 @@ impl FrontendError {
             message: None,
         }
     }
+
+    pub fn new_with_message(kind: DisplayErrorKind, message: String) -> Self {
+        FrontendError {
+            kind,
+            message: Some(message)
+        }
+    }
 }
 
 impl Default for FrontendError {
@@ -38,6 +45,7 @@ pub enum DisplayErrorKind {
     NoPathChosen,
     ImportPostmanError,
     ParseError,
+    InvalidOpenPath
 }
 
 impl std::fmt::Display for FrontendError {

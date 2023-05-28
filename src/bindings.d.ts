@@ -8,7 +8,7 @@ export type Procedures = {
         { key: "is_directory_empty", input: string, result: boolean } | 
         { key: "load_requests_for_collection", input: Collection, result: LoadRequestsResult } | 
         { key: "load_workspace", input: never, result: Workspace } | 
-        { key: "open_file_native", input: string, result: null } | 
+        { key: "open_folder_native", input: string, result: null } | 
         { key: "remove_collection", input: Collection, result: Workspace } | 
         { key: "run_request", input: RunRequestCommand, result: RequestResult } | 
         { key: "save_request", input: SaveRequestCommand, result: RequestModel } | 
@@ -19,17 +19,17 @@ export type Procedures = {
     subscriptions: never
 };
 
+export type AddExistingCollectionsParams = { path: string; workspace: Workspace }
+
 export type RunRequestCommand = { request: RequestModel; environment: Environment | null }
 
 export type Header = { key: string; value: string; active: boolean }
 
 export type RequestFileModel = { id: string; path: string; requests: RequestModel[] }
 
-export type DisplayErrorKind = "Generic" | "LoadWorkspaceError" | "ReadWorkspaceFileError" | "DeserializeWorkspaceError" | "SerializeWorkspaceError" | "SaveWorkspaceError" | "NoPathChosen" | "ImportPostmanError" | "ParseError"
+export type ImportPostmanCommandParams = { workspace: Workspace; import_postman_path: string; import_result_path: string }
 
 export type QueryParam = { key: string; value: string; active: boolean }
-
-export type AddExistingCollectionsParams = { path: string; workspace: Workspace }
 
 export type RequestModel = { id: string; name: string; description: string; method: HttpMethod; url: string; query_params: QueryParam[]; headers: Header[]; body: RequestBody; rest_file_path: string; http_version: Replaced<HttpVersion>; settings: RequestSettings }
 
@@ -47,6 +47,8 @@ export type EnvironmentVariable = { name: string; initial_value: string; current
 
 export type Replaced<T> = { value: T; is_replaced: boolean }
 
+export type DisplayErrorKind = "Generic" | "LoadWorkspaceError" | "ReadWorkspaceFileError" | "DeserializeWorkspaceError" | "SerializeWorkspaceError" | "SaveWorkspaceError" | "NoPathChosen" | "ImportPostmanError" | "ParseError" | "InvalidOpenPath"
+
 export type Environment = { name: string; variables: EnvironmentVariable[]; secrets: EnvironmentSecret[]; env_var_descriptions: EnvVarDescription[] }
 
 export type ImportWarning = { rest_file_path: string; request_name: string }
@@ -56,8 +58,6 @@ export type Workspace = { collections: Collection[] }
 export type EnvVarDescription = { env_var_name: string; description: string; is_secret: boolean }
 
 export type RequestBody = "None" | { Multipart: { boundary: string; parts: Multipart[] } } | { Text: { data: DataSource<string> } }
-
-export type ImportPostmanCommandParams = { workspace: Workspace; import_postman_path: string; import_result_path: string }
 
 export type Multipart = { name: string; data: DataSource<string>; fields: DispositionField[]; headers: Header[] }
 

@@ -62,8 +62,9 @@ class Backend {
     return api.query(['copy_to_clipboard', value]);
   }
 
-  openFileNative(path: string): Promise<null> {
-    return api.query(['open_file_native', path]);
+  openFolderNative(path: string): Promise<null> {
+    console.log('open folder native: ', path);
+    return api.query(['open_folder_native', path]);
   }
 }
 

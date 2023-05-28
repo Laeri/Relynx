@@ -89,7 +89,7 @@ export function CollectionInfo(props: ComponentProps) {
                                    style={{height: '30px', flexShrink: 1, minWidth: 0}}/>
                         <Button icon="pi pi-folder-open" className={"p-button-text"}
                                 style={{width: '30px', height: '30px', marginLeft: '5px'}}
-                                onClick={() => backend.openFileNative(props.collection.path)}/>
+                                onClick={() => backend.openFolderNative(props.collection.path)}/>
                     </div>
                 </div>
 

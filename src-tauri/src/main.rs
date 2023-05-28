@@ -14,7 +14,11 @@ use model::{
 };
 use rspc::Router;
 use serde::{Deserialize, Serialize};
-use std::{path::PathBuf, sync::Arc}; // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
+use std::{
+    path::PathBuf,
+    sync::{Arc, Mutex},
+}; // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
+use tauri::{api::shell, AppHandle, Manager};
 use tauri_plugin_log::LogTarget;
 use walkdir::WalkDir;
 
@@ -36,6 +40,7 @@ fn remove_collection(collection: Collection) -> Result<Workspace, rspc::Error> {
         .ok_or(FrontendError::new(DisplayErrorKind::Generic))?;
 
     workspace.collections.remove(position);
+
     config::save_workspace(&workspace)?;
     Ok(workspace)
 }
@@ -182,13 +187,46 @@ fn copy_to_clipboard(string: String) -> Result<(), rspc::Error> {
 }
 
 #[tauri::command]
-fn open_file_native(spath: String) -> Result<(), rspc::Error> {
-    todo!("implement")
+fn open_folder_native(app_handle: &tauri::AppHandle, path: &String) -> Result<(), rspc::Error> {
+    // @TODO: we might want to restrict the path to collection folders
+    let check_path = std::path::PathBuf::from(path.clone());
+    if !check_path.exists() {
+        return Err(FrontendError::new_with_message(
+            DisplayErrorKind::InvalidOpenPath,
+            format!(
+                "Cannot open folder: '{}' in explorer as it does not exist",
+                check_path.to_string_lossy().to_owned()
+            ),
+        )
+        .into());
+    }
+
+    if !check_path.is_dir() {
+        return Err(FrontendError::new_with_message(
+            DisplayErrorKind::InvalidOpenPath,
+            format!(
+                "Cannot open folder: '{}' in explorer as it is not a directory",
+                check_path.to_string_lossy().to_owned()
+            ),
+        )
+        .into());
+    }
+    let shell_scope = app_handle.shell_scope();
+
+    match shell::open(&shell_scope, path, None) {
+        tauri::api::Result::Ok(_) => Ok(()),
+        tauri::api::Result::Err(err) => {
+            // @TODO: log error
+            Err(FrontendError::new_with_message(
+                DisplayErrorKind::InvalidOpenPath,
+                format!("Could not open directory: {}", path),
+            )
+            .into())
+        }
+    }
 }
 
-struct Context;
-
-fn router() -> Arc<Router<Context>> {
+fn router() -> Arc<Router> {
     let router = Router::new()
         // change the bindings filename to your liking
         .config(rspc::Config::new().export_ts_bindings("../src/bindings.d.ts"))
@@ -231,24 +269,44 @@ fn router() -> Arc<Router<Context>> {
         .query("copy_to_clipboard", |t| {
             t(|_, string: String| copy_to_clipboard(string))
         })
-        .query("open_file_native", |t| {
-            t(|_, string: String| open_file_native(string))
+        .query("open_folder_native", |t| {
+            t(|_, path: String| {
+                let mutex = RELYNX_CONTEXT.lock().unwrap();
+                let handle = mutex.app_handle.as_ref().unwrap();
+                open_folder_native(handle, &path)
+            })
         })
         .build();
     Arc::new(router)
 }
 
+pub struct Context {
+    pub app_handle: Option<AppHandle>,
+}
+
+// @TODO: This is a workaround to access app_handle within router. Maybe with later rspc version we
+// can do this (https://github.com/oscartbeaumont/rspc/issues/163)
+static RELYNX_CONTEXT: Mutex<Context> = Mutex::new(Context { app_handle: None });
+
 fn main() {
     let rt = tokio::runtime::Runtime::new().unwrap();
     let _guard = rt.enter();
-
-    tauri::Builder::default()
-        .plugin(rspc::integrations::tauri::plugin(router(), || Context))
+    let context = tauri::generate_context!();
+    let app = tauri::Builder::default();
+    let app = app
+        .plugin(rspc::integrations::tauri::plugin(router(), || {}))
         .plugin(
             tauri_plugin_log::Builder::default()
                 .targets([LogTarget::LogDir, LogTarget::Stdout, LogTarget::Webview])
                 .build(),
         )
-        .run(tauri::generate_context!())
+        .build(context)
         .expect("error while running tauri application");
+
+    // @TODO: This is a workaround to access app_handle within router. Maybe with later rspc version we
+    // can do this (https://github.com/oscartbeaumont/rspc/issues/163)
+    let mut data = RELYNX_CONTEXT.lock().unwrap();
+    data.app_handle = Some(app.app_handle());
+    std::mem::drop(data);
+    app.run(|_, _| {});
 }
