@@ -9,7 +9,10 @@ mod sanitize;
 mod tree;
 
 use error::{DisplayErrorKind, FrontendError};
-use http_rest_file::{model::HttpRestFile, Serializer};
+use http_rest_file::{
+    model::{HttpRestFile, HttpRestFileExtension},
+    Serializer,
+};
 use import::LoadRequestsResult;
 use model::{
     AddCollectionsResult, Collection, CollectionConfig, ImportCollectionResult, RequestModel,
@@ -332,11 +335,85 @@ fn add_group_node(params: AddGroupNodeParams) -> RequestTreeNode {
 pub struct DeleteNodeParams {
     collection: Collection,
     node: RequestTreeNode,
+    file_node: Option<RequestTreeNode>,
 }
 #[tauri::command]
-fn delete_node(params: DeleteNodeParams) {
-    // @TODO
-    todo!("@TODO");
+fn delete_node(params: DeleteNodeParams) -> Result<(), rspc::Error> {
+    let collection = params.collection;
+    let node = params.node;
+
+    if node.filepath == "" {
+        return Err(FrontendError::new_with_message(
+            DisplayErrorKind::NodeDeleteError,
+            "The node you want to delete has an invalid file path".to_string(),
+        )
+        .into());
+    }
+
+    if !node.filepath.starts_with(&collection.path) {
+        let msg = format!(
+            "The node: '{}' with path: '{}' is not within collection: '{}', collectionPath: '{}'",
+            node.name, node.filepath, collection.name, collection.path
+        );
+        return Err(FrontendError::new_with_message(DisplayErrorKind::NodeDeleteError, msg).into());
+    }
+
+    // if deleted node is part of a file, then we need to remove it from its request and resave /
+    // reserialize all requests within the file
+    if let Some(mut file_node) = params.file_node {
+        // file_node only has children with requests, so it is safe to unwrap
+        file_node.children = file_node
+            .children
+            .into_iter()
+            .filter(|child| child.request.as_ref().unwrap().id != node.request.as_ref().unwrap().id)
+            .collect::<Vec<RequestTreeNode>>();
+        let file_model = HttpRestFile {
+            requests: file_node
+                .children
+                .into_iter()
+                .map(|node| node.request.unwrap().into())
+                .collect::<Vec<http_rest_file::model::Request>>(),
+            errs: vec![],
+            extension: Some(HttpRestFileExtension::Http),
+            path: Box::new(PathBuf::from(file_node.filepath.clone())),
+        };
+        match Serializer::serialize_to_file(&file_model) {
+            Ok(_) => return Ok(()),
+            Err(err) => {
+                let msg = format!(
+                    "Could not remove request: '{}' from file: '{}'",
+                    node.name, file_node.filepath
+                );
+                return Err(Into::<rspc::Error>::into(FrontendError::new_with_message(
+                    DisplayErrorKind::NodeDeleteError,
+                    msg,
+                )));
+            }
+        };
+    }
+
+    // @TODO: if the node contains multiple children maybe ask if they want to delete everything
+    // otherwise we delete either a single request (one file), or a directory with all its children
+    if let Some(_) = node.request {
+        // @TODO: log error
+        std::fs::remove_file(node.filepath)
+        // @TODO: check that only requests/folders are within the group so that nothing wanted is
+        // removed as well
+    } else {
+        std::fs::remove_dir_all(node.filepath)
+    }
+    .map_err(|err| {
+        let msg = format!(
+            "Could not delete node: {}, err: {}",
+            node.name,
+            err.to_string()
+        );
+        Into::<rspc::Error>::into(FrontendError::new_with_message(
+            DisplayErrorKind::NodeDeleteError,
+            msg,
+        ))
+    })?;
+    Ok(())
 }
 
 #[derive(Serialize, Deserialize, rspc::Type, Debug)]

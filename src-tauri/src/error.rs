@@ -47,7 +47,8 @@ pub enum DisplayErrorKind {
     ParseError,
     InvalidOpenPath,
     CopyToClipboardError,
-    RequestFileAlreadyExists
+    RequestFileAlreadyExists,
+    NodeDeleteError
 }
 
 impl std::fmt::Display for FrontendError {

@@ -329,7 +329,7 @@ impl From<RequestModel> for http_rest_file::model::Request {
 }
 impl From<&RequestModel> for http_rest_file::model::Request {
     fn from(value: &RequestModel) -> Self {
-        let http_version = match  value.http_version.clone() {
+        let http_version = match value.http_version.clone() {
             Replaced {
                 value,
                 is_replaced: false,
@@ -339,15 +339,17 @@ impl From<&RequestModel> for http_rest_file::model::Request {
                 is_replaced: true,
             } => WithDefault::Default(value.clone()),
         };
-        let comments: Vec<http_rest_file::model::Comment> = value
-            .description
-            .split("\n")
-            .into_iter()
-            .map(|str| http_rest_file::model::Comment {
-                kind: http_rest_file::model::CommentKind::DoubleSlash,
-                value: str.to_string(),
-            })
-            .collect();
+        let comments: Vec<http_rest_file::model::Comment> = match &value.description[..] {
+            "" => vec![],
+            description => description
+                .split("\n")
+                .into_iter()
+                .map(|str| http_rest_file::model::Comment {
+                    kind: http_rest_file::model::CommentKind::DoubleSlash,
+                    value: str.to_string(),
+                })
+                .collect(),
+        };
         let target = value.url.as_str().into();
         http_rest_file::model::Request {
             name: Some(value.name.clone()),

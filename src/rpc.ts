@@ -79,8 +79,8 @@ class Backend {
     return api.query(['add_group_node', { collection: collection, parent: parent, group_name: groupName }]);
   }
 
-  deleteNode(collection: Collection, node: RequestTreeNode): Promise<null> {
-    return api.query(['delete_node', { collection: collection, node: node }]);
+  deleteNode(collection: Collection, node: RequestTreeNode, fileNode: RequestTreeNode | null): Promise<null> {
+    return api.query(['delete_node', { collection: collection, node: node, file_node: fileNode }]);
   }
 
   //Parent *RequestTreeNode, dragNode *RequestTreeNode, dropNode *RequestTreeNode, dropIndex int) (dragAndDropResult *DragAndDropResult, returnError error) {

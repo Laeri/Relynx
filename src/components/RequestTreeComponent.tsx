@@ -70,7 +70,9 @@ export const deleteNode = (toast: ToastContext, collection: Collection, requestT
     displayAndLogErr(error, toast);
     return
   }
-  backend.deleteNode(collection, treeNode).then(() => {
+
+  // @TODO: pass file_node if parent is a file_node!
+  backend.deleteNode(collection, treeNode, null).then(() => {
     // if we delete the current request remove it and change to the collection view
     let currentRequestRemoved = false;
     if (currentRequest) {
