@@ -20,6 +20,7 @@ import { Message } from "primereact/message";
 import { hasInvalidFileBody } from "../common/requestUtils";
 import { WarningCollapsible } from "./WarningCollapsible";
 import { updatedRequestModel, newQueryParam, newRequestHeader } from '../model/model';
+import { getAllRequestsFromTree } from "../common/treeUtils";
 
 interface ComponentProps {
 }
@@ -27,7 +28,7 @@ interface ComponentProps {
 export function RequestComponent(_props: ComponentProps) {
 
   const currentRequest = useRequestModelStore((state) => state.currentRequest as RequestModel);
-  // @TODO const storeUpdateRequestAndTree = useRequestModelStore((state) => state.storeUpdateRequestAndTree);
+  const storeUpdateRequestAndTree = useRequestModelStore((state) => state.storeUpdateRequestAndTree);
   /* const url = useRequestModelStore((state) => state.currentRequest?.Url as string); // we are sure that we have a request here
   const requestType = useRequestModelStore((state) => state.currentRequest?.RequestType as RequestType);
   const queryParams = useRequestModelStore((state) => state.currentRequest?.QueryParams as QueryParam[]);
@@ -44,7 +45,7 @@ export function RequestComponent(_props: ComponentProps) {
 
   const currentEnvironment = useRequestModelStore((state) => state.currentEnvironment);
 
-  // @TODO const requestTree = useRequestModelStore((state) => state.requestTree);
+  const requestTree = useRequestModelStore((state) => state.requestTree);
 
   const [activeIndex, setActiveIndex] = useState<number>(0);
 
@@ -119,15 +120,17 @@ export function RequestComponent(_props: ComponentProps) {
   }
 
   function updateRequest(newRequest: RequestModel, valid: boolean = true) {
+    console.log('update request', newRequest);
     if (!currentCollection || !currentRequest) {
       return
     }
 
-    let allRequests: RequestModel[] = [] // @TODO: getAllRequestsFromTree(requestTree)
+    let allRequests: RequestModel[] = getAllRequestsFromTree(requestTree);
 
     // find all requests with the same path which means they are in the same file
     // @SPEED, we have to parse the tree everytime we do this
     let requestsInSameFile = allRequests.filter((request: RequestModel) => request.rest_file_path == newRequest.rest_file_path || request.id == newRequest.id);
+    console.log('requestsInSameFile: ', requestsInSameFile);
 
     // replace the new request within our requests here
     requestsInSameFile = requestsInSameFile.map((request: RequestModel) => {
@@ -138,8 +141,9 @@ export function RequestComponent(_props: ComponentProps) {
       }
     });
 
+    console.log('requestsInSameFile2: ', requestsInSameFile);
     backend.saveRequest(requestsInSameFile, currentCollection, currentRequest.name).then(() => {
-      // @TODO: storeUpdateRequestAndTree(newRequest)
+      storeUpdateRequestAndTree(newRequest)
     }).catch(catchError(toast));
 
   }

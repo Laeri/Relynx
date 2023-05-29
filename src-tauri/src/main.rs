@@ -10,7 +10,7 @@ mod tree;
 
 use error::{DisplayErrorKind, FrontendError};
 use http_rest_file::{
-    model::{HttpRestFile, HttpRestFileExtension},
+    model::{HttpRestFile, HttpRestFileExtension, Request},
     Serializer,
 };
 use import::LoadRequestsResult;
@@ -19,6 +19,7 @@ use model::{
     RequestResult, RunRequestCommand, SaveRequestCommand, Workspace,
 };
 use rspc::Router;
+use sanitize::sanitize_filename_with_options;
 use serde::{Deserialize, Serialize};
 use std::{
     path::PathBuf,
@@ -26,7 +27,7 @@ use std::{
 }; // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 use tauri::{api::shell, AppHandle, ClipboardManager, Manager};
 use tauri_plugin_log::LogTarget;
-use tree::RequestTreeNode;
+use tree::{GroupOptions, RequestTreeNode, DEFAULT_OPTIONS};
 use walkdir::WalkDir;
 
 #[tauri::command]
@@ -184,8 +185,62 @@ fn run_request(request_command: RunRequestCommand) -> Result<RequestResult, rspc
 }
 
 #[tauri::command]
-fn save_request(command: SaveRequestCommand) -> Result<RequestModel, rspc::Error> {
-    todo!("implement")
+fn save_request(command: SaveRequestCommand) -> Result<String, rspc::Error> {
+    if command.requests.is_empty() {
+        return Err(FrontendError::new_with_message(
+            DisplayErrorKind::SaveRequestError,
+            "Tried to save empty request list".to_string(),
+        )
+        .into());
+    }
+
+    let file_path = command.requests[0].rest_file_path.clone();
+    let requests: Vec<Request> = command
+        .requests
+        .clone()
+        .into_iter()
+        .map(Into::into)
+        .collect();
+    let file_model = http_rest_file::model::HttpRestFile {
+        errs: vec![],
+        requests,
+        path: Box::new(PathBuf::from(file_path.clone())),
+        extension: Some(HttpRestFileExtension::Http),
+    };
+
+    Serializer::serialize_to_file(&file_model).map_err(|_err| {
+        // @TODO: handle error
+        Into::<rspc::Error>::into(FrontendError::new_with_message(
+            DisplayErrorKind::SaveRequestError,
+            "Could not save request to file".to_string(),
+        ))
+    })?;
+
+    // if the request is renamed and within a file group (only then are multiple requests present)
+    // then just return after renaming the request
+    if command.requests.len() > 1 {
+        return Ok(file_path);
+    }
+
+    // also check if name changed, because then the request will reside in a new file based on its
+    // new name and we have to remove the old file as a new file was created by the Serializer
+    // beforehand
+    let model = command.requests[0].clone();
+    if model.name != command.request_name {
+        std::fs::remove_file(model.rest_file_path.clone()).map_err(|_err| {
+            // @TODO: handle error
+            let msg = format!(
+                "When renaming the request could not remove old file at path: {}",
+                model.rest_file_path
+            );
+            Into::<rspc::Error>::into(FrontendError::new_with_message(
+                DisplayErrorKind::RemoveOldRequestFile,
+                msg,
+            ))
+        })?;
+    }
+
+    Ok(file_path)
 }
 
 #[tauri::command]
@@ -233,7 +288,7 @@ fn open_folder_native(app_handle: &tauri::AppHandle, path: &String) -> Result<()
 
     match shell::open(&shell_scope, path, None) {
         tauri::api::Result::Ok(_) => Ok(()),
-        tauri::api::Result::Err(err) => {
+        tauri::api::Result::Err(_err) => {
             // @TODO: log error
             Err(FrontendError::new_with_message(
                 DisplayErrorKind::InvalidOpenPath,
@@ -326,9 +381,75 @@ pub struct AddGroupNodeParams {
 }
 
 #[tauri::command]
-fn add_group_node(params: AddGroupNodeParams) -> RequestTreeNode {
-    // @TODO
-    todo!("@TODO");
+fn add_group_node(params: AddGroupNodeParams) -> Result<RequestTreeNode, rspc::Error> {
+    let folder_name = sanitize_filename_with_options(params.group_name, DEFAULT_OPTIONS);
+
+    if folder_name == "" {
+        return Err(FrontendError::new_with_message(
+            DisplayErrorKind::AddGroupNodeError,
+            "Cannot add a group node with no name".to_string(),
+        )
+        .into());
+    }
+
+    if !params.parent.filepath.starts_with(&params.collection.path) {
+        let msg = format!(
+            "The path: '{}' is not within the collection: '{}'",
+            params.parent.filepath, params.collection.path
+        );
+        return Err(
+            FrontendError::new_with_message(DisplayErrorKind::AddGroupNodeError, msg).into(),
+        );
+    }
+
+    if params
+        .parent
+        .children
+        .iter()
+        .any(|child| child.name == folder_name)
+    {
+        let msg = "There exists already a node with the same name in the parent".to_string();
+        return Err(
+            FrontendError::new_with_message(DisplayErrorKind::AddGroupNodeError, msg).into(),
+        );
+    }
+
+    let parent_path = PathBuf::from(params.parent.filepath.clone());
+    if !parent_path.exists() {
+        let msg = format!(
+            "The parent's path of the new group does not exist or has been removed. Cannot create new folder in nonexisting directory. Path: '{}'",
+            parent_path.to_string_lossy().to_string()
+        );
+        return Err(
+            FrontendError::new_with_message(DisplayErrorKind::AddGroupNodeError, msg).into(),
+        );
+    }
+
+    let path = parent_path.join(folder_name);
+    if path.exists() {
+        let msg = format!(
+            "There exists already a file/folder with path: {}",
+            path.to_string_lossy().to_string()
+        );
+        return Err(
+            FrontendError::new_with_message(DisplayErrorKind::AddGroupNodeError, msg).into(),
+        );
+    }
+
+    match std::fs::create_dir(path.clone()) {
+        Ok(()) => Ok(RequestTreeNode::new_group(GroupOptions::FullPath(
+            path.to_string_lossy().to_string(),
+        ))),
+        Err(_err) => {
+            // @TODO: log error
+            //
+            let msg = format!(
+                "Could not create new folder at path: '{}'",
+                path.to_string_lossy().to_string()
+            );
+            Err(FrontendError::new_with_message(DisplayErrorKind::AddGroupNodeError, msg).into())
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, rspc::Type, Debug)]

@@ -1,7 +1,4 @@
-use std::{
-    cell::RefCell,
-    collections::HashMap,
-};
+use std::{cell::RefCell, collections::HashMap};
 
 use rspc::Type;
 use serde::{Deserialize, Serialize};
@@ -10,7 +7,7 @@ use walkdir::WalkDir;
 use crate::{
     error::FrontendError,
     model::{request_to_request_model, Collection},
-    tree::{RequestTree, RequestTreeNode},
+    tree::{GroupOptions, RequestTree, RequestTreeNode},
 };
 use http_rest_file::parser::Parser as RestFileParser;
 
@@ -27,7 +24,7 @@ pub fn load_requests_for_collection(
 ) -> Result<LoadRequestsResult, FrontendError> {
     let mut parse_errs: Vec<FrontendError> = Vec::new();
     let mut nodes: HashMap<String, Vec<RefCell<RequestTreeNode>>> = HashMap::new();
-    let mut root = RequestTreeNode::new_group(collection.path.clone());
+    let mut root = RequestTreeNode::new_group(GroupOptions::FullPath(collection.path.clone()));
 
     for entry in WalkDir::new(&collection.path) {
         if let Ok(entry) = entry {
@@ -75,7 +72,7 @@ pub fn load_requests_for_collection(
             } else {
                 // @TODO handle error
                 let path = entry.path().to_string_lossy().to_string();
-                let group_node = RequestTreeNode::new_group(path);
+                let group_node = RequestTreeNode::new_group(GroupOptions::FullPath(path));
                 let entry = nodes.entry(parent_path.to_string_lossy().to_string()); //insert_(parent_path, RefCell::new(node));
                 let elements = entry.or_insert(Vec::new());
                 elements.push(RefCell::new(group_node));
@@ -87,7 +84,10 @@ pub fn load_requests_for_collection(
     while !parents.is_empty() {
         let parent = parents.pop().unwrap();
         if let Some(children) = nodes.remove(&parent.filepath) {
-            let children: Vec<RequestTreeNode> = children.into_iter().map(|child| child.into_inner()).collect();
+            let children: Vec<RequestTreeNode> = children
+                .into_iter()
+                .map(|child| child.into_inner())
+                .collect();
             parent.children = children;
             let new_parents: Vec<&mut RequestTreeNode> = parent.children.iter_mut().collect();
             parents.extend(new_parents);

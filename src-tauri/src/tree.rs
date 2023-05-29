@@ -26,11 +26,15 @@ pub struct RequestTreeNode {
     pub is_file_group: bool,
 }
 
-const DEFAULT_OPTIONS: SanitizeOptions<'static> = SanitizeOptions {
+pub const DEFAULT_OPTIONS: SanitizeOptions<'static> = SanitizeOptions {
     replacement: "_",
     windows: cfg!(windows),
     truncate: true,
 };
+
+pub enum GroupOptions {
+    FullPath(String),
+}
 
 impl RequestTreeNode {
     pub fn new_request_node(request_model: RequestModel, path: String) -> Self {
@@ -42,15 +46,18 @@ impl RequestTreeNode {
         node.request = Some(request_model);
         node
     }
-    pub fn new_group(path: String) -> Self {
+    pub fn new_group(options: GroupOptions) -> Self {
         let mut node = RequestTreeNode::default();
-        node.filepath = path.clone();
-        let group_path = std::path::PathBuf::from(path.clone());
-        node.name = match group_path.file_name() {
-            Some(file_name) => file_name.to_string_lossy().to_string(),
-            None => sanitize_filename_with_options(path, DEFAULT_OPTIONS),
-        };
-
+        match options {
+            GroupOptions::FullPath(path) => {
+                node.filepath = path.clone();
+                let group_path = std::path::PathBuf::from(path.clone());
+                node.name = match group_path.file_name() {
+                    Some(file_name) => file_name.to_string_lossy().to_string(),
+                    None => sanitize_filename_with_options(path, DEFAULT_OPTIONS),
+                };
+            }
+        }
         node
     }
 

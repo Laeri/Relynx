@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { Workspace, Collection, Environment, RequestModel, RequestResult, RequestTree } from "../bindings.d";
-import { newWorkspace } from "../model/model";
+import { getUpdateRequestTreeWithRequest } from "../common/treeUtils";
+import { newWorkspace, updatedRequestModel } from "../model/model";
 
 interface RelynxState {
 
@@ -27,8 +28,9 @@ interface RelynxState {
 
   requestTree?: RequestTree,
 
-  updateRequestTree: (requestTree: RequestTree) => void
+  updateRequestTree: (requestTree: RequestTree) => void,
 
+  storeUpdateRequestAndTree: (requestModel: Partial<RequestModel>) => void
 }
 
 //@TODO: Use immertype Callback = (state: State) => void;
@@ -108,7 +110,22 @@ export const useRequestModelStore = create<RelynxState>((set) => {
         ...state, requestTree: requestTree
       };
 
-    })
+    }),
+
+    storeUpdateRequestAndTree: (partial: Partial<RequestModel>) => set((state: RelynxState) => {
+      if (!state.currentRequest || !state.requestTree) {
+        return {}
+      }
+      let newRequestModel = updatedRequestModel(state.currentRequest, partial)
+      let newRequestTree = getUpdateRequestTreeWithRequest(state.requestTree, newRequestModel)
+
+      return {
+        ...state,
+        currentRequest: newRequestModel,
+        requestTree: newRequestTree
+      }
+    }),
+
   }
 });
 

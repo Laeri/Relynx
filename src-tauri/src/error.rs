@@ -48,7 +48,10 @@ pub enum DisplayErrorKind {
     InvalidOpenPath,
     CopyToClipboardError,
     RequestFileAlreadyExists,
-    NodeDeleteError
+    NodeDeleteError,
+    SaveRequestError,
+    RemoveOldRequestFile,
+    AddGroupNodeError
 }
 
 impl std::fmt::Display for FrontendError {

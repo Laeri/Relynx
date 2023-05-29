@@ -266,11 +266,14 @@ export function removeNodeFromRequestTree(requestTree: RequestTree, node: Reques
 }
 
 export function newRequestTreeNode(): RequestTreeNode {
-    let requestTreeNode = newRequestTreeNode();
-    requestTreeNode.id = newUUID();
-    requestTreeNode.name = "New Request";
-    requestTreeNode.children = [];
-    return requestTreeNode;
+  return {
+    id: newUUID(),
+    name: "New Request",
+    children: [],
+    request: null,
+    filepath: "",
+    is_file_group: false
+  };
 }
 
 
