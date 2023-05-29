@@ -5,6 +5,7 @@ mod config;
 mod error;
 mod import;
 mod model;
+mod tree;
 
 use error::{DisplayErrorKind, FrontendError};
 use import::LoadRequestsResult;
@@ -20,6 +21,7 @@ use std::{
 }; // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 use tauri::{api::shell, AppHandle, ClipboardManager, Manager};
 use tauri_plugin_log::LogTarget;
+use tree::RequestTreeNode;
 use walkdir::WalkDir;
 
 #[tauri::command]
@@ -237,6 +239,81 @@ fn open_folder_native(app_handle: &tauri::AppHandle, path: &String) -> Result<()
     }
 }
 
+#[derive(Serialize, Deserialize, rspc::Type, Debug)]
+pub struct AddRequestNodeParams {
+    collection: Collection,
+    parent: RequestTreeNode,
+    new_request: RequestModel,
+    requests_in_same_file: Vec<RequestModel>,
+}
+
+#[tauri::command]
+fn add_request_node(params: AddRequestNodeParams) -> RequestTreeNode {
+    // @TODO
+    todo!("@TODO");
+}
+
+#[derive(Serialize, Deserialize, rspc::Type, Debug)]
+pub struct AddGroupNodeParams {
+    collection: Collection,
+    parent: RequestTreeNode,
+    group_name: String,
+}
+
+#[tauri::command]
+fn add_group_node(params: AddGroupNodeParams) -> RequestTreeNode {
+    // @TODO
+    todo!("@TODO");
+}
+
+#[derive(Serialize, Deserialize, rspc::Type, Debug)]
+pub struct DeleteNodeParams {
+    collection: Collection,
+    node: RequestTreeNode,
+}
+#[tauri::command]
+fn delete_node(params: DeleteNodeParams) {
+    // @TODO
+    todo!("@TODO");
+}
+
+#[derive(Serialize, Deserialize, rspc::Type, Debug)]
+pub struct DragAndDropParams {
+    collection: Collection,
+    drag_node_parent: RequestTreeNode,
+    drag_node: RequestTreeNode,
+    drop_node: RequestTreeNode,
+    drop_index: u32,
+}
+
+#[derive(Serialize, Deserialize, rspc::Type, Debug)]
+pub struct DragAndDropResult {
+    // @TODO
+    new_drop_node: RequestTreeNode,
+    remove_drag_node_parent: bool
+}
+
+#[tauri::command]
+fn drag_and_drop(params: DragAndDropParams) -> DragAndDropResult {
+    // @TODO
+    todo!("@TODO");
+}
+
+#[derive(Serialize, Deserialize, rspc::Type, Debug)]
+pub struct ReorderNodesParams {
+    // @TODO
+    collection: Collection,
+    drag_node: RequestTreeNode,
+    drop_node: RequestTreeNode,
+    drop_index: u32,
+}
+
+#[tauri::command]
+fn reorder_nodes_within_parent(params: ReorderNodesParams) -> RequestTreeNode {
+    // @TODO
+    todo!("@TODO");
+}
+
 fn router() -> Arc<Router> {
     let router = Router::new()
         // change the bindings filename to your liking
@@ -286,6 +363,21 @@ fn router() -> Arc<Router> {
                 let handle = mutex.app_handle.as_ref().unwrap();
                 open_folder_native(handle, &path)
             })
+        })
+        .query("add_request_node", |t| {
+            t(|_, params: AddRequestNodeParams| add_request_node(params))
+        })
+        .query("add_group_node", |t| {
+            t(|_, params: AddGroupNodeParams| add_group_node(params))
+        })
+        .query("delete_node", |t| {
+            t(|_, params: DeleteNodeParams| delete_node(params))
+        })
+        .query("drag_and_drop", |t| {
+            t(|_, params: DragAndDropParams| drag_and_drop(params))
+        })
+        .query("reorder_nodes_within_parent", |t| {
+            t(|_, params: ReorderNodesParams| reorder_nodes_within_parent(params))
         })
         .build();
     Arc::new(router)

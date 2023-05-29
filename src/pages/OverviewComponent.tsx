@@ -64,9 +64,6 @@ export function OverviewComponent(_props: ComponentProps) {
           footer={<Button label={"Import Collection"} icon="pi pi-plus"
             onClick={() => openImportCollectionModal(workspace)} />}
         />
-
-        <Button onClick={() => backend.copyToClipboard("TROLOLO")}>COPY TO CLIPBOARD</Button>
-
       </div>
     </div>
   )

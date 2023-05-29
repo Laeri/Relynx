@@ -1,6 +1,7 @@
 import { createClient } from '@rspc/client'
 import { TauriTransport } from '@rspc/tauri'
-import { Procedures, Workspace, Collection, AddCollectionsResult, ImportCollectionResult, LoadRequestsResult, RunRequestCommand, RequestResult, RequestModel, SaveRequestCommand } from './bindings';
+import { Procedures, Workspace, Collection, AddCollectionsResult, ImportCollectionResult, LoadRequestsResult, RunRequestCommand, RequestResult, RequestModel, SaveRequestCommand, RequestTreeNode, DragAndDropResult } from './bindings';
+import { FError } from './common/errorhandling';
 
 export const api = createClient<Procedures>({
   transport: new TauriTransport()
@@ -41,7 +42,9 @@ class Backend {
   }
 
   loadRequestsForCollection(collection: Collection): Promise<LoadRequestsResult> {
-    return api.query(['load_requests_for_collection', collection])
+    let result = api.query(['load_requests_for_collection', collection])
+    console.log('load requests for collection result: ', result);
+    return result;
   }
 
   importPostmanCollection(workspace: Workspace, import_postman_path: string, import_result_path: string): Promise<ImportCollectionResult> {
@@ -54,18 +57,44 @@ class Backend {
 
   // @TODO: check if current request one parameter?
   saveRequest(requests: RequestModel[], collection: Collection, requestName: string): Promise<RequestModel> {
-    let command: SaveRequestCommand = {requests: requests, collection: collection, request_name: requestName};
+    let command: SaveRequestCommand = { requests: requests, collection: collection, request_name: requestName };
     return api.query(['save_request', command]);
   }
 
   copyToClipboard(value: string): Promise<null> {
-    console.log('copy to clipboard');
     return api.query(['copy_to_clipboard', value]);
   }
 
   openFolderNative(path: string): Promise<null> {
-    console.log('open folder native: ', path);
     return api.query(['open_folder_native', path]);
+  }
+
+  addRequestNode(collection: Collection, parent: RequestTreeNode, new_request: RequestModel, requestsInSameFile: RequestModel[]): Promise<RequestTreeNode> {
+    return api.query(['add_request_node', { collection: collection, parent: parent, new_request: new_request, requests_in_same_file: requestsInSameFile }]);
+  }
+
+  addGroupNode(collection: Collection, parent: RequestTreeNode, groupName: string): Promise<RequestTreeNode> {
+    return api.query(['add_group_node', { collection: collection, parent: parent, group_name: groupName }]);
+  }
+
+  deleteNode(collection: Collection, node: RequestTreeNode): Promise<null> {
+    return api.query(['delete_node', { collection: collection, node: node }]);
+  }
+
+  //Parent *RequestTreeNode, dragNode *RequestTreeNode, dropNode *RequestTreeNode, dropIndex int) (dragAndDropResult *DragAndDropResult, returnError error) {
+
+  dragAndDrop(collection: Collection, dragNodeParent: RequestTreeNode, dragNode: RequestTreeNode, dropNode: RequestTreeNode, dropIndex: number): Promise<DragAndDropResult> {
+    return api.query(['drag_and_drop', { collection: collection, drag_node_parent: dragNodeParent, drag_node: dragNode, drop_node: dropNode, drop_index: dropIndex }]);
+  }
+
+  // collection *Collection, dragNode *RequestTreeNode, dropNode *RequestTreeNode, dropIndex int
+  reorderNodesWithinParent(collection: Collection, dragNode: RequestTreeNode, dropNode: RequestTreeNode, dropIndex: number): Promise<RequestTreeNode> {
+    return api.query(['reorder_nodes_within_parent', { collection: collection, drag_node: dragNode, drop_node: dropNode, drop_index: dropIndex }]);
+  }
+
+  logFrontendError(error: FError): Promise<void> {
+    // @TODO: IMPLEMENT
+    return Promise.resolve();
   }
 }
 

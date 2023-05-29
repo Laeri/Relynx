@@ -57,7 +57,7 @@ pub struct CollectionConfig {
     pub name: String,
 }
 
-type Uuid = String;
+pub type Uuid = String;
 
 #[derive(Serialize, Deserialize, Type, Debug)]
 pub struct QueryParam {
@@ -89,7 +89,7 @@ impl From<HttpRestFile> for RequestFileModel {
     }
 }
 
-fn request_to_request_model(value: http_rest_file::model::Request, path: String) -> RequestModel {
+pub fn request_to_request_model(value: http_rest_file::model::Request, path: String) -> RequestModel {
     let url = value.request_line.target.to_string();
     // @TODO: parse query from url !
     RequestModel {

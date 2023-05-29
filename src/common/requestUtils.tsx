@@ -1,72 +1,66 @@
-import { RequestModel } from '../bindings';
-/* @TODO import {addRequestToRequestTree, PrimeNode} from "./treeUtils";
-*
-import {ToastContext} from "../App";
-import {NewFError} from "../models/Error";
-import {catchError, displayAndLogErr} from "./errorhandling";
-import {create} from "react-modal-promise";
-import {CreateRequestModal} from "../components/modals/CreateRequestModal";
-import {BodyTypes, newRequestModel} from "../models/Request";
-import {AddRequestNode} from "../../wailsjs/go/main/App";
-import {useRequestModelStore} from "../stores/requestStore";
-import React from "react";
-import RequestTreeNode = models.RequestTreeNode;
-import RequestModel = models.RequestModel;
-import AddRequestNodeResult = models.AddRequestNodeResult;
-import {RequestModel} from '../bindings';
+import { addRequestToRequestTree, PrimeNode } from "./treeUtils";
 
-export const createNewRequestNode = (parent: RequestTreeNode, toast: ToastContext, parentPrime?: PrimeNode) => {
-    // @TODO: expand parent prime
+import { ToastContext } from "../App";
+import { NewFError } from "../model/error";
+import { catchError, displayAndLogErr } from "./errorhandling";
+import { create } from "react-modal-promise";
+import { CreateRequestModal } from "../components/modals/CreateRequestModal";
+import { newRequestModel } from "../model/request";
+import { backend } from '../rpc';
+import { useRequestModelStore } from "../stores/requestStore";
+import { Collection, RequestModel, RequestTreeNode } from '../bindings';
 
-    const collection = useRequestModelStore.getState().currentCollection;
-    const requestTree = useRequestModelStore.getState().requestTree;
-    const updateRequestTree = useRequestModelStore.getState().updateRequestTree;
-    const setCurrentRequest = useRequestModelStore.getState().setCurrentRequest;
+// @TODO why is parentPrime never used?
+export const createNewRequestNode = (parent: RequestTreeNode, toast: ToastContext, _parentPrime?: PrimeNode) => {
+  // @TODO: expand parent prime
 
-    if (!parent) {
-        let error = NewFError("createNewGroupNode.noParent", "Error during create", "Could not create the new group correctly", "no parent when creating a new group");
-        displayAndLogErr(error, toast);
-        return
+  const collection = useRequestModelStore.getState().currentCollection as Collection;
+  const requestTree = useRequestModelStore.getState().requestTree;
+  const updateRequestTree = useRequestModelStore.getState().updateRequestTree;
+  const setCurrentRequest = useRequestModelStore.getState().setCurrentRequest;
+
+  if (!parent) {
+    let error = NewFError("createNewGroupNode.noParent", "Error during create", "Could not create the new group correctly", "no parent when creating a new group");
+    displayAndLogErr(error, toast);
+    return
+  }
+
+  const createRequestModalPromise = create(({ onResolve, onReject, isOpen }) => {
+    return <CreateRequestModal isOpen={isOpen} onResolve={onResolve} onReject={() => onReject()} />
+  });
+
+  createRequestModalPromise().then((requestName?: string) => {
+    if (!requestName) {
+      return
+    }
+    let newRequest = newRequestModel({});
+    newRequest.name = requestName;
+    // normally one request per file but if the parent is a file group there are multiple requests within the same file
+    let requestsWithinFile: RequestModel[] = [];
+
+    if (parent.is_file_group) {
+      requestsWithinFile = parent.children.filter((child: RequestTreeNode) => child !== undefined)
+        .map((child: RequestTreeNode) => child.request as RequestModel);
     }
 
-    const createRequestModalPromise = create(({onResolve, onReject, isOpen}) => {
-        return <CreateRequestModal isOpen={isOpen} onResolve={onResolve} onReject={() => onReject()}/>
-    });
+    backend.addRequestNode(collection, parent, newRequest, requestsWithinFile).then((node: RequestTreeNode) => {
+      let [newTree, error] = addRequestToRequestTree(requestTree, parent, node);
+      if (error) {
+        displayAndLogErr(error, toast);
+      }
+      updateRequestTree(newTree);
+      setCurrentRequest(newRequest);
+    }).catch(catchError(toast));
 
-    createRequestModalPromise().then((requestName?: string) => {
-        if (!requestName) {
-            return
-        }
-        let newRequest = newRequestModel();
-        newRequest.Name = requestName;
-        // normally one request per file but if the parent is a file group there are multiple requests within the same file
-        let requestsWithinFile: RequestModel[] = []
-
-        if (parent.IsFileGroup) {
-            requestsWithinFile = parent.Children.filter((child: RequestTreeNode) => child !== undefined)
-                .map((child: RequestTreeNode) => child.RequestModel as RequestModel)
-        }
-
-        AddRequestNode(collection, parent, newRequest, requestsWithinFile).then((result: AddRequestNodeResult) => {
-            if (!result.RequestTreeNode) {
-                return
-            }
-            let [newTree, error] = addRequestToRequestTree(requestTree, parent, result.RequestTreeNode);
-            if (error) {
-                displayAndLogErr(error, toast);
-            }
-            updateRequestTree(newTree);
-            setCurrentRequest(newRequest);
-        }).catch(catchError(toast));
-
-    });
+  });
 }
- 
+
+// @TODO: stub replace with real function
 export function hasInvalidFileBody(request: RequestModel) {
-    return request.RequestBody?.BodyType == BodyTypes.BINARY_FILE &&
-        (request.RequestBody.BinaryFilePath === "" || request.RequestBody.BinaryFilePath === undefined || request.RequestBody.BinaryFilePath === null)
+  return false
 }
-*/
-export function hasInvalidFileBody(_request: RequestModel): boolean {
-  throw new Error("@TODO requestUtils.tsx::hasInvalidFileBody");
-}
+/* export function hasInvalidFileBody(request: RequestModel) {
+  return request.body?.BodyType == BodyTypes.BINARY_FILE &&
+    (request.body.BinaryFilePath === "" || request.body.BinaryFilePath === undefined || request.body.BinaryFilePath === null)
+} */
+

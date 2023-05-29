@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { Workspace, Collection, Environment, RequestModel, RequestResult } from "../bindings.d";
+import { Workspace, Collection, Environment, RequestModel, RequestResult, RequestTree } from "../bindings.d";
 import { newWorkspace } from "../model/model";
 
 interface RelynxState {
@@ -14,6 +14,7 @@ interface RelynxState {
 
   setCurrentCollection: (collection?: Collection) => void,
   currentRequest?: RequestModel,
+  setCurrentRequest: (request?: RequestModel) => void,
   currentEnvironment?: Environment,
   environments: Environment[],
 
@@ -23,6 +24,10 @@ interface RelynxState {
   requestResult?: RequestResult,
 
   clearRequestResult: () => void,
+
+  requestTree?: RequestTree,
+
+  updateRequestTree: (requestTree: RequestTree) => void
 
 }
 
@@ -75,6 +80,13 @@ export const useRequestModelStore = create<RelynxState>((set) => {
     }),
 
     currentRequest: undefined,
+    setCurrentRequest: (request?: RequestModel) => set((state: RelynxState) => {
+      return {
+        ...state,
+        currentRequest: request
+      };
+    }),
+
     currentEnvironment: undefined,
     environments: [],
     setCurrentEnvironment: (environment?: Environment) => set((state: RelynxState) => {
@@ -89,6 +101,14 @@ export const useRequestModelStore = create<RelynxState>((set) => {
     clearRequestResult: () => set((state: RelynxState) => ({
       ...state, requestResult: undefined
     })),
+
+    requestTree: undefined,
+    updateRequestTree: (requestTree: RequestTree) => set((state: RelynxState) => {
+      return {
+        ...state, requestTree: requestTree
+      };
+
+    })
   }
 });
 

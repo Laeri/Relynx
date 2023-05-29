@@ -1,0 +1,61 @@
+import {Button} from "primereact/button";
+import {useRef} from "react";
+import {Tag} from "primereact/tag";
+import {Message} from "primereact/message";
+import {OverlayPanel} from "primereact/overlaypanel";
+import {hasInvalidFileBody} from "../common/requestUtils";
+import {RequestModel, ImportWarning} from '../bindings';
+
+interface ComponentProps {
+    requestId: string,
+    onClick: () => void,
+    highlighted: boolean,
+    requestModel: RequestModel,
+    label: string,
+
+    importWarnings: ImportWarning[]
+}
+
+export function RequestItemAsButton(props: ComponentProps) {
+    const invalidBodyWarnMessage = useRef<OverlayPanel>(null);
+    const importWarnMessage = useRef<OverlayPanel>(null);
+    return (
+        <Button onClick={props.onClick}
+                className={"p-button-raised p-button-text" + (props.highlighted ? 'p-button-secondary' : '')}
+                style={{display: 'flex', flexGrow: 1}}
+                key={props.requestId}><Tag value={props.requestModel.method.toString()}/>
+            <span style={{flexGrow: 1}}>{props.label}</span>
+            {props.importWarnings.length > 0 &&
+                <>
+                    <div
+                        style={{padding:'3px', display: 'flex', justifyContent: 'center', alignItems: 'center'}}
+                        onMouseEnter={(e) => importWarnMessage?.current?.show(e, e.target)}
+
+                        onMouseLeave={(e) => importWarnMessage?.current?.hide()}
+                    ><i className="pi pi-exclamation-triangle color-warn"/></div>
+
+                    <OverlayPanel ref={importWarnMessage}>
+                        <Message severity={"warn"}
+                                 text={"There were problems during the import with this request!"}/>
+                    </OverlayPanel>
+                </>
+            }
+            {hasInvalidFileBody(props.requestModel) &&
+                <>
+                    <div
+                          style={{padding:'3px', display: 'flex', justifyContent: 'center', alignItems: 'center'}}
+                          onMouseEnter={(e) => invalidBodyWarnMessage?.current?.show(e, e.target)}
+
+                          onMouseLeave={(e) => invalidBodyWarnMessage?.current?.hide()}
+                    ><i className="pi pi-exclamation-triangle color-warn"/></div>
+
+                    <OverlayPanel ref={invalidBodyWarnMessage}>
+                        <Message severity={"warn"}
+                                 text={"This request has a file without valid file path as body type set!"}/>
+                    </OverlayPanel>
+                </>
+            }
+
+        </Button>
+    )
+}
