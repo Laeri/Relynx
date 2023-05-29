@@ -26,6 +26,8 @@ postman_collection = "0.2.0"
 #@TODOhttp-rest-file = { git = "https://github.com/Laeri/http-rest-file.git", tag="v0.1.1" }
 http-rest-file = { path = "../../../http-rest-file/", features = ["serde", "rspc"] }
 uuid = { version = "1.3.2", features=["v4"] }  
+regex = "1.8.3"
+lazy_static = "1.4.0"
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem

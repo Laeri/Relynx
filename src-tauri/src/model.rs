@@ -1,6 +1,6 @@
 use http_rest_file::model::{
     DataSource, DispositionField, Header as HttpRestFileHeader, HttpMethod, HttpRestFile,
-    HttpVersion, Multipart as HttpRestfileMultipart, RequestBody as HttpRestFileBody,
+    HttpVersion, Multipart as HttpRestfileMultipart, RequestBody as HttpRestFileBody, RequestLine,
     RequestSettings, WithDefault,
 };
 use rspc::Type;
@@ -59,7 +59,7 @@ pub struct CollectionConfig {
 
 pub type Uuid = String;
 
-#[derive(Serialize, Deserialize, Type, Debug)]
+#[derive(Serialize, Deserialize, Type, Debug, Clone)]
 pub struct QueryParam {
     key: String,
     value: String,
@@ -89,9 +89,10 @@ impl From<HttpRestFile> for RequestFileModel {
     }
 }
 
-pub fn request_to_request_model(value: http_rest_file::model::Request, path: String) -> RequestModel {
-    let url = value.request_line.target.to_string();
-    // @TODO: parse query from url !
+pub fn request_to_request_model(
+    value: http_rest_file::model::Request,
+    path: String,
+) -> RequestModel {
     RequestModel {
         id: uuid::Uuid::new_v4().to_string(),
         name: value.name.clone().unwrap_or(String::new()),
@@ -107,7 +108,7 @@ pub fn request_to_request_model(value: http_rest_file::model::Request, path: Str
     }
 }
 
-#[derive(Serialize, Deserialize, Type, Debug)]
+#[derive(Serialize, Deserialize, Type, Debug, Clone)]
 pub struct Header {
     key: String,
     value: String,
@@ -124,7 +125,7 @@ impl From<&HttpRestFileHeader> for Header {
     }
 }
 
-#[derive(Serialize, Deserialize, Type, Debug)]
+#[derive(Serialize, Deserialize, Type, Debug, Clone)]
 pub enum RequestBody {
     None,
     Multipart {
@@ -150,7 +151,7 @@ impl From<&HttpRestFileBody> for RequestBody {
     }
 }
 
-#[derive(Serialize, Deserialize, Type, Debug)]
+#[derive(Serialize, Deserialize, Type, Debug, Clone)]
 pub struct Multipart {
     pub name: String,
     pub data: DataSource<String>,
@@ -169,22 +170,31 @@ impl From<&HttpRestfileMultipart> for Multipart {
     }
 }
 
-#[derive(Serialize, Deserialize, Type, Debug)]
+#[derive(Serialize, Deserialize, Type, Debug, Clone)]
 pub struct RequestModel {
     pub id: Uuid,
-    name: String,
-    description: String,
-    method: HttpMethod,
-    url: String,
-    query_params: Vec<QueryParam>,
-    headers: Vec<Header>,
-    body: RequestBody,
-    rest_file_path: String,
-    http_version: Replaced<HttpVersion>,
-    settings: RequestSettings,
+    pub name: String,
+    pub description: String,
+    pub method: HttpMethod,
+    pub url: String,
+    pub query_params: Vec<QueryParam>,
+    pub headers: Vec<Header>,
+    pub body: RequestBody,
+    pub rest_file_path: String,
+    pub http_version: Replaced<HttpVersion>,
+    pub settings: RequestSettings,
 }
 
-#[derive(Serialize, Deserialize, Type, Debug)]
+impl RequestModel {
+    pub fn get_request_file_path(&self, parent_path: String) -> String {
+        let parent_path = std::path::Path::new(&parent_path);
+        // @TODO files filenamify
+        let path = parent_path.join(std::path::Path::new(&self.name));
+        path.to_string_lossy().to_string()
+    }
+}
+
+#[derive(Serialize, Deserialize, Type, Debug, Clone)]
 pub struct Replaced<T> {
     value: T,
     is_replaced: bool,
@@ -278,4 +288,81 @@ pub struct SaveRequestCommand {
     pub requests: Vec<RequestModel>,
     pub collection: Collection,
     pub request_name: String,
+}
+
+impl From<&Header> for http_rest_file::model::Header {
+    fn from(value: &Header) -> Self {
+        http_rest_file::model::Header {
+            value: value.value.clone(),
+            key: value.key.clone(),
+        }
+    }
+}
+impl From<&Multipart> for http_rest_file::model::Multipart {
+    fn from(value: &Multipart) -> Self {
+        http_rest_file::model::Multipart {
+            data: value.data.clone(),
+            headers: value.headers.iter().map(Into::into).collect(),
+            name: value.name.clone(),
+            fields: value.fields.clone(),
+        }
+    }
+}
+use http_rest_file::model::RequestBody as RestFileBody;
+impl From<RequestBody> for http_rest_file::model::RequestBody {
+    fn from(value: RequestBody) -> Self {
+        match value {
+            RequestBody::None => RestFileBody::None,
+            RequestBody::Text { data } => RestFileBody::Text { data },
+            RequestBody::Multipart { boundary, parts } => RestFileBody::Multipart {
+                boundary,
+                parts: parts.iter().map(Into::into).collect(),
+            },
+        }
+    }
+}
+
+impl From<RequestModel> for http_rest_file::model::Request {
+    fn from(value: RequestModel) -> Self {
+        From::<&RequestModel>::from(&value)
+    }
+}
+impl From<&RequestModel> for http_rest_file::model::Request {
+    fn from(value: &RequestModel) -> Self {
+        let http_version = match  value.http_version.clone() {
+            Replaced {
+                value,
+                is_replaced: false,
+            } => WithDefault::Some(value.clone()),
+            Replaced {
+                value,
+                is_replaced: true,
+            } => WithDefault::Default(value.clone()),
+        };
+        let comments: Vec<http_rest_file::model::Comment> = value
+            .description
+            .split("\n")
+            .into_iter()
+            .map(|str| http_rest_file::model::Comment {
+                kind: http_rest_file::model::CommentKind::DoubleSlash,
+                value: str.to_string(),
+            })
+            .collect();
+        let target = value.url.as_str().into();
+        http_rest_file::model::Request {
+            name: Some(value.name.clone()),
+            request_line: RequestLine {
+                method: WithDefault::Some(value.method.clone()),
+                http_version,
+                target,
+            },
+            body: value.body.clone().into(),
+            headers: value.headers.iter().map(Into::into).collect(),
+            comments,
+            settings: value.settings.clone(),
+            redirect: None, // @TODO
+            pre_request_script: None,
+            response_handler: None,
+        }
+    }
 }

@@ -8,14 +8,14 @@ import { CreateRequestModal } from "../components/modals/CreateRequestModal";
 import { newRequestModel } from "../model/request";
 import { backend } from '../rpc';
 import { useRequestModelStore } from "../stores/requestStore";
-import { Collection, RequestModel, RequestTreeNode } from '../bindings';
+import { Collection, RequestModel, RequestTree, RequestTreeNode } from '../bindings';
 
 // @TODO why is parentPrime never used?
 export const createNewRequestNode = (parent: RequestTreeNode, toast: ToastContext, _parentPrime?: PrimeNode) => {
   // @TODO: expand parent prime
 
   const collection = useRequestModelStore.getState().currentCollection as Collection;
-  const requestTree = useRequestModelStore.getState().requestTree;
+  const requestTree = useRequestModelStore.getState().requestTree as RequestTree;
   const updateRequestTree = useRequestModelStore.getState().updateRequestTree;
   const setCurrentRequest = useRequestModelStore.getState().setCurrentRequest;
 

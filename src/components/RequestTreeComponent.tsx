@@ -159,7 +159,7 @@ export function RequestTreeComponent(props: ComponentProps) {
       let parentOfDropNode = findParent(props.requestTree, dropNode.requestNode)
       if (parentOfDropNode) {
         dropTreeNode = parentOfDropNode
-        dropIndex = parentOfDropNode.Children.map((child: RequestTreeNode) => child.id).indexOf(dropNode.requestNode.id)
+        dropIndex = parentOfDropNode.children.map((child: RequestTreeNode) => child.id).indexOf(dropNode.requestNode.id)
       }
     }
 
@@ -207,8 +207,8 @@ export function RequestTreeComponent(props: ComponentProps) {
   }
 
   const onPrimeTreeNodeClicked = (primeNode: PrimeNode) => {
-    if (primeNode.requestNode?.RequestModel) {
-      setCurrentRequest(primeNode.requestNode.RequestModel);
+    if (primeNode.requestNode?.request) {
+      setCurrentRequest(primeNode.requestNode.request);
       let options = { replace: true };
       if (location.pathname == '/collection') {
         options.replace = false;
@@ -228,7 +228,7 @@ export function RequestTreeComponent(props: ComponentProps) {
           <div className={'p-button-raised p-button-text'}
             style={{ flexGrow: 1, display: 'flex', justifyContent: 'flex-start', alignItems: 'center' }}>
             {
-              <span className={`pi ${primeNode.groupNode?.IsFileGroup ? 'pi-file' : 'pi-folder'}`} />
+              <span className={`pi ${primeNode.groupNode?.is_file_group ? 'pi-file' : 'pi-folder'}`} />
             }
             {/*TODO: maybe add info icon that this is a file group? */}
             <h4 style={{
@@ -237,7 +237,7 @@ export function RequestTreeComponent(props: ComponentProps) {
               alignItems: 'center',
               cursor: 'pointer'
 
-            }}>{primeNode.label} {primeNode.groupNode?.IsFileGroup ? '(File)' : ''}</h4>
+            }}>{primeNode.label} {primeNode.groupNode?.is_file_group ? '(File)' : ''}</h4>
           </div>
 
           <ActionDropdown styles={{ flexGrow: 1, marginRight: '3px' }}>
@@ -264,10 +264,10 @@ export function RequestTreeComponent(props: ComponentProps) {
       return (
         <div style={{ width: '100%', display: 'flex', alignItems: 'center' }}>
           <RequestItemAsButton onClick={() => onPrimeTreeNodeClicked(primeNode)} label={primeNode.label}
-            requestModel={primeNode.requestNode?.RequestModel as RequestModel}
+            requestModel={primeNode.requestNode?.request as RequestModel}
             requestId={primeNode.key}
             importWarnings={props.collection.import_warnings.filter((importWarning: ImportWarning) => {
-              let requestModel = primeNode.requestNode?.RequestModel as RequestModel
+              let requestModel = primeNode.requestNode?.request as RequestModel
               return importWarning.rest_file_path == requestModel.rest_file_path && importWarning.request_name == requestModel.name
             })}
             highlighted={props.currentRequest?.id == primeNode.key} />

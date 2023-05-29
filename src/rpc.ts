@@ -70,7 +70,9 @@ class Backend {
   }
 
   addRequestNode(collection: Collection, parent: RequestTreeNode, new_request: RequestModel, requestsInSameFile: RequestModel[]): Promise<RequestTreeNode> {
-    return api.query(['add_request_node', { collection: collection, parent: parent, new_request: new_request, requests_in_same_file: requestsInSameFile }]);
+    let result =  api.query(['add_request_node', { collection: collection, parent: parent, new_request: new_request, requests_in_same_file: requestsInSameFile }]);
+    console.log('RESULT: ', result);
+    return result;
   }
 
   addGroupNode(collection: Collection, parent: RequestTreeNode, groupName: string): Promise<RequestTreeNode> {

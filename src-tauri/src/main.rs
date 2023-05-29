@@ -5,9 +5,11 @@ mod config;
 mod error;
 mod import;
 mod model;
+mod sanitize;
 mod tree;
 
 use error::{DisplayErrorKind, FrontendError};
+use http_rest_file::{model::HttpRestFile, Serializer};
 use import::LoadRequestsResult;
 use model::{
     AddCollectionsResult, Collection, CollectionConfig, ImportCollectionResult, RequestModel,
@@ -248,8 +250,68 @@ pub struct AddRequestNodeParams {
 }
 
 #[tauri::command]
-fn add_request_node(params: AddRequestNodeParams) -> RequestTreeNode {
+fn add_request_node(params: AddRequestNodeParams) -> Result<RequestTreeNode, rspc::Error> {
     // @TODO
+    let (file_model, node) = if params.parent.is_file_group {
+        // new request is added last within the file
+        let mut models = params.requests_in_same_file;
+        let new_request_tree_node = Ok(RequestTreeNode::new_request_node(
+            params.new_request.clone(),
+            params.parent.filepath.clone(),
+        ));
+
+        models.push(params.new_request);
+        let requests: Vec<http_rest_file::model::Request> =
+            models.into_iter().map(Into::into).collect();
+        (
+            HttpRestFile {
+                requests,
+                path: Box::new(PathBuf::from(params.parent.filepath)),
+                errs: vec![],
+                extension: Some(http_rest_file::model::HttpRestFileExtension::Http),
+            },
+            new_request_tree_node,
+        )
+    } else {
+        // @TODO: check if any node with same name exists and return
+        let request_path = params
+            .new_request
+            .get_request_file_path(params.parent.filepath);
+        let request_path = std::path::PathBuf::from(request_path);
+        let new_request_tree_node = Ok(RequestTreeNode::new_request_node(
+            params.new_request.clone(),
+            request_path.to_string_lossy().to_string(),
+        ));
+
+        if request_path.exists() {
+            let msg = format!(
+                "Cannot save new request to path: '{}' as the file already exists",
+                request_path.to_string_lossy().to_string()
+            );
+
+            return Err(FrontendError::new_with_message(
+                DisplayErrorKind::RequestFileAlreadyExists,
+                msg,
+            )
+            .into());
+        }
+        (
+            HttpRestFile {
+                requests: vec![params.new_request.into()],
+                path: Box::new(request_path),
+                errs: vec![],
+                extension: Some(http_rest_file::model::HttpRestFileExtension::Http),
+            },
+            new_request_tree_node,
+        )
+    };
+    print!("FileModel: {:?}", file_model);
+    print!("Node: {:?}", node);
+    match Serializer::serialize_to_file(&file_model) {
+        Ok(()) => return node,
+        // @TODO: handle error
+        Err(_err) => {}
+    }
     todo!("@TODO");
 }
 
@@ -290,7 +352,7 @@ pub struct DragAndDropParams {
 pub struct DragAndDropResult {
     // @TODO
     new_drop_node: RequestTreeNode,
-    remove_drag_node_parent: bool
+    remove_drag_node_parent: bool,
 }
 
 #[tauri::command]

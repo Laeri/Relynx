@@ -1,16 +1,7 @@
 use crate::model::{RequestModel, Uuid};
+use crate::sanitize::{sanitize_filename_with_options, Options as SanitizeOptions};
 use rspc::Type;
 use serde::{Deserialize, Serialize};
-
-/* Id           UUID               `json:"Id"`
-   Name         string             `json:"Name"`
-   RequestModel *RequestModel      `json:"RequestModel"`
-   Children     []*RequestTreeNode `json:"Children"`
-   // path to the 'folder'/'file' within the file system
-   Filepath string `json:"Filepath"`
-   // if this node is actually a file (a single file can contain multiple requests)
-   IsFileGroup bool `json:"IsFileGroup"`
-*/
 
 #[derive(Serialize, Deserialize, Type, Debug)]
 pub struct RequestTree {
@@ -20,7 +11,7 @@ pub struct RequestTree {
 impl Default for RequestTree {
     fn default() -> Self {
         RequestTree {
-            root: RequestTreeNode::default()
+            root: RequestTreeNode::default(),
         }
     }
 }
@@ -35,21 +26,41 @@ pub struct RequestTreeNode {
     pub is_file_group: bool,
 }
 
+const DEFAULT_OPTIONS: SanitizeOptions<'static> = SanitizeOptions {
+    replacement: "_",
+    windows: cfg!(windows),
+    truncate: true,
+};
+
 impl RequestTreeNode {
     pub fn new_request_node(request_model: RequestModel, path: String) -> Self {
         let mut node = RequestTreeNode::default();
+        // @TODO check if name works for a file name
+
+        node.name = sanitize_filename_with_options(&request_model.name, DEFAULT_OPTIONS);
         node.filepath = path;
         node.request = Some(request_model);
         node
     }
     pub fn new_group(path: String) -> Self {
         let mut node = RequestTreeNode::default();
-        node.filepath = path;
+        node.filepath = path.clone();
+        let group_path = std::path::PathBuf::from(path.clone());
+        node.name = match group_path.file_name() {
+            Some(file_name) => file_name.to_string_lossy().to_string(),
+            None => sanitize_filename_with_options(path, DEFAULT_OPTIONS),
+        };
+
         node
     }
 
     pub fn new_file_group(path: String) -> Self {
         let mut node = RequestTreeNode::default();
+        let file_path = std::path::PathBuf::from(path.clone());
+        node.name = match file_path.file_name() {
+            Some(file_name) => file_name.to_string_lossy().to_string(),
+            None => sanitize_filename_with_options(path.clone(), DEFAULT_OPTIONS),
+        };
         node.is_file_group = true;
         node.filepath = path;
         node

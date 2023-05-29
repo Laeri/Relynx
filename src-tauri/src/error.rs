@@ -46,7 +46,8 @@ pub enum DisplayErrorKind {
     ImportPostmanError,
     ParseError,
     InvalidOpenPath,
-    CopyToClipboardError
+    CopyToClipboardError,
+    RequestFileAlreadyExists
 }
 
 impl std::fmt::Display for FrontendError {
