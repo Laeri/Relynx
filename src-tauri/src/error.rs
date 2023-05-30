@@ -17,10 +17,13 @@ impl FrontendError {
         }
     }
 
-    pub fn new_with_message(kind: DisplayErrorKind, message: String) -> Self {
+    pub fn new_with_message<T>(kind: DisplayErrorKind, message: T) -> Self
+    where
+        T: Into<String>,
+    {
         FrontendError {
             kind,
-            message: Some(message)
+            message: Some(message.into()),
         }
     }
 }
@@ -51,7 +54,10 @@ pub enum DisplayErrorKind {
     NodeDeleteError,
     SaveRequestError,
     RemoveOldRequestFile,
-    AddGroupNodeError
+    AddGroupNodeError,
+    DragAndDropError,
+    InvalidCollectionConfig,
+    ReorderError,
 }
 
 impl std::fmt::Display for FrontendError {

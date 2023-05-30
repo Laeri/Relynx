@@ -19,16 +19,9 @@ use commands::{
 };
 use model::{Collection, RunRequestCommand, SaveRequestCommand, Workspace};
 use rspc::Router;
-use sanitize::sanitize_filename_with_options;
-use serde::{Deserialize, Serialize};
-use std::{
-    path::PathBuf,
-    sync::{Arc, Mutex},
-}; // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
-use tauri::{api::shell, AppHandle, ClipboardManager, Manager};
+use std::sync::Arc;
+use tauri::Manager;
 use tauri_plugin_log::LogTarget;
-use tree::{GroupOptions, RequestTreeNode, DEFAULT_OPTIONS};
-use walkdir::WalkDir;
 
 fn router() -> Arc<Router> {
     let router = Router::new()

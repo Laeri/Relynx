@@ -22,6 +22,7 @@ import { CreateGroupModal } from "./modals/CreateGroupModal";
 import { useLocation, useNavigate } from "react-router";
 import { Collection, RequestTreeNode, RequestTree, RequestModel, ImportWarning, DragAndDropResult } from '../bindings';
 import {backend} from '../rpc';
+import { getDefaultGroupName } from "../common/common";
 
 const updateRequestTree = useRequestModelStore.getState().updateRequestTree;
 const setCurrentRequest = useRequestModelStore.getState().setCurrentRequest;
@@ -33,8 +34,11 @@ export const createNewGroupNode = (toast: ToastContext, expandNode: (parent: Pri
     displayAndLogErr(error, toast);
     return
   }
+
+  let groupName = getDefaultGroupName(parent);
+  
   const modalPromise = create(({ onResolve, onReject, isOpen }) => {
-    return <CreateGroupModal isOpen={isOpen} onResolve={onResolve} onReject={() => onReject()} />
+    return <CreateGroupModal groupName={groupName} isOpen={isOpen} onResolve={onResolve} onReject={() => onReject()} />
   });
 
   modalPromise().then((groupName?: string) => {
@@ -145,6 +149,8 @@ export function RequestTreeComponent(props: ComponentProps) {
    */
   const onReorder = (dragNode: PrimeNode, dropNode: PrimeNode | undefined, dropIndex: number) => {
 
+    console.log('DROP INDEX FROM PRIME');
+
     // cannot drag node into itself
     if (dragNode.id === dropNode?.id) {
       return
@@ -162,6 +168,7 @@ export function RequestTreeComponent(props: ComponentProps) {
       if (parentOfDropNode) {
         dropTreeNode = parentOfDropNode
         dropIndex = parentOfDropNode.children.map((child: RequestTreeNode) => child.id).indexOf(dropNode.requestNode.id)
+        console.log('DROP INDEX COMPUTED: ', dropIndex);
       }
     }
 

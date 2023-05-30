@@ -9,6 +9,7 @@ import { newRequestModel } from "../model/request";
 import { backend } from '../rpc';
 import { useRequestModelStore } from "../stores/requestStore";
 import { Collection, RequestModel, RequestTree, RequestTreeNode } from '../bindings';
+import { getDefaultRequestName } from "./common";
 
 // @TODO why is parentPrime never used?
 export const createNewRequestNode = (parent: RequestTreeNode, toast: ToastContext, _parentPrime?: PrimeNode) => {
@@ -25,8 +26,10 @@ export const createNewRequestNode = (parent: RequestTreeNode, toast: ToastContex
     return
   }
 
+  let requestName = getDefaultRequestName(parent);
+
   const createRequestModalPromise = create(({ onResolve, onReject, isOpen }) => {
-    return <CreateRequestModal isOpen={isOpen} onResolve={onResolve} onReject={() => onReject()} />
+    return <CreateRequestModal requestName={requestName} isOpen={isOpen} onResolve={onResolve} onReject={() => onReject()} />
   });
 
   createRequestModalPromise().then((requestName?: string) => {

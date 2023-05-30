@@ -7,12 +7,13 @@ import {onCtrlEnter} from "../../common/eventhandling";
 interface ComponentProps {
     isOpen: boolean
     onResolve: (requestName?: string) => void
-    onReject: () => void
+    onReject: () => void,
+    requestName?: string,
 }
 
 export function CreateRequestModal(props: ComponentProps) {
 
-    const [requestName, setRequestName] = useState<string>("");
+    const [requestName, setRequestName] = useState<string>(props.requestName ?? "");
 
     const resolveRequestName = () => props.onResolve(requestName)
     return (

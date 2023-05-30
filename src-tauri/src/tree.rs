@@ -1,5 +1,8 @@
+use std::path::PathBuf;
+
 use crate::model::{RequestModel, Uuid};
 use crate::sanitize::{sanitize_filename_with_options, Options as SanitizeOptions};
+use http_rest_file::model::{HttpRestFile, HttpRestFileExtension, Request};
 use rspc::Type;
 use serde::{Deserialize, Serialize};
 
@@ -72,6 +75,14 @@ impl RequestTreeNode {
         node.filepath = path;
         node
     }
+
+    pub fn any_child_with_name(&self, name: &str) -> bool {
+        self.children.iter().any(|child| child.name == name)
+    }
+
+    pub fn is_folder(&self) -> bool {
+        self.request.is_none() && !self.is_file_group
+    }
 }
 
 impl Default for RequestTreeNode {
@@ -84,5 +95,60 @@ impl Default for RequestTreeNode {
             filepath: String::new(),
             is_file_group: false,
         }
+    }
+}
+
+impl TryFrom<RequestTreeNode> for HttpRestFile {
+    type Error = ();
+    fn try_from(value: RequestTreeNode) -> Result<Self, Self::Error> {
+        TryFrom::<&RequestTreeNode>::try_from(&value)
+    }
+}
+
+impl TryFrom<&RequestTreeNode> for HttpRestFile {
+    type Error = ();
+    fn try_from(value: &RequestTreeNode) -> Result<Self, Self::Error> {
+        // here we have a group, cannot be converted into a rest file as it is a directory
+        if !value.is_file_group && value.request.is_none() {
+            return Err(());
+        }
+
+        let requests = if value.is_file_group {
+            value
+                .children
+                .iter()
+                .map(|child| child.request.as_ref().unwrap().into())
+                .collect::<Vec<Request>>()
+        } else if value.request.is_some() {
+            vec![value.request.as_ref().unwrap().into()]
+        } else {
+            return Err(());
+        };
+
+        Ok(HttpRestFile {
+            path: Box::new(std::path::PathBuf::from(value.filepath.clone())),
+            requests,
+            errs: vec![],
+            extension: Some(HttpRestFileExtension::Http),
+        })
+    }
+}
+
+pub fn correct_children_paths(node: &mut RequestTreeNode) {
+    let mut nodes: Vec<&mut RequestTreeNode> = vec![node];
+    while let Some(current) = nodes.pop() {
+        let current_path = PathBuf::from(&current.filepath);
+        current.children.iter_mut().for_each(|child| {
+            let child_path = PathBuf::from(&child.filepath);
+            if let Some(file_name) = child_path.file_name() {
+                child.filepath = current_path.join(file_name).to_string_lossy().to_string();
+            }
+        });
+        nodes.extend(
+            current
+                .children
+                .iter_mut()
+                .collect::<Vec<&mut RequestTreeNode>>(),
+        );
     }
 }

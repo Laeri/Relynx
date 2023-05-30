@@ -1,7 +1,9 @@
+use std::{collections::HashMap, path::PathBuf};
+
 use http_rest_file::model::{
     DataSource, DispositionField, Header as HttpRestFileHeader, HttpMethod, HttpRestFile,
-    HttpVersion, Multipart as HttpRestfileMultipart, RequestBody as HttpRestFileBody, RequestLine,
-    RequestSettings, WithDefault,
+    HttpRestFileExtension, HttpVersion, Multipart as HttpRestfileMultipart, Request,
+    RequestBody as HttpRestFileBody, RequestLine, RequestSettings, WithDefault,
 };
 use rspc::Type;
 use serde::{Deserialize, Serialize};
@@ -28,6 +30,13 @@ pub struct Collection {
     pub import_warnings: Vec<ImportWarning>,
 }
 
+impl Collection {
+    pub fn get_config_file_path(&self) -> PathBuf {
+        let path = PathBuf::from(&self.path);
+        path.join(COLLECTION_CONFIGFILE)
+    }
+}
+
 // @TODO
 #[derive(Serialize, Deserialize, Type, Debug)]
 pub struct ImportWarning {
@@ -52,9 +61,25 @@ pub struct ImportCollectionResult {
     pub import_warnings: Vec<ImportWarning>,
 }
 
+// order of children within a collection cannot be saved as they are just files/folders in a file
+// system which does not have an order. It maps paths to the respective order *within* a parent
+// this is only for requests or groups within a group. For filegroups the order is dependent on the
+// order of the requests within a file
+type PathOrder = HashMap<String, u32>;
+
 #[derive(Serialize, Deserialize, Type, Debug)]
 pub struct CollectionConfig {
     pub name: String,
+    pub path_orders: PathOrder,
+}
+
+impl Default for CollectionConfig {
+    fn default() -> Self {
+        CollectionConfig {
+            name: String::new(),
+            path_orders: HashMap::new(),
+        }
+    }
 }
 
 pub type Uuid = String;
@@ -85,6 +110,27 @@ impl From<HttpRestFile> for RequestFileModel {
                     request_to_request_model(request, value.path.to_string_lossy().to_string())
                 })
                 .collect::<Vec<RequestModel>>(),
+        }
+    }
+}
+
+impl From<RequestFileModel> for HttpRestFile {
+    fn from(value: RequestFileModel) -> Self {
+        From::<&RequestFileModel>::from(&value)
+    }
+}
+
+impl From<&RequestFileModel> for HttpRestFile {
+    fn from(value: &RequestFileModel) -> Self {
+        HttpRestFile {
+            requests: value
+                .requests
+                .iter()
+                .map(Into::into)
+                .collect::<Vec<Request>>(),
+            errs: vec![],
+            path: Box::new(std::path::PathBuf::from(value.path.clone())),
+            extension: Some(HttpRestFileExtension::Http),
         }
     }
 }
@@ -309,6 +355,8 @@ impl From<&Multipart> for http_rest_file::model::Multipart {
     }
 }
 use http_rest_file::model::RequestBody as RestFileBody;
+
+use crate::config::COLLECTION_CONFIGFILE;
 impl From<RequestBody> for http_rest_file::model::RequestBody {
     fn from(value: RequestBody) -> Self {
         match value {

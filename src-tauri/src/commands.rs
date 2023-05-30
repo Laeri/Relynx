@@ -1,3 +1,4 @@
+use crate::config::{load_collection_config, save_collection_config};
 use crate::error::{DisplayErrorKind, FrontendError};
 use crate::import::LoadRequestsResult;
 use crate::model::{
@@ -5,16 +6,16 @@ use crate::model::{
     RequestResult, RunRequestCommand, SaveRequestCommand, Workspace,
 };
 use crate::sanitize::sanitize_filename_with_options;
-use crate::tree::{GroupOptions, RequestTreeNode, DEFAULT_OPTIONS};
+use crate::tree::{correct_children_paths, GroupOptions, RequestTreeNode, DEFAULT_OPTIONS};
 use http_rest_file::{
     model::{HttpRestFile, HttpRestFileExtension, Request},
     Serializer,
 };
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, ClipboardManager};
 use std::path::PathBuf;
 use std::sync::Mutex; // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 use tauri::{api::shell, Manager};
+use tauri::{AppHandle, ClipboardManager};
 use walkdir::WalkDir;
 
 pub struct Context {
@@ -148,7 +149,9 @@ pub fn add_existing_collections(
 }
 
 #[tauri::command]
-pub fn load_requests_for_collection(collection: Collection) -> Result<LoadRequestsResult, rspc::Error> {
+pub fn load_requests_for_collection(
+    collection: Collection,
+) -> Result<LoadRequestsResult, rspc::Error> {
     crate::import::load_requests_for_collection(&collection).map_err(|err| err.into())
 }
 
@@ -550,9 +553,232 @@ pub struct DragAndDropResult {
 }
 
 #[tauri::command]
-pub fn drag_and_drop(_params: DragAndDropParams) -> DragAndDropResult {
-    // @TODO
-    todo!("@TODO");
+pub fn drag_and_drop(params: DragAndDropParams) -> Result<DragAndDropResult, rspc::Error> {
+    let DragAndDropParams {
+        collection,
+        mut drag_node_parent,
+        mut drag_node,
+        mut drop_node,
+        drop_index,
+    } = params;
+
+    println!("DROP INDEX: {:?}", drop_index);
+    if collection.path == "" {
+        return Err(FrontendError::new_with_message(
+            DisplayErrorKind::DragAndDropError,
+            "Invalid collection given, collection has no path",
+        )
+        .into());
+    }
+
+    if !drag_node.filepath.starts_with(&collection.path) {
+        return Err(FrontendError::new_with_message(
+            DisplayErrorKind::DragAndDropError,
+            "The drag node is not within the given collection",
+        )
+        .into());
+    }
+
+    if !drop_node.filepath.starts_with(&collection.path) {
+        return Err(FrontendError::new_with_message(
+            DisplayErrorKind::DragAndDropError,
+            "The drop node is not within the given collection",
+        )
+        .into());
+    }
+
+    if drag_node.filepath == drop_node.filepath {
+        return Err(FrontendError::new_with_message(
+            DisplayErrorKind::DragAndDropError,
+            "Cannot drag node unto itself",
+        )
+        .into());
+    }
+
+    if drop_node.request.is_some() {
+        return Err(FrontendError::new_with_message(
+            DisplayErrorKind::DragAndDropError,
+            "Can only drop node into a group and not into a request",
+        )
+        .into());
+    }
+
+    // cannot drag a regular group into a file group, only requests can be put into file groups
+    if drop_node.is_file_group && drag_node.request.is_none() {
+        return Err(FrontendError::new_with_message(
+            DisplayErrorKind::DragAndDropError,
+            "Cannot drop a group node into a file group.",
+        )
+        .into());
+    }
+
+    if drop_node.any_child_with_name(&drag_node.name) {
+        return Err(FrontendError::new_with_message(
+            DisplayErrorKind::DragAndDropError,
+            "There exists already a node within the same name in the new parent. Rename the node first before dragging it."
+        )
+        .into());
+    }
+
+    // remove node from parent
+    let in_parent_pos = drag_node_parent
+        .children
+        .iter()
+        .position(|child| child.id == drag_node.id)
+        .unwrap();
+    println!("PARENT_POS: {:?}", in_parent_pos);
+    drag_node_parent.children.remove(in_parent_pos);
+
+    // create at new location
+    let new_path = if drag_node.is_folder() {
+        let new_path = PathBuf::from(&drop_node.filepath).join(&drag_node.name);
+        std::fs::create_dir(&new_path).map_err(|_err| {
+            Into::<rspc::Error>::into(FrontendError::new_with_message(
+                DisplayErrorKind::DragAndDropError,
+                "Could not create new folder when dragging folder group",
+            ))
+        })?;
+        new_path
+    } else {
+        // Create new file
+        // If we drop into a file group the parent (aka the file group node) has to be resaved with the
+        // new requests
+        println!("DROP NODE: {:?}", drop_node);
+        let request_file = if drop_node.is_file_group {
+            // we drop a request into a file that already has requests, therefore save new file with
+            // new request and remove old file
+            let request_file: Result<HttpRestFile, ()> = (&drop_node).try_into();
+            if request_file.is_err() {
+                return Err(FrontendError::new_with_message(
+                    DisplayErrorKind::DragAndDropError,
+                    "Cannot convert request into a request file",
+                )
+                .into());
+            }
+            request_file.unwrap()
+        } else {
+            // otherwise we have moved a request into a folder and just need to save a new request
+            // file
+            let request_file: Result<HttpRestFile, ()> = (&drag_node).try_into();
+
+            if request_file.is_err() {
+                eprintln!("ERROR {:?}", request_file.unwrap_err());
+                return Err(FrontendError::new_with_message(
+                    DisplayErrorKind::DragAndDropError,
+                    "Cannot convert request into a request file",
+                )
+                .into());
+            }
+            // we need to take the new path the drag node would have after dragging
+            let mut request_file = request_file.unwrap();
+            request_file.path = Box::new(PathBuf::from(&drop_node.filepath).join(&drag_node.name));
+
+            request_file
+        };
+        Serializer::serialize_to_file(&request_file).map_err(|_err| {
+            // @TODO: log serialize error
+            Into::<rspc::Error>::into(FrontendError::new_with_message(
+                DisplayErrorKind::DragAndDropError,
+                "Could not write request to file. The request may be malformed.",
+            ))
+        })?;
+        (*request_file.path).clone()
+    };
+
+    // Remove old file
+    // If the parents drag node was a file group we need to remove the file from the group and
+    // resave the group. If it was a single request we need to remove the old file
+    if drag_node_parent.is_file_group {
+        let drag_node_pos = drag_node_parent
+            .children
+            .iter()
+            .position(|child| child.id == drag_node.id);
+        match drag_node_pos {
+            Some(pos) => {
+                drag_node_parent.children.remove(pos);
+            }
+            None => { /* @TODO handle error / warning?*/ }
+        }
+
+        // @TODO: @ERROR
+        // if we dragged out of a file node and there are no requests left then remove the file
+        if drag_node_parent.children.is_empty() {
+            std::fs::remove_file(drag_node_parent.filepath).map_err(|_err| {
+                Into::<rspc::Error>::into(FrontendError::new_with_message(
+                    DisplayErrorKind::DragAndDropError,
+                    "Could not remove old request file for drag node",
+                ))
+            })?;
+        } else {
+            // @TODO this might only be a warning?
+            let new_drag_node_file = (&drag_node_parent).try_into().map_err(|_err| {
+                Into::<rspc::Error>::into(FrontendError::new_with_message(
+                    DisplayErrorKind::DragAndDropError,
+                    "Could not remove drag node from old parent.",
+                ))
+            });
+            // @TODO log error
+            Serializer::serialize_to_file(new_drag_node_file.as_ref().unwrap()).map_err(
+                |_err| {
+                    Into::<rspc::Error>::into(FrontendError::new_with_message(
+                        DisplayErrorKind::DragAndDropError,
+                        "Could not save drag node's parent to file for updating",
+                    ))
+                },
+            )?;
+        }
+    } else {
+        // we have a request file or folder that was moved, so remove the old path
+        let remove_path: PathBuf = drag_node.filepath.into();
+
+        println!("Remove path: {:?}", remove_path);
+
+        if !remove_path.exists() {
+            return Err(Into::<rspc::Error>::into(FrontendError::new_with_message(
+                DisplayErrorKind::DragAndDropError,
+                "Could not save drag node's parent to file for updating",
+            )));
+        }
+
+        if dbg!(drag_node.is_file_group || drag_node.request.is_some()) {
+            std::fs::remove_file(remove_path)
+        } else {
+            std::fs::remove_dir(remove_path)
+        }
+        .map_err(|_err| {
+            // @TODO: log error
+            Into::<rspc::Error>::into(FrontendError::new_with_message(
+                DisplayErrorKind::DragAndDropError,
+                "Could not remove old request file for drag node",
+            ))
+        })?;
+    };
+
+    // update paths
+    if drop_node.is_file_group {
+        drag_node.filepath = drop_node.filepath.clone();
+    } else {
+        drag_node.filepath = new_path.to_string_lossy().to_string()
+    }
+
+    if drop_index >= drop_node.children.len() as u32 {
+        drop_node.children.push(drag_node);
+    } else {
+        drop_node.children.insert(drop_index as usize, drag_node);
+    }
+
+    correct_children_paths(&mut drop_node);
+    // @TODO: update child order in collection config
+    /*  let collection_config =
+    load_collection_config(&collection.get_config_file_path()).unwrap_or_default(); */
+
+    // if we removed the last child from the drag node then we need to remove its file as well
+    let remove_drag_node_parent =
+        drag_node_parent.is_file_group && drag_node_parent.children.is_empty();
+    Ok(DragAndDropResult {
+        new_drop_node: drop_node,
+        remove_drag_node_parent,
+    })
 }
 
 #[derive(Serialize, Deserialize, rspc::Type, Debug)]
@@ -561,11 +787,77 @@ pub struct ReorderNodesParams {
     collection: Collection,
     drag_node: RequestTreeNode,
     drop_node: RequestTreeNode,
+    // needs u32 type as rspc cannot export larger types as there is an issue with json parsing for
+    // large numbers
     drop_index: u32,
 }
 
 #[tauri::command]
-pub fn reorder_nodes_within_parent(_params: ReorderNodesParams) -> RequestTreeNode {
-    // @TODO
-    todo!("@TODO");
+pub fn reorder_nodes_within_parent(
+    params: ReorderNodesParams,
+) -> Result<RequestTreeNode, rspc::Error> {
+    let ReorderNodesParams {
+        collection,
+        mut drag_node,
+        mut drop_node,
+        mut drop_index,
+    } = params;
+
+    let mut drop_index = drop_index as usize;
+
+    let drop_node_path = PathBuf::from(&drop_node.filepath);
+    if !drop_node_path.exists() {
+        return Err(FrontendError::new_with_message(
+            DisplayErrorKind::ReorderError,
+            "Reorder parent does not exist anymore. The file/folder might have been removed."
+                .to_string(),
+        )
+        .into());
+    }
+
+    let position = drop_node
+        .children
+        .iter()
+        .position(|child| child.id == drag_node.id);
+    if position.is_none() {
+        return Err(FrontendError::new_with_message(
+            DisplayErrorKind::ReorderError,
+            "Could not reorder items".to_string(),
+        )
+        .into());
+    }
+    let position = position.unwrap();
+    if drop_index > position {
+        drop_index -= 1;
+    }
+    drop_node.children.remove(position);
+    drop_node.children.insert(drop_index, drag_node);
+
+    // if a request is dragged within a file group its ordering within changed and we have to
+    // resave the file
+    if drop_node.is_file_group {
+        let rest_file: HttpRestFile = (&drop_node).try_into().unwrap();
+        Serializer::serialize_to_file(&rest_file).map_err(|_err| {
+            FrontendError::new_with_message(
+                DisplayErrorKind::ReorderError,
+                "Could not persist updated requests".to_string(),
+            )
+        })?;
+    } else {
+        // we dragged a folder/file within a folder, we only have to store the updated pathordering
+        // @TODO: load CollectionConfig, update orderings for all paths within parent_node
+        let config_file_path = collection.get_config_file_path();
+        let mut collection_config = load_collection_config(&config_file_path).unwrap_or_default();
+        let path_orders = &mut collection_config.path_orders;
+        drop_node
+            .children
+            .iter()
+            .enumerate()
+            .for_each(|(index, child)| {
+                path_orders.insert(child.filepath.clone(), index as u32);
+            });
+        save_collection_config(&collection_config, &config_file_path)?;
+    }
+
+    Ok(drop_node)
 }

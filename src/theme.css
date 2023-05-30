@@ -6224,3 +6224,9 @@
 .p-overlaypanel.p-component {
   position: absolute;
 }
+
+
+/* fix tree toggler */
+.p-tree-toggler {
+  width: 1rem !important;
+}

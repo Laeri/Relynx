@@ -2,7 +2,7 @@ import { create } from "react-modal-promise";
 import { AddCollectionModal } from "../components/modals/AddCollectionModal";
 import { useRequestModelStore } from "../stores/requestStore";
 import { Workspace, Collection, AddCollectionsResult, ImportCollectionResult } from "../bindings";
-import { newWorkspace, newCollection as newCollectionFunc } from "../model/model";
+import { newWorkspace, newCollection } from "../model/model";
 import { backend } from "../rpc";
 import { catchError } from "./errorhandling";
 import { ExternalToast, ToastContext } from "../App";
@@ -10,6 +10,7 @@ import { ImportCollectionModal } from "../components/modals/ImportCollectionModa
 import { CreateCollectionModal } from "../components/modals/CreateCollectionModal";
 // @TODO import ImportCollectionResult = collectionImport.ImportCollectionResult;
 import { ImportResultModal } from "../components/modals/ImportResultModal";
+import { getDefaultCollectionName } from "./common";
 
 
 export const addCollectionToWorkspace = (newCollection: Collection) => {
@@ -29,21 +30,22 @@ export const openCreateCollectionModal = (workspace: Workspace): Promise<Collect
     if (!result) {
       return
     }
-    let newCollection: Collection = newCollectionFunc();
-    newCollection.name = result.collectionName;
-    newCollection.path = result.collectionPath;
+    let collection: Collection = newCollection();
+    collection.name = result.collectionName;
+    collection.path = result.collectionPath;
 
     const addCollectionToStore = useRequestModelStore.getState().addCollection
 
-    addCollectionToStore(newCollection);
-    addCollectionToWorkspace(newCollection);
-    return newCollection
+    addCollectionToStore(collection);
+    addCollectionToWorkspace(collection);
+    return collection
   });
 }
 
 export const openAddExistingCollectionModal = (workspace: Workspace, toast: ToastContext): Promise<void | AddCollectionsResult> => {
+  let name = getDefaultCollectionName(workspace.collections);
   const addCollectionModal = create(({ isOpen, onResolve, onReject }) => {
-    return <AddCollectionModal isOpen={isOpen} onResolve={onResolve} onReject={onReject} />
+    return <AddCollectionModal collectionName={name} collectionNameisOpen={isOpen} onResolve={onResolve} onReject={onReject} />
   })
 
   return addCollectionModal().then((result?: { collectionPath: string }): Promise<void | AddCollectionsResult> => {

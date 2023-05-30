@@ -56,7 +56,8 @@ class Backend {
   }
 
   // @TODO: check if current request one parameter?
-  saveRequest(requests: RequestModel[], collection: Collection, requestName: string): Promise<RequestModel> {
+  // Promise result contains new path??? @TODO
+  saveRequest(requests: RequestModel[], collection: Collection, requestName: string): Promise<string> {
     let command: SaveRequestCommand = { requests: requests, collection: collection, request_name: requestName };
     return api.query(['save_request', command]);
   }
@@ -86,6 +87,7 @@ class Backend {
   //Parent *RequestTreeNode, dragNode *RequestTreeNode, dropNode *RequestTreeNode, dropIndex int) (dragAndDropResult *DragAndDropResult, returnError error) {
 
   dragAndDrop(collection: Collection, dragNodeParent: RequestTreeNode, dragNode: RequestTreeNode, dropNode: RequestTreeNode, dropIndex: number): Promise<DragAndDropResult> {
+    console.log('drop index: ', dropIndex);
     return api.query(['drag_and_drop', { collection: collection, drag_node_parent: dragNodeParent, drag_node: dragNode, drop_node: dropNode, drop_index: dropIndex }]);
   }
 
