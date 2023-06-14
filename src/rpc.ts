@@ -2,6 +2,7 @@ import { createClient } from '@rspc/client'
 import { TauriTransport } from '@rspc/tauri'
 import { Procedures, Workspace, Collection, AddCollectionsResult, ImportCollectionResult, LoadRequestsResult, RunRequestCommand, RequestResult, RequestModel, SaveRequestCommand, RequestTreeNode, DragAndDropResult } from './bindings';
 import { FError } from './common/errorhandling';
+import { CancellationToken } from './model/error';
 
 export const api = createClient<Procedures>({
   transport: new TauriTransport()
@@ -54,8 +55,13 @@ class Backend {
     return api.query(['import_postman_collection', { workspace, import_postman_path, import_result_path }]);
   }
 
-  runRequest(runRequestCommand: RunRequestCommand): Promise<RequestResult> {
-    return api.query(['run_request', runRequestCommand]);
+  runRequest(runRequestCommand: RunRequestCommand, cancellationToken: CancellationToken): Promise<RequestResult> {
+    return new Promise((resolve, reject) => {
+      if (cancellationToken.cancelled) {
+        return
+      }
+      api.query(['run_request', runRequestCommand]).then((result: any) => resolve(result)).catch((cancel_val: any) => reject(cancel_val))
+    });
   }
 
   // @TODO: check if current request one parameter?

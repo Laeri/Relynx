@@ -15,6 +15,22 @@ export const HTTP_METHODS = {
   TRACE: "TRACE" as HttpMethod
 }
 
+export function requestMethodToString(method: HttpMethod) {
+  if (isCustomMethod(method)) {
+    return (method as {CUSTOM: string}).CUSTOM;
+  } else {
+    return method as string;
+  }
+}
+
+export function isCustomMethod(method: HttpMethod) {
+  if (typeof method === 'string' || method instanceof String) {
+    return false;
+  } else {
+    return true;
+  }
+}
+
 export type BodyType = "NONE" | "PLAIN_TEXT" | "FORM_URL_ENCODED" | "JSON" | "GRAPHQL" | "BINARY_FILE" | "FORM_DATA"
 
 export type UUID = string

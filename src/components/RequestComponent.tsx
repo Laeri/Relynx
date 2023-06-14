@@ -21,6 +21,7 @@ import { hasInvalidFileBody } from "../common/requestUtils";
 import { WarningCollapsible } from "./WarningCollapsible";
 import { updatedRequestModel, newQueryParam, newRequestHeader } from '../model/model';
 import { getAllRequestsFromTree } from "../common/treeUtils";
+import { HTTP_METHODS, isCustomMethod } from "../model/request";
 
 interface ComponentProps {
 }
@@ -29,10 +30,6 @@ export function RequestComponent(_props: ComponentProps) {
 
   const currentRequest = useRequestModelStore((state) => state.currentRequest as RequestModel);
   const storeUpdateRequestAndTree = useRequestModelStore((state) => state.storeUpdateRequestAndTree);
-  /* const url = useRequestModelStore((state) => state.currentRequest?.Url as string); // we are sure that we have a request here
-  const requestType = useRequestModelStore((state) => state.currentRequest?.RequestType as RequestType);
-  const queryParams = useRequestModelStore((state) => state.currentRequest?.QueryParams as QueryParam[]);
-  const requestHeaders = useRequestModelStore((state) => state.currentRequest?.RequestHeaders as RequestHeader[]); */
 
   const requestResult = useRequestModelStore((state) => state.requestResult);
   const workspace = useRequestModelStore((state) => state.workspace);
@@ -60,6 +57,8 @@ export function RequestComponent(_props: ComponentProps) {
 
   const [importWarnings, setImportWarnings] = useState<ImportWarning[]>([]);
 
+  const [customRequestType, setCustomRequestType] = useState<string>("CUSTOM");
+
 
   useEffect(() => {
     scrollMainToTop();
@@ -69,7 +68,7 @@ export function RequestComponent(_props: ComponentProps) {
     setTmpRequestName(currentRequest.name);
 
     let importWarnings: ImportWarning[] = (currentCollection as Collection).import_warnings.filter((import_warning: ImportWarning) => {
-      return import_warning.request_name === currentRequest.name && import_warning.rest_file_path === currentRequest.rest_file_path
+      return import_warning.rest_file_path === currentRequest.rest_file_path;
     });
     setImportWarnings(importWarnings);
   }, [currentRequest]);
@@ -112,7 +111,8 @@ export function RequestComponent(_props: ComponentProps) {
     // reset request result before the request
     // @TODO: updateRequestResult(newRequestResult());
     setIsSendingRequest(true);
-    backend.runRequest(backendRequest).then((result: RequestResult) => {
+    // @TODO: cancel request
+    backend.runRequest(backendRequest, { cancelled: false }).then((result: RequestResult) => {
       // @TODO: updateRequestResult(result);
     }).catch(catchError(toast)).finally(() => {
       setIsSendingRequest(false);
@@ -120,17 +120,17 @@ export function RequestComponent(_props: ComponentProps) {
   }
 
   function updateRequest(newRequest: RequestModel, valid: boolean = true) {
-    console.log('update request', newRequest);
     if (!currentCollection || !currentRequest) {
       return
     }
-
-    let allRequests: RequestModel[] = getAllRequestsFromTree(requestTree);
+    let allRequests: RequestModel[] = [];
+    if (requestTree) {
+      allRequests = getAllRequestsFromTree(requestTree);
+    }
 
     // find all requests with the same path which means they are in the same file
     // @SPEED, we have to parse the tree everytime we do this
     let requestsInSameFile = allRequests.filter((request: RequestModel) => request.rest_file_path == newRequest.rest_file_path || request.id == newRequest.id);
-    console.log('requestsInSameFile: ', requestsInSameFile);
 
     // replace the new request within our requests here
     requestsInSameFile = requestsInSameFile.map((request: RequestModel) => {
@@ -141,7 +141,6 @@ export function RequestComponent(_props: ComponentProps) {
       }
     });
 
-    console.log('requestsInSameFile2: ', requestsInSameFile);
     backend.saveRequest(requestsInSameFile, currentCollection, currentRequest.name).then(() => {
       storeUpdateRequestAndTree(newRequest)
     }).catch(catchError(toast));
@@ -185,8 +184,19 @@ export function RequestComponent(_props: ComponentProps) {
     updateRequest(newRequest);
   }
 
-  function updateRequestType(method: HttpMethod) {
-    let newRequest = updatedRequestModel(currentRequest, { method: method });
+  function updateRequestType(method: string) {
+    let newRequest;
+    if (method == "CUSTOM") {
+      newRequest = updatedRequestModel(currentRequest, { method: { CUSTOM: customRequestType } });
+    } else {
+      newRequest = updatedRequestModel(currentRequest, { method: method as HttpMethod });
+    }
+    updateRequest(newRequest);
+  }
+
+  function updateCustomMethod(value: string) {
+    setCustomRequestType(value);
+    let newRequest = updatedRequestModel(currentRequest, { method: { CUSTOM: value } });
     updateRequest(newRequest);
   }
 
@@ -267,9 +277,12 @@ export function RequestComponent(_props: ComponentProps) {
     updateRequestHeader(requestHeader, header);
   }
 
-  const requestTypeOptions: { name: string, value: string }[] = []; /* @TODO Object.entries(requestTypes).map(([key, value]) => {
-    return { name: key, value: value };
-  }); */
+  const requestTypeOptions: { name: string, value: string }[] = Object.entries(HTTP_METHODS).map(([key, value]) => {
+    return { name: key, value: value as string };
+  });
+
+  requestTypeOptions.push({ name: "CUSTOM", value: "CUSTOM" })
+
 
   const copyResultToClipboard = () => {
     backend.copyToClipboard(requestResult?.result ?? '').then(() => {
@@ -291,18 +304,11 @@ export function RequestComponent(_props: ComponentProps) {
     }
     let newWorkspace = structuredClone(workspace);
     let newCollection = structuredClone(currentCollection);
-    newCollection.import_warnings = newCollection.import_warnings.filter((importWarning: ImportWarning) => {
-      return (importWarning.request_name !== currentRequest.name && importWarning.rest_file_path !== currentRequest.rest_file_path)
+    newCollection.import_warnings = [];
+    let new_index = newWorkspace.collections.findIndex((currentCol: Collection) => {
+      currentCol.path == currentCollection.path;
     });
-
-    newWorkspace.collections = newWorkspace.collections.map((currentCol: Collection) => {
-      if (currentCol.path === currentCollection.path) {
-        return newCollection;
-      } else {
-        return currentCol;
-      }
-    });
-
+    newWorkspace.collections[new_index] = newCollection;
     updateWorkspace(newWorkspace);
     backend.updateWorkspace(newWorkspace).then(() => {
       // do nothing
@@ -340,8 +346,11 @@ export function RequestComponent(_props: ComponentProps) {
           </div>
         </div>
         <div className="input" style={{ display: 'flex', marginTop: '30px' }}>
-          <Dropdown optionLabel="name" value={currentRequest.method} options={requestTypeOptions}
+          <div><Dropdown optionLabel="name" value={isCustomMethod(currentRequest.method) ? "CUSTOM" : currentRequest.method} options={requestTypeOptions}
             onChange={(e) => updateRequestType(e.value)} />
+
+          </div>
+
           <InputText value={currentRequest.url} onChange={(e) => updateUrl(e.target.value)} placeholder={"Url"}
             style={{ marginLeft: '20px', flexBasis: '35%' }} disabled={isSendingRequest} />
           <Button label="Send Request" onClick={doRequest} className="p-button-outlined"
@@ -350,6 +359,15 @@ export function RequestComponent(_props: ComponentProps) {
             isSendingRequest && <ProgressSpinner style={{ maxHeight: '30px' }} />
           }
         </div>
+        {
+          isCustomMethod(currentRequest.method) &&
+          <div style={{ display: 'flex', marginTop: '10px' }}>
+            <InputText value={(currentRequest.method as { CUSTOM: string }).CUSTOM} onChange={(e) => updateCustomMethod(e.target.value)} placeholder={"Custom Method"}
+              style={{ maxWidth: '150px' }} disabled={isSendingRequest} />
+
+          </div>
+        }
+
         {
           importWarnings.length > 0 &&
           <WarningCollapsible collection={currentCollection as Collection} importWarnings={importWarnings}

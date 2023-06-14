@@ -17,3 +17,7 @@ export function NewFError(id: string, title: string, userMsg: string, errorMsg: 
   frontendError.Error = errorMsg;*/
   return frontendError
 }
+
+export type CancellationToken = {
+  cancelled: boolean
+}
