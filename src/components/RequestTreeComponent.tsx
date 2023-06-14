@@ -233,7 +233,7 @@ export function RequestTreeComponent(props: ComponentProps) {
     if (primeNode.isFolder) {
       // we have a group
       return (
-        <div style={{ width: '100%', display: 'flex', alignItems: 'center', maxWidth: '100%' }}>
+        <div style={{ width: '100%', display: 'flex', alignItems: 'center', maxWidth: '100%' }} className="fade-in-fast">
           <div className={'p-button-raised p-button-text'}
             style={{ flexGrow: 1, display: 'flex', justifyContent: 'flex-start', alignItems: 'center' }}>
             {
@@ -277,7 +277,7 @@ export function RequestTreeComponent(props: ComponentProps) {
             requestId={primeNode.key}
             importWarnings={props.collection.import_warnings.filter((importWarning: ImportWarning) => {
               let requestModel = primeNode.requestNode?.request as RequestModel
-              return importWarning.rest_file_path == requestModel.rest_file_path && importWarning.request_name == requestModel.name
+              return importWarning.rest_file_path == requestModel.rest_file_path 
             })}
             highlighted={props.currentRequest?.id == primeNode.key} />
           <ActionDropdown styles={{ flexGrow: 1, marginRight: '3px' }}>

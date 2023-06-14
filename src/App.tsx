@@ -3,7 +3,6 @@ import './App.css';
 import 'primereact/resources/primereact.min.css';
 import '../node_modules/primeicons/primeicons.css';
 import './theme.css';
-import { api } from './rpc';
 import { Workspace } from './bindings';
 import { OverviewComponent } from './pages/OverviewComponent';
 import { MemoryRouter, Routes, Route } from 'react-router';
@@ -14,7 +13,7 @@ import { ConfirmPopup } from 'primereact/confirmpopup';
 import { Container as ModalContainer } from 'react-modal-promise';
 import { RequestComponent } from './components/RequestComponent';
 import { CollectionOverviewComponent } from './components/CollectionOverviewComponent';
-import {backend} from './rpc';
+import { backend } from './rpc';
 
 export interface ToastContext {
   toast: Ref<any>,

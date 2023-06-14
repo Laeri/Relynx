@@ -1,37 +1,37 @@
-import {Message} from "primereact/message";
-import {ImportWarning} from "../bindings";
-import {MessageSeverity} from "primereact/api";
-import {Fieldset} from "primereact/fieldset";
+import { Message } from "primereact/message";
+import { ImportWarning, MessageSeverity } from "../bindings";
+import { Fieldset } from "primereact/fieldset";
+import { Accordion, AccordionTab } from "primereact/accordion";
 
 interface ComponentProps {
-    relativeRequestPath: string,
-    messages: ImportWarning[]
+  relativeRequestPath: string,
+  messages: ImportWarning[]
 }
 
 export function RequestImportMessages(props: ComponentProps) {
 
-    return (
-        <Fieldset toggleable={true} legend={`Request: ${props.messages[0].RequestName}`} style={{
-            marginTop: '30px',
-            width: '100%',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'flex-start'
-        }}>
-            <div style={{display: 'flex', flexDirection: 'column', alignItems: 'flex-start'}}>
-                {
-                    `/${props.messages[0].RequestName}` !== props.relativeRequestPath &&
-                    <span>Path: {props.relativeRequestPath}</span>
-                }
-                {
-                    props.messages.map((message: ImportWarning) => {
-                        return <Message style={{marginTop: '20px'}}
-                                        severity={message.Severity as MessageSeverity}
-                                        text={message.Message}/>
-                    })
-                }
-            </div>
+  const legend = `Request: ${props.messages[0].node_name ?? props.messages[0].rest_file_path}`;
+  return (
+    <Accordion activeIndex={0}
+       style={{
+        marginTop: '20px'
+      }}>
+      <AccordionTab header={legend}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+          {
+            `/${props.messages[0].node_name ?? props.messages[0].rest_file_path}` !== props.relativeRequestPath &&
+            <span>Path: {props.relativeRequestPath}</span>
+          }
+          {
+            props.messages.map((message: ImportWarning) => {
+              return <Message style={{ marginTop: '20px' }}
+                severity={message.severity as MessageSeverity}
+                text={message.message} />
+            })
+          }
+        </div>
+      </AccordionTab>
 
-        </Fieldset>
-    )
+    </Accordion>
+  )
 }

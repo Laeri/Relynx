@@ -1,18 +1,12 @@
 import { useRequestModelStore } from "../stores/requestStore";
 import { useContext, useEffect, useState } from "react";
-// @TODO import {LoadEnvironmentsForCollection, LoadRequestsForSingle,} from "../../wailsjs/go/main/App";
 import { Button } from "primereact/button";
 import { PrimeNode, } from "../common/treeUtils";
 import { ToastContext } from "../App";
-// @TODO import {catchError, formatParseErrorsMsg} from "../common/errorhandling";
 import { createNewRequestNode } from "../common/requestUtils";
 import { createNewGroupNode, RequestTreeComponent } from "./RequestTreeComponent";
 import { CollectionInfo } from "./CollectionInfo";
 import { Collection, RequestTree, RequestTreeNode } from "../bindings";
-// @TODO import RequestTreeNode = models.RequestTreeNode;
-// @TODO import RequestTree = models.RequestTree;
-// @TODO import Environment = models.Environment;
-// @TODO import ParseRequestsResult = models.ParseRequestsResult;
 //
 import { backend } from '../rpc';
 import { LoadRequestsResult } from "../bindings";
@@ -76,7 +70,7 @@ export function CollectionMenuView(props: ComponentProps) {
 
   return (
     <div className={"fade-in-fast"} style={{ display: 'flex', flexDirection: 'column' }}>
-      {props.collection && initFinished && <>
+      {props.collection && <>
         {
           <div>
             <CollectionInfo collection={props.collection} displayPathTitle={false} />
@@ -91,8 +85,11 @@ export function CollectionMenuView(props: ComponentProps) {
                 className={"p-button-sm p-button-text p-button-raised"}
                 style={{ marginLeft: '10px' }} />
             </div>
-            <RequestTreeComponent requestTree={requestTree} collection={collection}
-              currentRequest={currentRequest} withBackgroundColor={true} />
+            {
+              initFinished && <RequestTreeComponent requestTree={requestTree} collection={collection}
+                currentRequest={currentRequest} withBackgroundColor={true} />
+
+            }
 
           </div>
         }

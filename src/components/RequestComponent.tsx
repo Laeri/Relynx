@@ -345,14 +345,14 @@ export function RequestComponent(_props: ComponentProps) {
             }
           </div>
         </div>
-        <div className="input" style={{ display: 'flex', marginTop: '30px' }}>
-          <div><Dropdown optionLabel="name" value={isCustomMethod(currentRequest.method) ? "CUSTOM" : currentRequest.method} options={requestTypeOptions}
+        <div className="input" style={{ display: 'flex', flexDirection: 'row', marginTop: '30px' }}>
+          <div><Dropdown disabled={isSendingRequest} optionLabel="name" value={isCustomMethod(currentRequest.method) ? "CUSTOM" : currentRequest.method} options={requestTypeOptions}
             onChange={(e) => updateRequestType(e.value)} />
 
           </div>
 
           <InputText value={currentRequest.url} onChange={(e) => updateUrl(e.target.value)} placeholder={"Url"}
-            style={{ marginLeft: '20px', flexBasis: '35%' }} disabled={isSendingRequest} />
+            style={{ marginLeft: '20px', flexGrow: 1, minWidth: '400px' }} disabled={isSendingRequest} />
           <Button label="Send Request" onClick={doRequest} className="p-button-outlined"
             style={{ marginLeft: '20px' }} disabled={isSendingRequest} />
           {

@@ -24,73 +24,75 @@ export type Procedures = {
     subscriptions: never
 };
 
-export type ImportCollectionResult = { collection: Collection }
-
 export type DisplayErrorKind = "Generic" | "LoadWorkspaceError" | "ReadWorkspaceFileError" | "DeserializeWorkspaceError" | "SerializeWorkspaceError" | "SaveWorkspaceError" | "NoPathChosen" | "ImportPostmanError" | "ParseError" | "InvalidOpenPath" | "CopyToClipboardError" | "RequestFileAlreadyExists" | "NodeDeleteError" | "SaveRequestError" | "RemoveOldRequestFile" | "AddGroupNodeError" | "DragAndDropError" | "InvalidCollectionConfig" | "ReorderError" | "UnsupportedImportFormat" | "ImportSerializeError"
 
 export type HttpVersion = { major: number; minor: number }
 
 export type ImportPostmanCommandParams = { workspace: Workspace; import_postman_path: string; import_result_path: string }
 
-export type EnvVarDescription = { env_var_name: string; description: string; is_secret: boolean }
+export type RequestModel = { id: string; name: string; description: string; method: HttpMethod; url: string; query_params: QueryParam[]; headers: Header[]; body: RequestBody; rest_file_path: string; http_version: Replaced<HttpVersion>; settings: RequestSettings }
+
+export type RequestResult = { result: string; status_code: string; total_time: number; total_result_size: number; content_type: string }
 
 export type ReorderNodesParams = { collection: Collection; drag_node: RequestTreeNode; drop_node: RequestTreeNode; drop_index: number }
 
-export type QueryParam = { key: string; value: string; active: boolean }
-
 export type FrontendError = { kind: DisplayErrorKind; message: string | null }
-
-export type RequestModel = { id: string; name: string; description: string; method: HttpMethod; url: string; query_params: QueryParam[]; headers: Header[]; body: RequestBody; rest_file_path: string; http_version: Replaced<HttpVersion>; settings: RequestSettings }
 
 export type UrlEncodedParam = { key: string; value: string }
 
-export type Header = { key: string; value: string; active: boolean }
-
 export type RequestTree = { root: RequestTreeNode }
-
-export type Multipart = { name: string; data: DataSource<string>; fields: DispositionField[]; headers: Header[] }
 
 export type DeleteNodeParams = { collection: Collection; node: RequestTreeNode; file_node: RequestTreeNode | null }
 
+export type Environment = { name: string; variables: EnvironmentVariable[]; secrets: EnvironmentSecret[]; env_var_descriptions: EnvVarDescription[] }
+
 export type Collection = { name: string; path: string; current_env_name: string; description: string; import_warnings: ImportWarning[] }
+
+export type Replaced<T> = { value: T; is_replaced: boolean }
 
 export type RequestSettings = { no_redirect: boolean | null; no_log: boolean | null; no_cookie_jar: boolean | null; use_os_credentials: boolean | null }
 
-export type Environment = { name: string; variables: EnvironmentVariable[]; secrets: EnvironmentSecret[]; env_var_descriptions: EnvVarDescription[] }
+export type ImportWarning = { rest_file_path: string; node_name: string; is_group: boolean; message: string | null; severity: MessageSeverity | null }
 
-export type ImportWarning = { rest_file_path: string; node_name: string; is_group: boolean; message: string | null }
+export type AddCollectionsResult = { workspace: Workspace; any_collections_found: boolean; num_imported: number; errored_collections: string[] }
+
+export type Header = { key: string; value: string; active: boolean }
+
+export type EnvironmentVariable = { name: string; initial_value: string; current_value: string; description: string }
+
+export type QueryParam = { key: string; value: string; active: boolean }
+
+export type RunRequestCommand = { request: RequestModel; environment: Environment | null }
 
 export type DragAndDropResult = { new_drop_node: RequestTreeNode; remove_drag_node_parent: boolean }
+
+export type ImportCollectionResult = { collection: Collection }
 
 export type Workspace = { collections: Collection[] }
 
 export type AddGroupNodeParams = { collection: Collection; parent: RequestTreeNode; group_name: string }
 
-export type SaveRequestCommand = { requests: RequestModel[]; collection: Collection; request_name: string }
-
 export type DispositionField = { key: string; value: string }
 
-export type Replaced<T> = { value: T; is_replaced: boolean }
+export type EnvVarDescription = { env_var_name: string; description: string; is_secret: boolean }
+
+export type EnvironmentSecret = { name: string; initial_value: string; current_value: string; description: string; persist_to_file: boolean }
 
 export type AddRequestNodeParams = { collection: Collection; parent: RequestTreeNode; request_name: string; requests_in_same_file: RequestModel[] }
 
-export type RunRequestCommand = { request: RequestModel; environment: Environment | null }
-
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" | "TRACE" | "OPTIONS" | "CONNECT" | { CUSTOM: string }
 
-export type EnvironmentVariable = { name: string; initial_value: string; current_value: string; description: string }
+export type SaveRequestCommand = { requests: RequestModel[]; collection: Collection; request_name: string }
 
-export type AddCollectionsResult = { workspace: Workspace; any_collections_found: boolean; num_imported: number; errored_collections: string[] }
+export type Multipart = { name: string; data: DataSource<string>; fields: DispositionField[]; headers: Header[] }
 
 export type DragAndDropParams = { collection: Collection; drag_node_parent: RequestTreeNode; drag_node: RequestTreeNode; drop_node: RequestTreeNode; drop_index: number }
 
+export type MessageSeverity = "warn" | "warn" | "success" | "error"
+
 export type LoadRequestsResult = { request_tree: RequestTree; errs: FrontendError[] }
 
-export type RequestResult = { result: string; status_code: string; total_time: number; total_result_size: number; content_type: string }
-
 export type RequestTreeNode = { id: string; name: string; request: RequestModel | null; children: RequestTreeNode[]; filepath: string; is_file_group: boolean }
-
-export type EnvironmentSecret = { name: string; initial_value: string; current_value: string; description: string; persist_to_file: boolean }
 
 export type DataSource<T> = { Raw: T } | { FromFilepath: string }
 
