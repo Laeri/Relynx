@@ -9,7 +9,7 @@ import { ProgressSpinner } from "primereact/progressspinner";
 import { TabPanel, TabView } from "primereact/tabview";
 import { useRequestModelStore } from "../stores/requestStore";
 import { backend } from '../rpc';
-import { RequestModel, QueryParam, Header, Collection, ImportWarning, RunRequestCommand, RequestResult, EnvironmentVariable, EnvironmentSecret, HttpMethod } from '../bindings';
+import { RequestModel, QueryParam, Header, Collection, ImportWarning, RunRequestCommand, RequestResult, EnvironmentVariable, EnvironmentSecret, HttpMethod, RequestSettings } from '../bindings';
 //import {getAllRequestsFromTree, getRequestsInSameGroup} from "../common/treeUtils";
 import { ToastContext } from "../App";
 import { catchError } from "../common/errorhandling";
@@ -22,6 +22,8 @@ import { WarningCollapsible } from "./WarningCollapsible";
 import { updatedRequestModel, newQueryParam, newRequestHeader } from '../model/model';
 import { getAllRequestsFromTree } from "../common/treeUtils";
 import { HTTP_METHODS, isCustomMethod } from "../model/request";
+import { Checkbox } from "primereact/checkbox";
+import { HelpTooltip } from "./HelpTooltip";
 
 interface ComponentProps {
 }
@@ -38,7 +40,7 @@ export function RequestComponent(_props: ComponentProps) {
   // @TODO const updateRequestResult = useRequestModelStore((state) => state.updateRequestResult);
   const clearResultText = useRequestModelStore((state) => state.clearRequestResult);
 
-  const currentCollection = useRequestModelStore((state) => state.currentCollection);
+  const currentCollection = useRequestModelStore((state) => state.currentCollection as Collection);
 
   const currentEnvironment = useRequestModelStore((state) => state.currentEnvironment);
 
@@ -61,7 +63,7 @@ export function RequestComponent(_props: ComponentProps) {
 
 
   useEffect(() => {
-    scrollMainToTop();
+    //scrollMainToTop();
     if (!currentRequest) {
       return
     }
@@ -292,6 +294,16 @@ export function RequestComponent(_props: ComponentProps) {
     });
   }
 
+  const updateRequestSettings = (partial: Partial<RequestSettings>) => {
+    let new_settings = { ...currentRequest.settings, ...partial };
+    console.log('new settings: ', new_settings);
+    let request = updatedRequestModel(currentRequest, { settings: new_settings });
+    backend.saveRequest([request], currentCollection, request.name).then((filepath: string) => {
+      request.rest_file_path = filepath;
+      storeUpdateRequestAndTree(request);
+    })
+  }
+
   // Result needs to be memoized because if it is updated frequently it will freeze inputs
   const resultDisplay = useMemo(() => {
     return <ResultDisplay requestResult={requestResult} copyResultToClipboard={copyResultToClipboard}
@@ -439,6 +451,30 @@ export function RequestComponent(_props: ComponentProps) {
                   onChange={(e) => updateDescription(e.target.value)}
                   rows={20}
                   cols={30} autoResize={false} className={'resultText-area'} />
+              </div>
+            </TabPanel>
+
+            <TabPanel header="RequestSettings">
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                <h2 style={{ marginBottom: '20px' }}>RequestSettings</h2>
+                {/* When request sending is implemented, check if all of these are needed and disable and mark those that are not present*/}
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <Checkbox inputId="no_redirect" name="no_redirect" value="no_redirect" onChange={(e) => updateRequestSettings({ no_redirect: e.target.checked })} checked={currentRequest.settings.no_redirect ?? false} />
+                  <label htmlFor="no_redirect" style={{ marginLeft: '20px' }}>No redirect</label>
+                  <HelpTooltip style={{ marginLeft: '20px' }} text="Determines when sending a request if we should follow the redirect or not. If active no follow is done and the result is directly returned." />
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <Checkbox inputId="no_cookie_jar" name="no_cookie_jar" value="no_cookie_jar" onChange={(e) => updateRequestSettings({ no_cookie_jar: e.target.checked })} checked={currentRequest.settings.no_cookie_jar ?? false} />
+                  <label htmlFor="no_cookie_jar" style={{ marginLeft: '20px' }}>No cookie jar</label>
+                  <HelpTooltip style={{ marginLeft: '20px' }} text="Prevents saving any received cookies within the http-client.cookies jar so you do not have to remove them manually everytime if you don't want them." />
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <Checkbox inputId="no_log" name="no_log" value="no_log" onChange={(e) => updateRequestSettings({ no_log: e.target.checked })} checked={currentRequest.settings.no_log ?? false} />
+                  <label htmlFor="no_log" style={{ marginLeft: '20px' }}>No log</label>
+                  <HelpTooltip style={{ marginLeft: '20px' }} text="With this setting you can prevent that any response received of this request is saved in the history. Use this if the response contains sensitive data" />
+                </div>
               </div>
             </TabPanel>
 
