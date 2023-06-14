@@ -36,8 +36,6 @@ export const createNewRequestNode = (parent: RequestTreeNode, toast: ToastContex
     if (!requestName) {
       return
     }
-    let newRequest = newRequestModel({});
-    newRequest.name = requestName;
     // normally one request per file but if the parent is a file group there are multiple requests within the same file
     let requestsWithinFile: RequestModel[] = [];
 
@@ -46,13 +44,13 @@ export const createNewRequestNode = (parent: RequestTreeNode, toast: ToastContex
         .map((child: RequestTreeNode) => child.request as RequestModel);
     }
 
-    backend.addRequestNode(collection, parent, newRequest, requestsWithinFile).then((node: RequestTreeNode) => {
+    backend.addRequestNode(collection, parent, requestName, requestsWithinFile).then((node: RequestTreeNode) => {
       let [newTree, error] = addRequestToRequestTree(requestTree, parent, node);
       if (error) {
         displayAndLogErr(error, toast);
       }
       updateRequestTree(newTree);
-      setCurrentRequest(newRequest);
+      setCurrentRequest(node.request as RequestModel);
     }).catch(catchError(toast));
 
   });

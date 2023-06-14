@@ -8,7 +8,6 @@ interface RelynxState {
   // Workspace
   workspace: Workspace
   updateWorkspace: (partial: Partial<Workspace>) => void
-  addCollection: (collection: Collection) => void
   removeCollection: (collection: Collection) => void,
 
   currentCollection?: Collection,
@@ -50,17 +49,6 @@ export const useRequestModelStore = create<RelynxState>((set) => {
         ...state,
         workspace: workspace
       }
-    }),
-
-    addCollection: (collection: Collection) => set((state: RelynxState) => {
-      // @TODO
-      let workspace = newWorkspace(state.workspace)
-      workspace.collections.push(collection)
-      return {
-        ...state,
-        workspace: workspace
-      }
-      return state
     }),
 
     removeCollection: (collection: Collection) => set((state: RelynxState) => {

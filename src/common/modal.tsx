@@ -8,17 +8,18 @@ import { catchError } from "./errorhandling";
 import { ExternalToast, ToastContext } from "../App";
 import { ImportCollectionModal } from "../components/modals/ImportCollectionModal";
 import { CreateCollectionModal } from "../components/modals/CreateCollectionModal";
-// @TODO import ImportCollectionResult = collectionImport.ImportCollectionResult;
 import { ImportResultModal } from "../components/modals/ImportResultModal";
-import { getDefaultCollectionName } from "./common";
 
 
 export const addCollectionToWorkspace = (newCollection: Collection) => {
   const toast = ExternalToast;
   let updatedWorkspace = newWorkspace();
   const workspace = useRequestModelStore.getState().workspace
+  const updateWorkspaceInStore = useRequestModelStore.getState().updateWorkspace;
   updatedWorkspace.collections = [...workspace.collections, newCollection];
-  backend.updateWorkspace(updatedWorkspace).catch(catchError(toast));
+  backend.updateWorkspace(updatedWorkspace).then(() => {
+    updateWorkspaceInStore(updatedWorkspace);
+  }).catch(catchError(toast));
 }
 
 export const openCreateCollectionModal = (workspace: Workspace): Promise<Collection | undefined> => {
@@ -34,18 +35,14 @@ export const openCreateCollectionModal = (workspace: Workspace): Promise<Collect
     collection.name = result.collectionName;
     collection.path = result.collectionPath;
 
-    const addCollectionToStore = useRequestModelStore.getState().addCollection
-
-    addCollectionToStore(collection);
     addCollectionToWorkspace(collection);
     return collection
   });
 }
 
 export const openAddExistingCollectionModal = (workspace: Workspace, toast: ToastContext): Promise<void | AddCollectionsResult> => {
-  let name = getDefaultCollectionName(workspace.collections);
   const addCollectionModal = create(({ isOpen, onResolve, onReject }) => {
-    return <AddCollectionModal collectionName={name} collectionNameisOpen={isOpen} onResolve={onResolve} onReject={onReject} />
+    return <AddCollectionModal isOpen={isOpen} onResolve={onResolve} onReject={onReject} />
   })
 
   return addCollectionModal().then((result?: { collectionPath: string }): Promise<void | AddCollectionsResult> => {
@@ -91,14 +88,11 @@ export const openImportCollectionModal = (workspace: Workspace) => {
       return
     }
 
-    const addCollectionToStore = useRequestModelStore.getState().addCollection
-
     // TODO: what about the name?
     backend.importPostmanCollection(workspace, result.importCollectionFilepath, result.collectionPath).then((importResult: ImportCollectionResult) => {
-      addCollectionToStore(importResult.collection as Collection);
       addCollectionToWorkspace(importResult.collection as Collection);
 
-      if (importResult.import_warnings.length > 0) {
+      if (importResult.collection.import_warnings.length > 0) {
         const importResultModal = create(({ isOpen, onResolve, onReject }) => {
           return <ImportResultModal isOpen={isOpen} onResolve={onResolve} onReject={onReject}
             importCollectionResult={importResult} />

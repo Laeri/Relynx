@@ -94,7 +94,7 @@ export function CollectionOverviewComponent(_props: ComponentProps) {
           <div style={{ width: '100%' }} className={'overview-request-list'}>
             {requests && requests.length == 0 &&
               <div>
-                <p style={{ textAlign: 'left' }}>You do not have any request yet in this collection. </p>
+                <p style={{ textAlign: 'left' }}>You do not have any requests yet in this collection. </p>
                 <p style={{ textAlign: 'left' }}>Create a new request or import the
                   requests of an existing collection.</p>
 

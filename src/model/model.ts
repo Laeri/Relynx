@@ -71,7 +71,8 @@ export function newEnvironment(partial: undefined | Partial<Environment>): Envir
   let environment: Environment = {
     name: "New Environment",
     secrets: [],
-    variables: []
+    variables: [],
+    env_var_descriptions: []
   }
 
   if (partial) {

@@ -14,6 +14,7 @@ import { ConfirmPopup } from 'primereact/confirmpopup';
 import { Container as ModalContainer } from 'react-modal-promise';
 import { RequestComponent } from './components/RequestComponent';
 import { CollectionOverviewComponent } from './components/CollectionOverviewComponent';
+import {backend} from './rpc';
 
 export interface ToastContext {
   toast: Ref<any>,
@@ -41,10 +42,11 @@ function App() {
 
   // Load workspace initially from backend
   useEffect(() => {
-    api.query(['load_workspace'])
+    backend.loadWorkspace()
       .then((workspace: Workspace) => {
+        console.log('HERE: ', workspace)
         updateWorkspace(workspace);
-      }).catch((err: any) => { console.log('err', err) });
+      }).catch((err: any) => { console.log('CATCH ERR err', err) });
   }, []);
 
 

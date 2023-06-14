@@ -33,7 +33,6 @@ export function ImportResultModal(props: ComponentProps) {
         {
           (props.importCollectionResult && props.importCollectionResult.collection) &&
           <ImportResultComponent collection={props.importCollectionResult.collection}
-            importWarnings={props.importCollectionResult.import_warnings}
             onClearWarnings={undefined}
           />
         }

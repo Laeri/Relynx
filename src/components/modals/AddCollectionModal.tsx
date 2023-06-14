@@ -10,12 +10,11 @@ interface ComponentProps {
   isOpen: boolean
   onResolve: (result?: { collectionPath: string }) => void
   onReject: () => void,
-  collectionName?: string
 }
 
 export function AddCollectionModal(props: ComponentProps) {
 
-  const [collectionPath, setCollectionPath] = useState<string>(props.collectionName ?? "");
+  const [collectionPath, setCollectionPath] = useState<string>("");
 
   const toast = useContext(ToastContext);
 
@@ -44,10 +43,11 @@ export function AddCollectionModal(props: ComponentProps) {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'flex-start',
-        marginBottom: '50px',
-        marginTop: '40px'
+        marginBottom: '20px',
+        marginTop: '10px'
       }}>
-        <h3 style={{ marginTop: '30px', marginBottom: '20px' }}>Folder</h3>
+        <h3 style={{ marginTop: '10px', marginBottom: '10px' }}>Folder</h3>
+        <p style={{ marginBottom: '20px' }}>Choose a folder which contains an existing collection</p>
         <div style={{ display: 'flex', width: '100%' }}>
           <Button label={"Open"}
             onClick={openCollectionDirectoryPicker} style={{}} />

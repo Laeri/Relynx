@@ -14,7 +14,10 @@ class Backend {
   }
 
   loadWorkspace(): Promise<Workspace> {
-    return api.query(['load_workspace']);
+    console.log('try load');
+    let result = api.query(['load_workspace']);
+    console.log('result: ', result);
+    return result;
   }
 
   removeCollection(collection: Collection): Promise<Workspace> {
@@ -70,30 +73,37 @@ class Backend {
     return api.query(['open_folder_native', path]);
   }
 
-  addRequestNode(collection: Collection, parent: RequestTreeNode, new_request: RequestModel, requestsInSameFile: RequestModel[]): Promise<RequestTreeNode> {
-    let result =  api.query(['add_request_node', { collection: collection, parent: parent, new_request: new_request, requests_in_same_file: requestsInSameFile }]);
+  addRequestNode(collection: Collection, parent: RequestTreeNode, request_name: string, requestsInSameFile: RequestModel[]): Promise<RequestTreeNode> {
+    let result = api.query(['add_request_node', { collection: collection, parent: parent, request_name: request_name, requests_in_same_file: requestsInSameFile }]);
     console.log('RESULT: ', result);
     return result;
   }
 
   addGroupNode(collection: Collection, parent: RequestTreeNode, groupName: string): Promise<RequestTreeNode> {
-    return api.query(['add_group_node', { collection: collection, parent: parent, group_name: groupName }]);
+    let result = api.query(['add_group_node', { collection: collection, parent: parent, group_name: groupName }]);
+    console.log('RESULT: ', result);
+    return result;
   }
 
   deleteNode(collection: Collection, node: RequestTreeNode, fileNode: RequestTreeNode | null): Promise<null> {
     return api.query(['delete_node', { collection: collection, node: node, file_node: fileNode }]);
   }
 
-  //Parent *RequestTreeNode, dragNode *RequestTreeNode, dropNode *RequestTreeNode, dropIndex int) (dragAndDropResult *DragAndDropResult, returnError error) {
-
   dragAndDrop(collection: Collection, dragNodeParent: RequestTreeNode, dragNode: RequestTreeNode, dropNode: RequestTreeNode, dropIndex: number): Promise<DragAndDropResult> {
     console.log('drop index: ', dropIndex);
-    return api.query(['drag_and_drop', { collection: collection, drag_node_parent: dragNodeParent, drag_node: dragNode, drop_node: dropNode, drop_index: dropIndex }]);
+    let result = api.query(['drag_and_drop', { collection: collection, drag_node_parent: dragNodeParent, drag_node: dragNode, drop_node: dropNode, drop_index: dropIndex }]);
+
+    var jsonPretty = JSON.stringify(JSON.parse(JSON.stringify(result)));
+    console.log('RESULT DRAG AND DROP: ', jsonPretty)
+    console.log('"drag_and_drop result: ', result);
+    return result;
   }
 
   // collection *Collection, dragNode *RequestTreeNode, dropNode *RequestTreeNode, dropIndex int
   reorderNodesWithinParent(collection: Collection, dragNode: RequestTreeNode, dropNode: RequestTreeNode, dropIndex: number): Promise<RequestTreeNode> {
-    return api.query(['reorder_nodes_within_parent', { collection: collection, drag_node: dragNode, drop_node: dropNode, drop_index: dropIndex }]);
+    let result = api.query(['reorder_nodes_within_parent', { collection: collection, drag_node: dragNode, drop_node: dropNode, drop_index: dropIndex }]);
+    console.log('reorder nodes result: ', result);
+    return result;
   }
 
   logFrontendError(error: FError): Promise<void> {

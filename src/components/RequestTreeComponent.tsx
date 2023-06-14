@@ -1,7 +1,7 @@
 import { Tree, TreeDragDropEvent, TreeExpandedKeysType } from "primereact/tree";
 import {
   addGroupToRequestTree,
-  dragAndDropResult,
+  applyDragAndDropResult,
   findParent,
   isChildOf, isModelSomewhereWithinGroup,
   PrimeNode, removeNodeFromRequestTree,
@@ -21,7 +21,7 @@ import { create } from "react-modal-promise";
 import { CreateGroupModal } from "./modals/CreateGroupModal";
 import { useLocation, useNavigate } from "react-router";
 import { Collection, RequestTreeNode, RequestTree, RequestModel, ImportWarning, DragAndDropResult } from '../bindings';
-import {backend} from '../rpc';
+import { backend } from '../rpc';
 import { getDefaultGroupName } from "../common/common";
 
 const updateRequestTree = useRequestModelStore.getState().updateRequestTree;
@@ -36,7 +36,7 @@ export const createNewGroupNode = (toast: ToastContext, expandNode: (parent: Pri
   }
 
   let groupName = getDefaultGroupName(parent);
-  
+
   const modalPromise = create(({ onResolve, onReject, isOpen }) => {
     return <CreateGroupModal groupName={groupName} isOpen={isOpen} onResolve={onResolve} onReject={() => onReject()} />
   });
@@ -181,7 +181,7 @@ export function RequestTreeComponent(props: ComponentProps) {
       displayAndLogErr(NewFError("onReorder.noDragTreeNode", "Could not reorder elements", "", "drag tree node not present in onReorder"), toast)
     }
 
-    // if we reorder a node within a group then we do not need a backend call
+    // either we reorder within a group/request file
     if (isChildOf(props.requestTree, dragTreeNode, dropTreeNode)) {
       backend.reorderNodesWithinParent(props.collection, dragTreeNode, dropTreeNode, dropIndex).then((newDropNode: RequestTreeNode) => {
         let [newTree, error] = reorderReplace(props.requestTree, newDropNode);
@@ -192,16 +192,16 @@ export function RequestTreeComponent(props: ComponentProps) {
       }).catch(catchError(toast));
 
     } else {
+      // or it is a drag and drop
       let dragNodeParent = findParent(props.requestTree, dragTreeNode)
       if (!dragNodeParent) {
         displayAndLogErr(NewFError("onReorder.noParentForDragTreeNode", "Could not reorder elements", "", "Could not find parent of dragTreeNode for DragAndDrop argument"), toast)
         return
       }
       backend.dragAndDrop(props.collection, dragNodeParent, dragTreeNode, dropTreeNode, dropIndex).then((ddResult: DragAndDropResult) => {
-        if (!ddResult.new_drop_node) {
-          return
-        }
-        let [newTree, error] = dragAndDropResult(props.requestTree, dragTreeNode, ddResult, dropIndex);
+        let [newTree, error] = applyDragAndDropResult(props.requestTree, dragTreeNode, ddResult);
+        console.log('NEW TREE FINAL', newTree);
+        console.log('ERROR: ', error);
         if (error) {
           displayAndLogErr(error, toast);
         }
