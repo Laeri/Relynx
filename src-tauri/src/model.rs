@@ -3,25 +3,18 @@ use std::{collections::HashMap, path::PathBuf};
 use http_rest_file::model::{
     DataSource, DispositionField, Header as HttpRestFileHeader, HttpMethod, HttpRestFile,
     HttpRestFileExtension, HttpVersion, Multipart as HttpRestfileMultipart, Request,
-    RequestBody as HttpRestFileBody, RequestLine, RequestSettings, WithDefault,
+    RequestBody as HttpRestFileBody, RequestLine, RequestSettings, UrlEncodedParam, WithDefault,
 };
+
 use rspc::Type;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Type, Debug)]
+#[derive(Serialize, Deserialize, Type, Default, Debug)]
 pub struct Workspace {
     pub collections: Vec<Collection>,
 }
 
-impl Default for Workspace {
-    fn default() -> Self {
-        Workspace {
-            collections: Vec::new(),
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Type, Debug)]
+#[derive(Serialize, Deserialize, Type, Debug, Clone)]
 pub struct Collection {
     pub name: String,
     pub path: String,
@@ -38,10 +31,12 @@ impl Collection {
 }
 
 // @TODO
-#[derive(Serialize, Deserialize, Type, Debug)]
+#[derive(Serialize, Deserialize, Type, Debug, Clone)]
 pub struct ImportWarning {
-    rest_file_path: String,
-    request_name: String, // @TODO: check if not identifiable by id
+    pub rest_file_path: String,
+    pub node_name: String, // @TODO: check if not identifiable by id
+    pub is_group: bool,
+    pub message: Option<String>
 }
 
 #[derive(Serialize, Deserialize, Type, Debug)]
@@ -58,28 +53,18 @@ pub struct ImportCollectionResult {
     // @TODO: environment
     // @TODO: requestTree
     // @TODO: collectionConfig
-    pub import_warnings: Vec<ImportWarning>,
 }
 
 // order of children within a collection cannot be saved as they are just files/folders in a file
 // system which does not have an order. It maps paths to the respective order *within* a parent
 // this is only for requests or groups within a group. For filegroups the order is dependent on the
 // order of the requests within a file
-type PathOrder = HashMap<String, u32>;
+pub type PathOrder = HashMap<String, u32>;
 
-#[derive(Serialize, Deserialize, Type, Debug)]
+#[derive(Serialize, Deserialize, Type, Default, Debug)]
 pub struct CollectionConfig {
     pub name: String,
     pub path_orders: PathOrder,
-}
-
-impl Default for CollectionConfig {
-    fn default() -> Self {
-        CollectionConfig {
-            name: String::new(),
-            path_orders: HashMap::new(),
-        }
-    }
 }
 
 pub type Uuid = String;
@@ -142,7 +127,7 @@ pub fn request_to_request_model(
     RequestModel {
         id: uuid::Uuid::new_v4().to_string(),
         name: value.name.clone().unwrap_or(String::new()),
-        description: value.get_comment_text().clone().unwrap_or(String::new()),
+        description: value.get_comment_text().unwrap_or(String::new()),
         method: value.request_line.method.unwrap_or_default(),
         http_version: value.request_line.http_version.into(),
         url: value.request_line.target.to_string(),
@@ -156,9 +141,23 @@ pub fn request_to_request_model(
 
 #[derive(Serialize, Deserialize, Type, Debug, Clone)]
 pub struct Header {
-    key: String,
-    value: String,
-    active: bool,
+    pub key: String,
+    pub value: String,
+    pub active: bool,
+}
+
+impl Header {
+    pub fn new<S, T>(key: S, value: T) -> Self
+    where
+        S: Into<String>,
+        T: Into<String>,
+    {
+        Header {
+            key: key.into(),
+            value: value.into(),
+            active: true,
+        }
+    }
 }
 
 impl From<&HttpRestFileHeader> for Header {
@@ -178,8 +177,11 @@ pub enum RequestBody {
         boundary: String,
         parts: Vec<Multipart>,
     },
+    UrlEncoded {
+        url_encoded_params: Vec<UrlEncodedParam>,
+    },
     //@TODO
-    Text {
+    Raw {
         data: DataSource<String>,
     },
 }
@@ -192,7 +194,10 @@ impl From<&HttpRestFileBody> for RequestBody {
                 boundary: boundary.clone(),
                 parts: parts.iter().map(Into::into).collect(),
             },
-            HttpRestFileBody::Text { data } => RequestBody::Text { data: data.clone() },
+            HttpRestFileBody::UrlEncoded { url_encoded_params } => RequestBody::UrlEncoded {
+                url_encoded_params: url_encoded_params.clone(),
+            },
+            HttpRestFileBody::Raw { data } => RequestBody::Raw { data: data.clone() },
         }
     }
 }
@@ -231,33 +236,81 @@ pub struct RequestModel {
     pub settings: RequestSettings,
 }
 
+const DEFAULT_HTTP_EXTENSION: &str = "http";
+
+impl Default for RequestModel {
+    fn default() -> Self {
+        RequestModel {
+            id: uuid::Uuid::new_v4().to_string(),
+            name: "Request".to_string(),
+            description: String::new(),
+            method: HttpMethod::default(),
+            url: String::new(),
+            query_params: vec![],
+            headers: vec![],
+            body: RequestBody::None,
+            rest_file_path: String::new(),
+            http_version: Replaced {
+                value: HttpVersion::default(),
+                is_replaced: true,
+            },
+            settings: RequestSettings::default(),
+        }
+    }
+}
+
 impl RequestModel {
-    pub fn get_request_file_path(&self, parent_path: String) -> String {
-        let parent_path = std::path::Path::new(&parent_path);
-        // @TODO files filenamify
-        let path = parent_path.join(std::path::Path::new(&self.name));
+    pub fn get_request_file_path(&self, parent_path: &str) -> String {
+        let parent_path = std::path::Path::new(parent_path);
+        let previous_path = std::path::PathBuf::from(&self.rest_file_path);
+        let file_name = previous_path.file_name().unwrap();
+        let path = parent_path
+            .join(std::path::Path::new(&self.rest_file_path))
+            .join(file_name);
         path.to_string_lossy().to_string()
+    }
+
+    pub fn get_request_file_name(&self) -> String {
+        let path = PathBuf::from(&self.rest_file_path);
+        return path.file_name().unwrap().to_string_lossy().to_string();
+    }
+
+    pub fn create_request_path(
+        request_name: &str,
+        parent_path: std::path::PathBuf,
+    ) -> std::path::PathBuf {
+        let file_name = dbg!(sanitize_filename_with_options(
+            request_name,
+            DEFAULT_OPTIONS
+        ));
+        let mut result = parent_path.join(file_name);
+        result.set_extension(DEFAULT_HTTP_EXTENSION);
+        result
+    }
+    pub fn new(name: String, path: &std::path::Path) -> Self {
+        RequestModel {
+            id: uuid::Uuid::new_v4().to_string(),
+            name,
+            description: String::new(),
+            method: HttpMethod::GET,
+            url: String::new(),
+            query_params: vec![],
+            headers: vec![],
+            body: RequestBody::None,
+            rest_file_path: path.to_string_lossy().to_string(),
+            http_version: Replaced {
+                value: HttpVersion::default(),
+                is_replaced: true,
+            },
+            settings: RequestSettings::default(),
+        }
     }
 }
 
 #[derive(Serialize, Deserialize, Type, Debug, Clone)]
 pub struct Replaced<T> {
-    value: T,
-    is_replaced: bool,
-}
-
-impl<T> Replaced<T> {
-    fn unwrap(self) -> T {
-        self.value
-    }
-
-    fn is_replaced(&self) -> bool {
-        self.is_replaced
-    }
-
-    fn as_ref<'a>(&'a self) -> &'a T {
-        &self.value
-    }
+    pub value: T,
+    pub is_replaced: bool,
 }
 
 impl<T> From<WithDefault<T>> for Replaced<T> {
@@ -356,12 +409,17 @@ impl From<&Multipart> for http_rest_file::model::Multipart {
 }
 use http_rest_file::model::RequestBody as RestFileBody;
 
-use crate::config::COLLECTION_CONFIGFILE;
+use crate::{
+    config::COLLECTION_CONFIGFILE, sanitize::sanitize_filename_with_options, tree::DEFAULT_OPTIONS,
+};
 impl From<RequestBody> for http_rest_file::model::RequestBody {
     fn from(value: RequestBody) -> Self {
         match value {
             RequestBody::None => RestFileBody::None,
-            RequestBody::Text { data } => RestFileBody::Text { data },
+            RequestBody::Raw { data } => RestFileBody::Raw { data },
+            RequestBody::UrlEncoded { url_encoded_params } => {
+                RestFileBody::UrlEncoded { url_encoded_params }
+            }
             RequestBody::Multipart { boundary, parts } => RestFileBody::Multipart {
                 boundary,
                 parts: parts.iter().map(Into::into).collect(),
@@ -381,17 +439,16 @@ impl From<&RequestModel> for http_rest_file::model::Request {
             Replaced {
                 value,
                 is_replaced: false,
-            } => WithDefault::Some(value.clone()),
+            } => WithDefault::Some(value),
             Replaced {
                 value,
                 is_replaced: true,
-            } => WithDefault::Default(value.clone()),
+            } => WithDefault::Default(value),
         };
         let comments: Vec<http_rest_file::model::Comment> = match &value.description[..] {
             "" => vec![],
             description => description
-                .split("\n")
-                .into_iter()
+                .split('\n')
                 .map(|str| http_rest_file::model::Comment {
                     kind: http_rest_file::model::CommentKind::DoubleSlash,
                     value: str.to_string(),
@@ -399,6 +456,13 @@ impl From<&RequestModel> for http_rest_file::model::Request {
                 .collect(),
         };
         let target = value.url.as_str().into();
+        // filter out headers which have no key
+        let headers: Vec<http_rest_file::model::Header> = value
+            .headers
+            .iter()
+            .filter(|header| !header.key.is_empty())
+            .map(Into::into)
+            .collect();
         http_rest_file::model::Request {
             name: Some(value.name.clone()),
             request_line: RequestLine {
@@ -407,7 +471,7 @@ impl From<&RequestModel> for http_rest_file::model::Request {
                 target,
             },
             body: value.body.clone().into(),
-            headers: value.headers.iter().map(Into::into).collect(),
+            headers,
             comments,
             settings: value.settings.clone(),
             redirect: None, // @TODO

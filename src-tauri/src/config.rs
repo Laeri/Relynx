@@ -30,10 +30,10 @@ pub fn load_workspace() -> Result<Workspace, FrontendError> {
         save_workspace(&Workspace::default())?;
     }
 
-    let content = dbg!(std::fs::read_to_string(workspace_file_path)
-        .map_err(|_io_err| FrontendError::new(DisplayErrorKind::ReadWorkspaceFileError)))?;
-    let workspace: Workspace = dbg!(serde_json::from_str(&content)
-        .map_err(|_err| FrontendError::new(DisplayErrorKind::DeserializeWorkspaceError)))?;
+    let content = std::fs::read_to_string(workspace_file_path)
+        .map_err(|_io_err| FrontendError::new(DisplayErrorKind::ReadWorkspaceFileError))?;
+    let workspace: Workspace = serde_json::from_str(&content)
+        .map_err(|_err| FrontendError::new(DisplayErrorKind::DeserializeWorkspaceError))?;
 
     Ok(workspace)
 }
@@ -44,7 +44,7 @@ pub fn save_workspace(workspace: &Workspace) -> Result<(), FrontendError> {
     let workspace_file_path = dbg!(config_dir.join(WORKSPACE_FILENAME));
     let default_str = serde_json::to_string_pretty::<Workspace>(workspace)
         .map_err(|_serde_err| FrontendError::new(DisplayErrorKind::SerializeWorkspaceError))?;
-    fs::write(workspace_file_path.clone(), default_str)
+    fs::write(workspace_file_path, default_str)
         .map_err(|_io_err| FrontendError::new(DisplayErrorKind::SaveWorkspaceError))?;
     Ok(())
 }
@@ -52,44 +52,33 @@ pub fn save_workspace(workspace: &Workspace) -> Result<(), FrontendError> {
 pub fn load_collection_config(
     config_file_path: &PathBuf,
 ) -> Result<CollectionConfig, FrontendError> {
-    if let Some(_) = HttpRestFileExtension::from_path(&config_file_path) {
-        let content = std::fs::read_to_string(config_file_path).map_err(|_err| {
-            // @TODO: log error
-            FrontendError::new_with_message(
-                DisplayErrorKind::InvalidCollectionConfig,
-                format!(
-                    "Could not load collection at path: '{}'",
-                    config_file_path.to_string_lossy().to_string()
-                ),
-            )
-        })?;
-        let collection_config: CollectionConfig =
-            serde_json::from_str(&content).map_err(|_err| {
-                FrontendError::new_with_message(
-                    DisplayErrorKind::InvalidCollectionConfig,
-                    format!(
-                        "Could not load collection at path: '{}'",
-                        config_file_path.to_string_lossy().to_string()
-                    ),
-                )
-            })?;
-        Ok(collection_config)
-    } else {
-        Err(FrontendError::new_with_message(
+    let content = std::fs::read_to_string(config_file_path).map_err(|_err| {
+        // @TODO: log error
+        FrontendError::new_with_message(
             DisplayErrorKind::InvalidCollectionConfig,
             format!(
-                "Did not find a collection config json file at path: '{}'",
-                config_file_path.to_string_lossy().to_string()
+                "Could not load collection at path: '{}'",
+                config_file_path.to_string_lossy()
             ),
-        ))
-    }
+        )
+    })?;
+    let collection_config: CollectionConfig = serde_json::from_str(&content).map_err(|_err| {
+        FrontendError::new_with_message(
+            DisplayErrorKind::InvalidCollectionConfig,
+            format!(
+                "Could not load collection at path: '{}'",
+                config_file_path.to_string_lossy()
+            ),
+        )
+    })?;
+    Ok(collection_config)
 }
 
 pub fn save_collection_config(
     collection_config: &CollectionConfig,
     path: &PathBuf,
 ) -> Result<(), FrontendError> {
-    let str = serde_json::to_string(collection_config).map_err(|_err| {
+    let str = serde_json::to_string_pretty(collection_config).map_err(|_err| {
         let msg = format!(
             "Could not serialize collection configuration for collection: {}",
             collection_config.name
@@ -101,7 +90,7 @@ pub fn save_collection_config(
         let msg = format!(
             "Could not write collection configuration to file. Collection config: {}, path: {}",
             collection_config.name,
-            path.to_string_lossy().to_string()
+            path.to_string_lossy()
         );
         FrontendError::new_with_message(DisplayErrorKind::InvalidCollectionConfig, msg)
     })

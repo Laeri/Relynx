@@ -1,5 +1,4 @@
 use http_rest_file::model::ParseError;
-use rspc;
 use rspc::Type;
 use serde::{Deserialize, Serialize};
 
@@ -58,6 +57,8 @@ pub enum DisplayErrorKind {
     DragAndDropError,
     InvalidCollectionConfig,
     ReorderError,
+    UnsupportedImportFormat,
+    ImportSerializeError
 }
 
 impl std::fmt::Display for FrontendError {

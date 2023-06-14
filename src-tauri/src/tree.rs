@@ -1,22 +1,14 @@
 use std::path::PathBuf;
 
-use crate::model::{RequestModel, Uuid};
+use crate::model::{PathOrder, RequestModel, Uuid};
 use crate::sanitize::{sanitize_filename_with_options, Options as SanitizeOptions};
 use http_rest_file::model::{HttpRestFile, HttpRestFileExtension, Request};
 use rspc::Type;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Type, Debug)]
+#[derive(Serialize, Deserialize, Type, Debug, Default)]
 pub struct RequestTree {
     pub root: RequestTreeNode,
-}
-
-impl Default for RequestTree {
-    fn default() -> Self {
-        RequestTree {
-            root: RequestTreeNode::default(),
-        }
-    }
 }
 
 #[derive(Serialize, Deserialize, Type, Debug)]
@@ -41,13 +33,13 @@ pub enum GroupOptions {
 
 impl RequestTreeNode {
     pub fn new_request_node(request_model: RequestModel, path: String) -> Self {
-        let mut node = RequestTreeNode::default();
         // @TODO check if name works for a file name
-
-        node.name = sanitize_filename_with_options(&request_model.name, DEFAULT_OPTIONS);
-        node.filepath = path;
-        node.request = Some(request_model);
-        node
+        RequestTreeNode {
+            name: sanitize_filename_with_options(&request_model.name, DEFAULT_OPTIONS),
+            filepath: path,
+            request: Some(request_model),
+            ..Default::default()
+        }
     }
     pub fn new_group(options: GroupOptions) -> Self {
         let mut node = RequestTreeNode::default();
@@ -83,6 +75,19 @@ impl RequestTreeNode {
     pub fn is_folder(&self) -> bool {
         self.request.is_none() && !self.is_file_group
     }
+
+    pub fn is_request_node(&self) -> bool {
+        self.request.is_some()
+    }
+
+    pub fn is_file_group(&self) -> bool {
+        self.is_file_group
+    }
+
+    pub fn get_file_name(&self) -> String {
+        let path = PathBuf::from(&self.filepath);
+        path.file_name().unwrap().to_string_lossy().to_string()
+    }
 }
 
 impl Default for RequestTreeNode {
@@ -102,6 +107,13 @@ impl TryFrom<RequestTreeNode> for HttpRestFile {
     type Error = ();
     fn try_from(value: RequestTreeNode) -> Result<Self, Self::Error> {
         TryFrom::<&RequestTreeNode>::try_from(&value)
+    }
+}
+
+impl TryFrom<&mut RequestTreeNode> for HttpRestFile {
+    type Error = ();
+    fn try_from(value: &mut RequestTreeNode) -> Result<Self, Self::Error> {
+        TryFrom::<&RequestTreeNode>::try_from(value)
     }
 }
 
@@ -134,16 +146,28 @@ impl TryFrom<&RequestTreeNode> for HttpRestFile {
     }
 }
 
-pub fn correct_children_paths(node: &mut RequestTreeNode) {
+pub fn correct_children_paths(node: &mut RequestTreeNode, path_orders: &mut PathOrder) {
     let mut nodes: Vec<&mut RequestTreeNode> = vec![node];
     while let Some(current) = nodes.pop() {
         let current_path = PathBuf::from(&current.filepath);
-        current.children.iter_mut().for_each(|child| {
-            let child_path = PathBuf::from(&child.filepath);
-            if let Some(file_name) = child_path.file_name() {
-                child.filepath = current_path.join(file_name).to_string_lossy().to_string();
-            }
-        });
+        current
+            .children
+            .iter_mut()
+            .enumerate()
+            .for_each(|(index, child)| {
+                let child_path = PathBuf::from(&child.filepath);
+                if let Some(file_name) = child_path.file_name() {
+                    let new_path = current_path.join(file_name).to_string_lossy().to_string();
+
+                    if path_orders.get(&child.filepath).is_some() {
+                        path_orders.insert(new_path.clone(), index as u32);
+                    }
+                    child.filepath = new_path.clone();
+                    if child.request.is_some() {
+                        child.request.as_mut().unwrap().rest_file_path = new_path;
+                    }
+                }
+            });
         nodes.extend(
             current
                 .children

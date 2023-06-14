@@ -8,6 +8,7 @@ mod import;
 mod model;
 mod sanitize;
 mod tree;
+mod serialize;
 
 use commands::{
     add_existing_collections, add_group_node, add_request_node, copy_to_clipboard, delete_node,

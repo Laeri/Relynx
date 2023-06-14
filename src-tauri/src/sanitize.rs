@@ -30,6 +30,7 @@ impl<'a> Default for Options<'a> {
     }
 }
 
+#[allow(dead_code)]
 pub fn sanitize_filename<S: AsRef<str>>(name: S) -> String {
     sanitize_filename_with_options(name, Options::default())
 }
@@ -42,7 +43,7 @@ pub fn sanitize_filename_with_options<S: AsRef<str>>(name: S, options: Options) 
     } = options;
     let name = name.as_ref();
 
-    let name = ILLEGAL_RE.replace_all(&name, replacement);
+    let name = ILLEGAL_RE.replace_all(name, replacement);
     let name = CONTROL_RE.replace_all(&name, replacement);
     let name = RESERVED_RE.replace(&name, replacement);
 
@@ -85,36 +86,38 @@ impl Default for OptionsForCheck {
     }
 }
 
+#[allow(dead_code)]
 pub fn is_sanitized<S: AsRef<str>>(name: S) -> bool {
     is_sanitized_with_options(name, OptionsForCheck::default())
 }
 
+#[allow(dead_code)]
 pub fn is_sanitized_with_options<S: AsRef<str>>(name: S, options: OptionsForCheck) -> bool {
     let OptionsForCheck { windows, truncate } = options;
     let name = name.as_ref();
 
-    if ILLEGAL_RE.is_match(&name) {
+    if ILLEGAL_RE.is_match(name) {
         return false;
     }
-    if CONTROL_RE.is_match(&name) {
+    if CONTROL_RE.is_match(name) {
         return false;
     }
-    if RESERVED_RE.is_match(&name) {
+    if RESERVED_RE.is_match(name) {
         return false;
     }
     if truncate && name.len() > 255 {
         return false;
     }
     if windows {
-        if WINDOWS_RESERVED_RE.is_match(&name) {
+        if WINDOWS_RESERVED_RE.is_match(name) {
             return false;
         }
-        if WINDOWS_TRAILING_RE.is_match(&name) {
+        if WINDOWS_TRAILING_RE.is_match(name) {
             return false;
         }
     }
 
-    return true;
+    true
 }
 
 #[cfg(test)]
