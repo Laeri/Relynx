@@ -32,28 +32,25 @@ impl Collection {
 
 #[derive(Serialize, Deserialize, Type, Debug, Clone)]
 pub enum MessageSeverity {
-
     #[serde(rename = "warn")]
     INFO,
 
     #[serde(rename = "warn")]
     Warn,
-#[serde(rename = "success")]
+    #[serde(rename = "success")]
     SUCCESS,
 
     #[serde(rename = "error")]
-    ERROR
+    ERROR,
 }
-
 
 // @TODO
 #[derive(Serialize, Deserialize, Type, Debug, Clone)]
 pub struct ImportWarning {
     pub rest_file_path: String,
-    pub node_name: String, // @TODO: check if not identifiable by id
     pub is_group: bool,
     pub message: Option<String>,
-    pub severity: Option<MessageSeverity>
+    pub severity: Option<MessageSeverity>,
 }
 
 #[derive(Serialize, Deserialize, Type, Debug)]

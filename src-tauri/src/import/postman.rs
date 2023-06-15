@@ -35,7 +35,6 @@ pub fn import(
                     let collection = postman_to_request_tree(result_path, spec);
                     // @TODO: handle not being able to save requests on file system
                     workspace.collections.push(collection.clone());
-                    println!("import_warnings: {:?}", collection.import_warnings);
                     // @TODO: also save collection config there as well to mark it is actually a
                     // collection?
                     save_workspace(&workspace)?;
@@ -45,7 +44,6 @@ pub fn import(
             }
         }
         Err(_e) => {
-            eprintln!("ERROR: {}", _e);
             // @TODO error handling
             return Err(FrontendError::new_with_message(
                 crate::error::DisplayErrorKind::ImportPostmanError,
@@ -62,7 +60,6 @@ fn into_request_tree_node(
     import_warnings: &mut Vec<ImportWarning>,
 ) -> Result<RequestTreeNode, ()> {
     let path = parent_path.join(filename);
-    println!("Current path: {:?}", path.to_string_lossy());
 
     if let Some(ref request) = item.request {
         let request_node = RequestTreeNode::new_request_node(
@@ -74,7 +71,6 @@ fn into_request_tree_node(
             // @TODO: error handling
             import_warnings.push(ImportWarning {
                 rest_file_path: path.to_string_lossy().to_string(),
-                node_name: filename.to_string(),
                 is_group: false,
                 severity: Some(MessageSeverity::ERROR),
                 message: None
@@ -82,12 +78,10 @@ fn into_request_tree_node(
             ()
         })?;
 
-        println!("Create request {}", path.to_string_lossy());
         Serializer::serialize_to_file(&file_model).map_err(|_err| {
             // @TODO: error handling
             import_warnings.push(ImportWarning {
                 rest_file_path: path.to_string_lossy().to_string(),
-                node_name: filename.to_string(),
                 is_group: false,
                 severity: Some(MessageSeverity::ERROR),
                 message: None
@@ -103,11 +97,9 @@ fn into_request_tree_node(
 
     if !path.exists() {
         std::fs::create_dir(&path).map_err(|_err| {
-            println!("Create dir: {}", path.to_string_lossy());
             // @TODO: error handling
             import_warnings.push(ImportWarning {
                 rest_file_path: path.to_string_lossy().to_string(),
-                node_name: filename.to_string(),
                 is_group: true,
                 severity: Some(MessageSeverity::ERROR),
                 message: None
@@ -329,7 +321,6 @@ fn transform_request(
                                                     severity: Some(MessageSeverity::Warn),
                                                     message: Some("Multiple files are present within the form parameters of the request body but only a single file can be imported".to_string()),
 
-                                                        node_name: name.clone(),
                                                         is_group: false,
                                                     });
                                                     files
@@ -396,7 +387,6 @@ let filename = PathBuf::from(&file_src)
                                 RequestBody::UrlEncoded { url_encoded_params }
                             },
                             Some(Mode::Graphql) => {
-                                println!("GRAPHQL: {:?}", postman_body.graphql);
                                 // @TODO: we modify headers, here, maybe create a `Headers` object and
                                 // expose some methods
                                 headers.push(crate::model::Header::new(
@@ -405,7 +395,7 @@ let filename = PathBuf::from(&file_src)
                                 ));
                             let graphql = serde_json::to_string(&postman_body.graphql.clone().unwrap_or_default());
                             if graphql.is_err() {
-                                import_warnings.push(ImportWarning { rest_file_path: request_path.to_string_lossy().to_string(), node_name: name.to_string(), is_group: false, message: Some("GraphQl Body could not be imported".to_string()), severity: Some(MessageSeverity::Warn) });
+                                import_warnings.push(ImportWarning { rest_file_path: request_path.to_string_lossy().to_string(),  is_group: false, message: Some("GraphQl Body could not be imported".to_string()), severity: Some(MessageSeverity::Warn) });
                                 DataSource::Raw(String::new()); 
                             } 
                                 RequestBody::Raw {

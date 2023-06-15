@@ -1,7 +1,7 @@
 mod drag_and_drop;
 use crate::config::{load_collection_config, save_collection_config};
 use crate::error::{DisplayErrorKind, FrontendError};
-use crate::import::{LoadRequestsResult, postman};
+use crate::import::{postman, LoadRequestsResult};
 use crate::model::{
     AddCollectionsResult, Collection, CollectionConfig, ImportCollectionResult, RequestModel,
     RequestResult, RunRequestCommand, SaveRequestCommand, Workspace,
@@ -179,9 +179,7 @@ pub fn import_postman_collection(
     import_postman_path: String,
     import_result_path: String,
 ) -> Result<ImportCollectionResult, rspc::Error> {
-    postman::import(workspace, import_postman_path, import_result_path).map_err(|err| {
-        dbg!(err)
-    }).map_err(Into::into)
+    postman::import(workspace, import_postman_path, import_result_path).map_err(Into::into)
 }
 
 #[tauri::command]
@@ -205,15 +203,15 @@ pub fn save_request(command: SaveRequestCommand) -> Result<String, rspc::Error> 
         .into());
     }
 
-    let file_path = dbg!(requests[0].rest_file_path.clone());
+    let file_path = requests[0].rest_file_path.clone();
     let requests: Vec<Request> = requests.into_iter().map(Into::into).collect();
 
-     let file_model = dbg!(http_rest_file::model::HttpRestFile {
+    let file_model = http_rest_file::model::HttpRestFile {
         errs: vec![],
         requests,
         path: Box::new(PathBuf::from(file_path.clone())),
         extension: Some(HttpRestFileExtension::Http),
-    });
+    };
 
     Serializer::serialize_to_file(&file_model).map_err(|_err| {
         // @TODO: handle error
@@ -375,8 +373,6 @@ pub fn add_request_node(params: AddRequestNodeParams) -> Result<RequestTreeNode,
             new_request_tree_node,
         )
     };
-    print!("FileModel: {:?}", file_model);
-    print!("Node: {:?}", node);
 
     if !file_model
         .path
