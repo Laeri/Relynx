@@ -25,7 +25,7 @@ export function EnvironmentComponent(_props: ComponentProps) {
 
   const currentEnvironment = useRequestModelStore((state) => state.currentEnvironment)
   const environments = useRequestModelStore((state) => state.environments)
-  const updateEnvironments = useRequestModelStore((state) => state.updateEnvironments)
+  const setEnvironments = useRequestModelStore((state) => state.setEnvironments)
   const setStoreCurrentEnvironment = useRequestModelStore((state) => state.setCurrentEnvironment)
 
   const currentCollection = useRequestModelStore((state) => state.currentCollection)
@@ -59,7 +59,7 @@ export function EnvironmentComponent(_props: ComponentProps) {
     let newEnvironments = [...environments];
     newEnvironments[index] = newEnvironment;
     setStoreCurrentEnvironment(newEnvironment)
-    updateEnvironments(newEnvironments)
+    setEnvironments(newEnvironments)
     // @ts-ignore
     backend.saveEnvironments(currentCollection, newEnvironments).then((_result: any) => {
       // ignored
@@ -105,7 +105,7 @@ export function EnvironmentComponent(_props: ComponentProps) {
       return
     }
     backend.saveEnvironments(currentCollection, newEnvironments).then(() => {
-      updateEnvironments([...environments, newEnviron]);
+      setEnvironments([...environments, newEnviron]);
       setStoreCurrentEnvironment(newEnviron);
     }).catch(catchError(toast))
 
@@ -146,7 +146,7 @@ export function EnvironmentComponent(_props: ComponentProps) {
   const removeCurrentEnvironment = () => {
     let currentEnvs = environments
     let newEnvironments = currentEnvs.filter((environment: Environment) => environment.name !== currentEnvironment?.name)
-    updateEnvironments(newEnvironments)
+    setEnvironments(newEnvironments)
     setStoreCurrentEnvironment(undefined)
   }
 
@@ -272,7 +272,7 @@ export function EnvironmentComponent(_props: ComponentProps) {
       style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '100%' }}>
 
       <h1 style={{ marginTop: '20px', marginBottom: '50px' }}>Environment</h1>
-      {currentEnvironment &&
+      {
         <div style={{ width: '100%', marginBottom: '200px' }}>
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: '50px' }}>
 
@@ -281,67 +281,72 @@ export function EnvironmentComponent(_props: ComponentProps) {
             {environments.length > 1 &&
               <Dropdown style={{ ...envDropdownStyle, marginLeft: '30px' }} optionLabel="name"
                 value={currentEnvironment?.name}
-                options={environmentsToOptions(environments, false)}
+                options={environmentsToOptions(environments, true)}
                 onChange={(e) => selectEnvironment(e.value)}
                 placeholder={"No Environment"} />}
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-            <h3>Name</h3>
-            <div>
-              <InputText autoFocus={true} value={currentEnvironment.name} placeholder={"Name"}
-                onChange={(e) => updateName(e.target.value)} style={{ marginTop: '10px' }} />
-              <Button label="Delete" onClick={openDeleteConfirmDialog} className={'p-button-outlined'}
-                icon="pi pi-trash" style={{ marginLeft: '50px' }} />
-            </div>
+          {currentEnvironment &&
+            <>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                <h3>Name</h3>
+                <div>
+                  <InputText autoFocus={true} value={currentEnvironment.name} placeholder={"Name"}
+                    onChange={(e) => updateName(e.target.value)} style={{ marginTop: '10px' }} />
+                  <Button label="Delete" onClick={openDeleteConfirmDialog} className={'p-button-outlined'}
+                    icon="pi pi-trash" style={{ marginLeft: '50px' }} />
+                </div>
 
-          </div>
+              </div>
 
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'flex-start',
-            marginTop: '40px',
-            marginBottom: '20px'
-          }}>
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'flex-start',
+                marginTop: '40px',
+                marginBottom: '20px'
+              }}>
 
-            {/*Public Variables*/}
-            <div style={envSectionStyle}>
-              <h2 style={{ marginTop: '40px', marginBottom: '20px', textAlign: 'left' }}>Variables</h2>
+                {/*Public Variables*/}
+                <div style={envSectionStyle}>
+                  <h2 style={{ marginTop: '40px', marginBottom: '20px', textAlign: 'left' }}>Variables</h2>
 
-              <p style={helpTextStyle}>
-                {variableHelpText}
-              </p>
+                  <p style={helpTextStyle}>
+                    {variableHelpText}
+                  </p>
 
-              <EnvTable isSecret={false} rowData={varRowData}
-                updateEnvironmentInState={updateEnvironmentInState}
-                onRemoveRowData={removeVariable} />
+                  <EnvTable isSecret={false} rowData={varRowData}
+                    updateEnvironmentInState={updateEnvironmentInState}
+                    onRemoveRowData={removeVariable} />
 
-              <Button icon={'pi pi-plus'} label={"Add Variable"}
-                className={'p-button-raised p-button-text'}
-                style={{ marginTop: '30px', maxWidth: '180px' }} onClick={addEnvironmentVariable} />
+                  <Button icon={'pi pi-plus'} label={"Add Variable"}
+                    className={'p-button-raised p-button-text'}
+                    style={{ marginTop: '30px', maxWidth: '180px' }} onClick={addEnvironmentVariable} />
 
-            </div>
+                </div>
 
-            {/*Secrets*/}
-            <div style={envSectionStyle}>
-              <h2 style={{ marginTop: '40px', marginBottom: '20px', textAlign: 'left' }}>Secrets</h2>
+                {/*Secrets*/}
+                <div style={envSectionStyle}>
+                  <h2 style={{ marginTop: '40px', marginBottom: '20px', textAlign: 'left' }}>Secrets</h2>
 
-              <p style={helpTextStyle}>
-                {secretHelpText}
-              </p>
-              <EnvTable isSecret={true} rowData={secretRowData}
-                updateEnvironmentInState={updateEnvironmentInState}
-                onRemoveRowData={removeSecret} />
+                  <p style={helpTextStyle}>
+                    {secretHelpText}
+                  </p>
+                  <EnvTable isSecret={true} rowData={secretRowData}
+                    updateEnvironmentInState={updateEnvironmentInState}
+                    onRemoveRowData={removeSecret} />
 
-              <Button icon={'pi pi-plus'} label={"Add Secret"} className={'p-button-raised p-button-text'}
-                style={{ marginTop: '30px', maxWidth: '180px' }} onClick={addSecretVariable} />
-            </div>
-          </div>
+                  <Button icon={'pi pi-plus'} label={"Add Secret"} className={'p-button-raised p-button-text'}
+                    style={{ marginTop: '30px', maxWidth: '180px' }} onClick={addSecretVariable} />
+                </div>
+              </div>
+            </>
+          }
         </div>
       }
+
       {
-        !currentEnvironment &&
+        environments.length == 0 &&
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
           <span>This collection does not have any environments yet. Create a new one.</span>
           <Button icon={'pi pi-plus'} label={"Add Environment"} className={'p-button-raised'}

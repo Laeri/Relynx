@@ -1,7 +1,7 @@
 import { useContext, useEffect, useState } from "react";
 import { useRequestModelStore } from "../stores/requestStore";
 import { ToastContext } from "../App";
-import { RequestModel, Collection, RequestTree } from '../bindings';
+import { RequestModel, Collection, RequestTree, Environment } from '../bindings';
 import { Button } from "primereact/button";
 import { createNewRequestNode } from "../common/requestUtils";
 import { createNewGroupNode } from "./RequestTreeComponent";
@@ -22,9 +22,14 @@ export function CollectionOverviewComponent(_props: ComponentProps) {
   const toast = useContext(ToastContext);
 
   const collection = useRequestModelStore((state) => state.currentCollection) as Collection;
+  const updateCollection = useRequestModelStore((state) => state.setCurrentCollection);
+
+  const setEnvironments = useRequestModelStore((state) => state.setEnvironments);
+  const setCurrentEnvironment = useRequestModelStore((state) => state.setCurrentEnvironment);
+
   const requestTree = useRequestModelStore((state) => state.requestTree) as RequestTree;
   const [requests, setRequests] = useState<RequestModel[]>([]);
-  const updateCollection = useRequestModelStore((state) => state.setCurrentCollection)
+
   const workspace = useRequestModelStore((state) => state.workspace)
   const updateWorkspace = useRequestModelStore((state) => state.updateWorkspace)
 
@@ -35,6 +40,18 @@ export function CollectionOverviewComponent(_props: ComponentProps) {
       setRequests(allRequests)
     }
   }, [requestTree])
+
+  useEffect(() => {
+    if (collection) {
+      backend.loadEnvironments(collection.path).then((environments: Environment[]) => {
+        setEnvironments(environments);
+        let current_env = environments.find((env: Environment) => env.name == collection.current_env_name);
+        if (current_env) {
+          setCurrentEnvironment(current_env);
+        }
+      }).catch(catchError);
+    }
+  }, [collection?.path]);
 
 
   const updateCollectionDescription = (newVal: string) => {

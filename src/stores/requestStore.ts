@@ -17,7 +17,7 @@ interface RelynxState {
   setCurrentRequest: (request?: RequestModel) => void,
   currentEnvironment?: Environment,
   environments: Environment[],
-  updateEnvironments: (environments: Environment[]) => void,
+  setEnvironments: (environments: Environment[]) => void,
 
   setCurrentEnvironment: (environment?: Environment) => void,
 
@@ -87,7 +87,7 @@ export const useRequestModelStore = create<RelynxState>((set) => {
       }
     }),
 
-    updateEnvironments: (environments: Environment[]) => set((state: RelynxState) => {
+    setEnvironments: (environments: Environment[]) => set((state: RelynxState) => {
       return {
         ...state,
         environments: environments

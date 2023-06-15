@@ -22,8 +22,8 @@ export interface RowData {
   index: number,
   name: string,
   initialValue: string,
-  currentValue: string,
-  description: string,
+  currentValue: string | null,
+  description: string | null,
   persistToFile?: boolean,
   invalid?: boolean
   error?: string
@@ -43,11 +43,11 @@ export function EnvTable(props: ComponentProps) {
   }
 
   const currentValueTemplate = (rowData: RowData) => {
-    return sharedTemplate(rowData.currentValue, "Current Value", undefined, false)
+    return sharedTemplate(rowData.currentValue ?? "", "Current Value", undefined, false)
   }
 
   const descriptionTemplate = (rowData: RowData) => {
-    return sharedTemplate(rowData.description, "Description", undefined, false)
+    return sharedTemplate(rowData.description ?? "", "Description", undefined, false)
   }
 
   const checkboxupdate = (rowIndex: number, checked: boolean) => {
@@ -85,7 +85,7 @@ export function EnvTable(props: ComponentProps) {
     let { rowData, newValue, field, originalEvent: event } = e;
 
     // @ts-ignore
-    rowData[field] = newValue;
+    rowData[field] = newValue ?? "";
     if (!currentEnvironment) {
       return
     }
