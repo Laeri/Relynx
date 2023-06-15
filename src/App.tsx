@@ -14,6 +14,7 @@ import { Container as ModalContainer } from 'react-modal-promise';
 import { RequestComponent } from './components/RequestComponent';
 import { CollectionOverviewComponent } from './components/CollectionOverviewComponent';
 import { backend } from './rpc';
+import { EnvironmentComponent } from './components/EnvironmentComponent';
 
 export interface ToastContext {
   toast: Ref<any>,
@@ -102,7 +103,7 @@ function App() {
 
               <Route element={<RequestComponent />} path={"/collection/request"} />
               <Route element={<CollectionOverviewComponent />} path={"/collection"} />
-              {/*<Route element={<EnvironmentComponent />} path={"/collection/environment"} /> */}
+              <Route element={<EnvironmentComponent />} path={"/collection/environment"} />
             </Routes>
           </main>
 

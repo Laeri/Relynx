@@ -3,8 +3,9 @@ use crate::config::{load_collection_config, save_collection_config};
 use crate::error::{DisplayErrorKind, FrontendError};
 use crate::import::{postman, LoadRequestsResult};
 use crate::model::{
-    AddCollectionsResult, Collection, CollectionConfig, ImportCollectionResult, RequestModel,
-    RequestResult, RunRequestCommand, SaveRequestCommand, Workspace,
+    AddCollectionsResult, Collection, CollectionConfig, Environment, ImportCollectionResult,
+    RequestModel, RequestResult, RunRequestCommand, SaveRequestCommand,
+    Workspace,
 };
 use crate::sanitize::sanitize_filename_with_options;
 use crate::tree::{GroupOptions, RequestTreeNode, DEFAULT_OPTIONS};
@@ -17,6 +18,7 @@ use http_rest_file::{
     Serializer,
 };
 use serde::{Deserialize, Serialize};
+
 use std::path::PathBuf;
 use std::sync::Mutex; // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 use tauri::{api::shell, Manager};
@@ -191,8 +193,8 @@ pub fn run_request(_request_command: RunRequestCommand) -> Result<RequestResult,
 pub fn save_request(command: SaveRequestCommand) -> Result<String, rspc::Error> {
     let SaveRequestCommand {
         requests,
-        collection,
-        request_name,
+        collection: _,
+        request_name: _,
     } = command;
 
     if requests.is_empty() {
@@ -557,4 +559,24 @@ pub fn delete_node(params: DeleteNodeParams) -> Result<(), rspc::Error> {
     let _ignored = save_collection_config(&collection_config, &collection.get_config_file_path());
 
     Ok(())
+}
+
+
+
+
+#[tauri::command]
+pub fn load_environments(collection_path: PathBuf) -> Result<Vec<Environment>, rspc::Error> {
+    crate::environment::load_environments(collection_path).map_err(Into::into)
+}
+
+#[derive(Serialize, Deserialize, rspc::Type, Debug)]
+pub struct SaveEnvironmentsParams {
+    collection_path: PathBuf,
+    environments: Vec<Environment>,
+}
+
+#[tauri::command]
+pub fn save_environments(params: SaveEnvironmentsParams) -> Result<(), rspc::Error> {
+    crate::environment::save_environments(params.collection_path, params.environments)
+        .map_err(Into::into)
 }

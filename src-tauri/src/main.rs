@@ -3,24 +3,26 @@
 
 mod commands;
 mod config;
+mod environment;
 mod error;
 mod import;
 mod model;
 mod sanitize;
-mod tree;
 mod serialize;
+mod tree;
 
 use commands::{
     add_existing_collections, add_group_node, add_request_node, copy_to_clipboard, delete_node,
-    drag_and_drop, import_postman_collection, is_directory_empty, load_requests_for_collection,
-    load_workspace, open_folder_native, remove_collection, reorder_nodes_within_parent,
-    run_request, save_request, select_directory, select_file, update_workspace,
-    AddExistingCollectionsParams, AddGroupNodeParams, AddRequestNodeParams, DeleteNodeParams,
-    DragAndDropParams, ImportPostmanCommandParams, ReorderNodesParams, RELYNX_CONTEXT,
+    drag_and_drop, import_postman_collection, is_directory_empty, load_environments,
+    load_requests_for_collection, load_workspace, open_folder_native, remove_collection,
+    reorder_nodes_within_parent, run_request, save_environments, save_request, select_directory,
+    select_file, update_workspace, AddExistingCollectionsParams, AddGroupNodeParams,
+    AddRequestNodeParams, DeleteNodeParams, DragAndDropParams, ImportPostmanCommandParams,
+    ReorderNodesParams, SaveEnvironmentsParams, RELYNX_CONTEXT,
 };
 use model::{Collection, RunRequestCommand, SaveRequestCommand, Workspace};
 use rspc::Router;
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 use tauri::Manager;
 use tauri_plugin_log::LogTarget;
 
@@ -88,6 +90,12 @@ fn router() -> Arc<Router> {
         })
         .query("reorder_nodes_within_parent", |t| {
             t(|_, params: ReorderNodesParams| reorder_nodes_within_parent(params))
+        })
+        .query("load_environments", |t| {
+            t(|_, collection_path: PathBuf| load_environments(collection_path))
+        })
+        .query("save_environments", |t| {
+            t(|_, params: SaveEnvironmentsParams| save_environments(params))
         })
         .build();
     Arc::new(router)

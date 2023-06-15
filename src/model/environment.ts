@@ -1,4 +1,4 @@
-import { EnvVarDescription, Environment } from '../bindings';
+import { Environment, EnvironmentVariable, EnvironmentSecret } from '../bindings';
 
 export const environmentsToOptions = (environments: Environment[], withNone: boolean = false) => {
   let options = environments.map((environment: Environment) => {
@@ -14,11 +14,28 @@ export const envDropdownStyle = {
   maxWidth: '150px'
 }
 
+export function getUpdatedEnvironment(environment: Environment, partial: Partial<Environment>): Environment {
+  return { ...environment, ...partial };
+}
 
-export function NewEnvVarDescription(name: string, isSecret: boolean, description: string): EnvVarDescription {
-  return {
-    env_var_name: name,
-    description: description,
-    is_secret: isSecret,
-  }
+export function newEnvironmentVariable(): EnvironmentVariable {
+  let variable: EnvironmentVariable = {
+    name: "",
+    description: null,
+    current_value: null,
+    initial_value: ""
+  };
+  return variable;
+}
+
+
+export function newEnvironmentSecret(): EnvironmentSecret {
+  let secret: EnvironmentSecret = {
+    name: "",
+    description: null,
+    current_value: null,
+    initial_value: "",
+    persist_to_file: true
+  };
+  return secret;
 }

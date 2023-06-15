@@ -25,8 +25,11 @@ pub struct Collection {
 
 impl Collection {
     pub fn get_config_file_path(&self) -> PathBuf {
-        let path = PathBuf::from(&self.path);
-        path.join(COLLECTION_CONFIGFILE)
+        Collection::config_file_path(&PathBuf::from(&self.path))
+    }
+
+    pub fn config_file_path(collection_folder_path: &PathBuf) -> PathBuf {
+        collection_folder_path.join(COLLECTION_CONFIGFILE)
     }
 }
 
@@ -74,11 +77,14 @@ pub struct ImportCollectionResult {
 // this is only for requests or groups within a group. For filegroups the order is dependent on the
 // order of the requests within a file
 pub type PathOrder = HashMap<String, u32>;
+pub type EnvName = String;
+pub type EnvVarDescriptions = HashMap<EnvName, Vec<SingleEnvVarDescription>>;
 
 #[derive(Serialize, Deserialize, Type, Default, Debug)]
 pub struct CollectionConfig {
     pub name: String,
     pub path_orders: PathOrder,
+    pub env_var_descriptions: EnvVarDescriptions,
 }
 
 pub type Uuid = String;
@@ -348,26 +354,26 @@ impl<T> From<WithDefault<T>> for Replaced<T> {
 
 #[derive(Serialize, Deserialize, Type, Debug)]
 pub struct EnvironmentVariable {
-    name: String,
-    initial_value: String,
-    current_value: String,
-    description: String,
+    pub name: String,
+    pub initial_value: String,
+    pub current_value: Option<String>,
+    pub description: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Type, Debug)]
 pub struct EnvironmentSecret {
-    name: String,
-    initial_value: String,
-    current_value: String,
-    description: String,
-    persist_to_file: bool,
+    pub name: String,
+    pub initial_value: String,
+    pub current_value: Option<String>,
+    pub description: Option<String>,
+    pub persist_to_file: bool,
 }
 
 #[derive(Serialize, Deserialize, Type, Debug)]
-pub struct EnvVarDescription {
-    env_var_name: String,
-    description: String,
-    is_secret: bool,
+pub struct SingleEnvVarDescription {
+    pub env_var_name: String,
+    pub description: String,
+    pub is_secret: bool,
 }
 
 #[derive(Serialize, Deserialize, Type, Debug)]
@@ -375,7 +381,16 @@ pub struct Environment {
     pub name: String,
     pub variables: Vec<EnvironmentVariable>,
     pub secrets: Vec<EnvironmentSecret>,
-    pub env_var_descriptions: Vec<EnvVarDescription>,
+}
+
+impl Environment {
+    pub fn new(name: String) -> Self {
+        Environment {
+            name,
+            variables: vec![],
+            secrets: vec![],
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Type, Debug)]

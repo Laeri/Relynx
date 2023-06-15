@@ -2,7 +2,6 @@ import {InputText} from "primereact/inputtext";
 import {Button} from "primereact/button";
 import {backend} from '../rpc';
 import {Dropdown} from "primereact/dropdown";
-// @TODO: import {envDropdownStyle, environmentsToOptions} from "../models/Environment";
 import {useContext} from "react";
 import {useRequestModelStore} from "../stores/requestStore";
 import {catchError} from "../common/errorhandling";

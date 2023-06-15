@@ -17,7 +17,7 @@ interface RelynxState {
   setCurrentRequest: (request?: RequestModel) => void,
   currentEnvironment?: Environment,
   environments: Environment[],
-
+  updateEnvironments: (environments: Environment[]) => void,
 
   setCurrentEnvironment: (environment?: Environment) => void,
 
@@ -30,6 +30,7 @@ interface RelynxState {
   updateRequestTree: (requestTree: RequestTree) => void,
 
   storeUpdateRequestAndTree: (requestModel: Partial<RequestModel>) => void
+
 }
 
 //@TODO: Use immertype Callback = (state: State) => void;
@@ -83,6 +84,13 @@ export const useRequestModelStore = create<RelynxState>((set) => {
       return {
         ...state,
         currentEnvironment: environment
+      }
+    }),
+
+    updateEnvironments: (environments: Environment[]) => set((state: RelynxState) => {
+      return {
+        ...state,
+        environments: environments
       }
     }),
 

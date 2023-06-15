@@ -1,6 +1,6 @@
 import { createClient } from '@rspc/client'
 import { TauriTransport } from '@rspc/tauri'
-import { Procedures, Workspace, Collection, AddCollectionsResult, ImportCollectionResult, LoadRequestsResult, RunRequestCommand, RequestResult, RequestModel, SaveRequestCommand, RequestTreeNode, DragAndDropResult } from './bindings';
+import { Procedures, Workspace, Collection, AddCollectionsResult, ImportCollectionResult, LoadRequestsResult, RunRequestCommand, RequestResult, RequestModel, SaveRequestCommand, RequestTreeNode, DragAndDropResult, Environment } from './bindings';
 import { FError } from './common/errorhandling';
 import { CancellationToken } from './model/error';
 
@@ -49,6 +49,14 @@ class Backend {
     let result = api.query(['load_requests_for_collection', collection])
     console.log('load requests for collection result: ', result);
     return result;
+  }
+
+  loadEnvironments(collectionPath: string): Promise<Environment[]> {
+    return api.query(['load_environments', collectionPath]);
+  }
+
+  saveEnvironments(collection: Collection, environments: Environment[]): Promise<null> {
+    return api.query(['save_environments', { collection_path: collection.path, environments: environments }]);
   }
 
   importPostmanCollection(workspace: Workspace, import_postman_path: string, import_result_path: string): Promise<ImportCollectionResult> {

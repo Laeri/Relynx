@@ -58,7 +58,9 @@ pub enum DisplayErrorKind {
     InvalidCollectionConfig,
     ReorderError,
     UnsupportedImportFormat,
-    ImportSerializeError
+    ImportSerializeError,
+    LoadEnvironmentsError,
+    SaveEnvironmentsError
 }
 
 impl std::fmt::Display for FrontendError {
