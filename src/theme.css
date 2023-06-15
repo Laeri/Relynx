@@ -6230,3 +6230,8 @@
 .p-tree-toggler {
   width: 1rem !important;
 }
+
+/* Fix accordion header not left aligning */
+.p-accordion-header-text {
+  display: flex;
+}

@@ -24,6 +24,8 @@ import { getAllRequestsFromTree } from "../common/treeUtils";
 import { HTTP_METHODS, isCustomMethod } from "../model/request";
 import { Checkbox } from "primereact/checkbox";
 import { HelpTooltip } from "./HelpTooltip";
+import { RequestImportMessages } from "./RequestImportMessages";
+import { Accordion, AccordionTab } from "primereact/accordion";
 
 interface ComponentProps {
 }
@@ -70,6 +72,7 @@ export function RequestComponent(_props: ComponentProps) {
     setTmpRequestName(currentRequest.name);
 
     let importWarnings: ImportWarning[] = (currentCollection as Collection).import_warnings.filter((import_warning: ImportWarning) => {
+      console.log('import warning path: ', import_warning.rest_file_path, " request path: ", currentRequest.rest_file_path);
       return import_warning.rest_file_path === currentRequest.rest_file_path;
     });
     setImportWarnings(importWarnings);
@@ -382,8 +385,23 @@ export function RequestComponent(_props: ComponentProps) {
 
         {
           importWarnings.length > 0 &&
-          <WarningCollapsible collection={currentCollection as Collection} importWarnings={importWarnings}
-            onClearWarnings={clearImportWarnings} />
+          <Accordion style={{ marginTop: '30px' }} className={"p-accordion-thin"}>
+            <AccordionTab
+              className={"wide-accordion-header"}
+              header={
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <div>
+                    <i className="pi pi-exclamation-triangle mr-2 color-warn"></i>
+                    <span
+                      className="vertical-align-middle color-warn">Import Problems</span>
+                  </div>
+                </div>
+              }
+            >
+              <RequestImportMessages absolutePath={currentRequest.rest_file_path} messages={importWarnings} collection={currentCollection} />
+            </AccordionTab>
+          </Accordion>
+
         }
         <div className="requestTabView"
           style={{ marginTop: '50px', width: '100%', display: 'flex', flexDirection: 'column' }}>

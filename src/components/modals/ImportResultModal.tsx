@@ -1,7 +1,7 @@
 import { Dialog } from "primereact/dialog";
 import { Button } from "primereact/button";
 import { ImportResultComponent } from "../../components/ImportResultComponent";
-import {ImportCollectionResult} from "../../bindings";
+import { ImportCollectionResult } from "../../bindings";
 
 interface ComponentProps {
   isOpen: boolean
@@ -33,6 +33,7 @@ export function ImportResultModal(props: ComponentProps) {
         {
           (props.importCollectionResult && props.importCollectionResult.collection) &&
           <ImportResultComponent collection={props.importCollectionResult.collection}
+            importWarnings={props.importCollectionResult.collection.import_warnings}
             onClearWarnings={undefined}
           />
         }

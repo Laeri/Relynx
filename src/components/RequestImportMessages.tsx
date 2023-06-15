@@ -1,37 +1,27 @@
 import { Message } from "primereact/message";
-import { ImportWarning, MessageSeverity } from "../bindings";
-import { Fieldset } from "primereact/fieldset";
-import { Accordion, AccordionTab } from "primereact/accordion";
+import { Collection, ImportWarning, MessageSeverity } from "../bindings";
 
 interface ComponentProps {
-  relativeRequestPath: string,
-  messages: ImportWarning[]
+  absolutePath: string,
+  messages: ImportWarning[],
+  // if true they are rendered in a collapsible as there are probably multiple warnings, otherwise directly display
+  collection: Collection
 }
 
 export function RequestImportMessages(props: ComponentProps) {
+  console.log('props: ', props);
 
-  const legend = `Request: ${props.messages[0].node_name ?? props.messages[0].rest_file_path}`;
+
   return (
-    <Accordion activeIndex={0}
-       style={{
-        marginTop: '20px'
-      }}>
-      <AccordionTab header={legend}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-          {
-            `/${props.messages[0].node_name ?? props.messages[0].rest_file_path}` !== props.relativeRequestPath &&
-            <span>Path: {props.relativeRequestPath}</span>
-          }
-          {
-            props.messages.map((message: ImportWarning) => {
-              return <Message style={{ marginTop: '20px' }}
-                severity={message.severity as MessageSeverity}
-                text={message.message} />
-            })
-          }
-        </div>
-      </AccordionTab>
-
-    </Accordion>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+      {
+        props.messages.map((message: ImportWarning) => {
+          return <Message style={{ marginTop: '20px' }}
+            severity={message.severity as MessageSeverity}
+            text={message.message} />
+        })
+      }
+    </div>
   )
+
 }

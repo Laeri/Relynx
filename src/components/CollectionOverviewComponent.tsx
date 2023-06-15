@@ -1,20 +1,17 @@
-import { useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { useRequestModelStore } from "../stores/requestStore";
 import { ToastContext } from "../App";
 import { RequestModel, Collection, RequestTree } from '../bindings';
-// @TODO import {getAllRequestsFromTree, PrimeNode} from "../common/treeUtils";
 import { Button } from "primereact/button";
 import { createNewRequestNode } from "../common/requestUtils";
-import { createNewGroupNode, RequestTreeComponent } from "./RequestTreeComponent";
+import { createNewGroupNode } from "./RequestTreeComponent";
 import { backend } from '../rpc';
 import { CollectionInfo } from "./CollectionInfo";
 import { InputTextarea } from "primereact/inputtextarea";
 import { catchError } from "../common/errorhandling";
 import { Accordion, AccordionTab } from "primereact/accordion";
-import { ImportResultComponent } from "./ImportResultComponent";
-import { confirmPopup } from "primereact/confirmpopup";
 import { WarningCollapsible } from "./WarningCollapsible";
-import { PrimeNode } from "../common/treeUtils";
+import { getAllRequestsFromTree, PrimeNode } from "../common/treeUtils";
 
 export interface ComponentProps {
 
@@ -32,10 +29,12 @@ export function CollectionOverviewComponent(_props: ComponentProps) {
   const updateWorkspace = useRequestModelStore((state) => state.updateWorkspace)
 
 
-  /* @TODO useEffect(() => {
-      let allRequests: RequestModel[] = []// @TODO: getAllRequestsFromTree(requestTree);
+  useEffect(() => {
+    if (requestTree) {
+      let allRequests: RequestModel[] = getAllRequestsFromTree(requestTree);
       setRequests(allRequests)
-  }, [requestTree]) */
+    }
+  }, [requestTree])
 
 
   const updateCollectionDescription = (newVal: string) => {
@@ -59,8 +58,6 @@ export function CollectionOverviewComponent(_props: ComponentProps) {
   const clearImportWarnings = () => {
     onClearWarnings();
   };
-
-
 
   const onClearWarnings = () => {
     let newWorkspace = structuredClone(workspace);
@@ -105,7 +102,9 @@ export function CollectionOverviewComponent(_props: ComponentProps) {
 
             {
               collection.import_warnings.length > 0 &&
-              <WarningCollapsible collection={collection} importWarnings={collection.import_warnings}
+              <WarningCollapsible
+                collection={collection}
+                importWarnings={collection.import_warnings}
                 onClearWarnings={clearImportWarnings} />
             }
 
@@ -136,7 +135,7 @@ export function CollectionOverviewComponent(_props: ComponentProps) {
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <div style={{ marginTop: '20px', display: 'flex' }}>
                   <Button icon={'pi pi-plus'} label={"Create Request"}
-                    onClick={() => {console.log('requestTree', requestTree);createNewRequestNode(requestTree.root, toast, undefined)}}
+                    onClick={() => { console.log('requestTree', requestTree); createNewRequestNode(requestTree.root, toast, undefined) }}
                     className={"p-button-sm p-button-text p-button-raised"}
                     style={{}} />
                   <Button icon={'pi pi-plus'} label={"Create Group"}

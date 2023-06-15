@@ -5,12 +5,12 @@ use crate::config::save_workspace;
 use crate::error::{DisplayErrorKind, FrontendError};
 use crate::model::{
     Collection, ImportCollectionResult, ImportWarning, Multipart, Replaced, RequestBody,
-    RequestModel, Workspace,
+    RequestModel, Workspace, MessageSeverity,
 };
 use crate::sanitize::sanitize_filename;
 use crate::tree::{GroupOptions, RequestTreeNode};
 use http_rest_file::model::{
-    DataSource, DispositionField, HttpMethod, HttpVersion, RequestSettings, UrlEncodedParam,
+    DataSource, HttpMethod, HttpVersion, RequestSettings, UrlEncodedParam,
     WithDefault,
 };
 use http_rest_file::Serializer;
@@ -76,6 +76,7 @@ fn into_request_tree_node(
                 rest_file_path: path.to_string_lossy().to_string(),
                 node_name: filename.to_string(),
                 is_group: false,
+                severity: Some(MessageSeverity::ERROR),
                 message: None
             });
             ()
@@ -88,6 +89,7 @@ fn into_request_tree_node(
                 rest_file_path: path.to_string_lossy().to_string(),
                 node_name: filename.to_string(),
                 is_group: false,
+                severity: Some(MessageSeverity::ERROR),
                 message: None
             });
 
@@ -107,6 +109,7 @@ fn into_request_tree_node(
                 rest_file_path: path.to_string_lossy().to_string(),
                 node_name: filename.to_string(),
                 is_group: true,
+                severity: Some(MessageSeverity::ERROR),
                 message: None
             });
             ()
@@ -128,10 +131,16 @@ fn into_request_tree_node(
     return Ok(group);
 }
 
-fn next_free_name(base_name: &str, index: u32, existing_names: &HashMap<String, ()>) -> String {
+fn next_free_name(base_name: &str, index: u32, existing_names: &HashMap<String, ()>, is_request: bool) -> String {
     let mut index = index;
+    let extension = if is_request {
+        http_rest_file::model::HttpRestFileExtension::Http.get_extension()
+    } else {
+        String::new()
+    };
+
     loop {
-        let name = format!("{}{}", base_name, index);
+        let name = format!("{}{}{}", base_name, index, extension);
         if let None = existing_names.get(&name) {
             return name;
         }
@@ -143,13 +152,16 @@ fn item_names(items: &Vec<Items>) -> Vec<String> {
     let mut names: HashMap<String, ()> = HashMap::new();
     for item in items.iter() {
         let mut name = sanitize_filename(item.name.clone().unwrap_or(String::new()));
+        if item.request.is_some() {
+            name = name + &http_rest_file::model::HttpRestFileExtension::Http.get_extension();
+        }
         if name.is_empty() {
             if let Some(_) = item.request {
-                name = next_free_name("Request_", 1, &names);
+                name = next_free_name("Request_", 1, &names, true);
             }
 
             if let Some(_) = item.item {
-                name = next_free_name("Group_", 1, &names);
+                name = next_free_name("Group_", 1, &names, false);
             }
         }
         names.insert(name, ());
@@ -314,7 +326,9 @@ fn transform_request(
                                                         rest_file_path: request_path
                                                             .to_string_lossy()
                                                             .to_string(),
+                                                    severity: Some(MessageSeverity::Warn),
                                                     message: Some("Multiple files are present within the form parameters of the request body but only a single file can be imported".to_string()),
+
                                                         node_name: name.clone(),
                                                         is_group: false,
                                                     });
@@ -325,21 +339,23 @@ fn transform_request(
                                                 }
                                                 None => String::new(),
                                             };
-
-                                            let filename = PathBuf::from(&file_src)
+let filename = PathBuf::from(&file_src)
                                                 .file_name()
                                                 .unwrap_or_default()
                                                 .to_string_lossy()
                                                 .to_string();
-                                            parts.push(crate::model::Multipart {
-                                                headers,
-                                                name,
-                                                fields: vec![
+
+ let disposition_fields: Vec<http_rest_file::model::DispositionField> = vec![
                                                     http_rest_file::model::DispositionField::new(
                                                         "filename", filename,
                                                     ),
-                                                ],
-                                                data: DataSource::FromFilepath(
+                                                ];
+
+
+                                                                                        parts.push(crate::model::Multipart {
+                                                headers,
+                                                name,
+                                                fields: disposition_fields,                                                 data: DataSource::FromFilepath(
                                                     file_src.to_string(),
                                                 ),
                                             })
@@ -389,7 +405,7 @@ fn transform_request(
                                 ));
                             let graphql = serde_json::to_string(&postman_body.graphql.clone().unwrap_or_default());
                             if graphql.is_err() {
-                                import_warnings.push(ImportWarning { rest_file_path: request_path.to_string_lossy().to_string(), node_name: name.to_string(), is_group: false, message: Some("GraphQl Body could not be imported".to_string()) });
+                                import_warnings.push(ImportWarning { rest_file_path: request_path.to_string_lossy().to_string(), node_name: name.to_string(), is_group: false, message: Some("GraphQl Body could not be imported".to_string()), severity: Some(MessageSeverity::Warn) });
                                 DataSource::Raw(String::new()); 
                             } 
                                 RequestBody::Raw {

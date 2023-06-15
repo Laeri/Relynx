@@ -32,8 +32,8 @@ pub fn load_workspace() -> Result<Workspace, FrontendError> {
 
     let content = std::fs::read_to_string(workspace_file_path)
         .map_err(|_io_err| FrontendError::new(DisplayErrorKind::ReadWorkspaceFileError))?;
-    let workspace: Workspace = serde_json::from_str(&content)
-        .map_err(|_err| FrontendError::new(DisplayErrorKind::DeserializeWorkspaceError))?;
+    let workspace: Workspace = dbg!(serde_json::from_str(&content)
+        .map_err(|_err| FrontendError::new(DisplayErrorKind::DeserializeWorkspaceError)))?;
 
     Ok(workspace)
 }
