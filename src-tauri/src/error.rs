@@ -60,7 +60,10 @@ pub enum DisplayErrorKind {
     UnsupportedImportFormat,
     ImportSerializeError,
     LoadEnvironmentsError,
-    SaveEnvironmentsError
+    SaveEnvironmentsError,
+    RequestFileMissing,
+    CurlError,
+    RequestSendError
 }
 
 impl std::fmt::Display for FrontendError {

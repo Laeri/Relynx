@@ -23,6 +23,8 @@ interface RelynxState {
 
   requestResult?: RequestResult,
 
+  setRequestResult: (requestResult?: RequestResult) => void,
+
   clearRequestResult: () => void,
 
   requestTree?: RequestTree,
@@ -61,8 +63,8 @@ export const useRequestModelStore = create<RelynxState>((set) => {
         ...state,
         workspace: workspace
       }
-      return state
     }),
+
     setCurrentCollection: (collection?: Collection) => set((state: RelynxState) => {
       return {
         ...state,
@@ -95,6 +97,13 @@ export const useRequestModelStore = create<RelynxState>((set) => {
     }),
 
     requestResult: undefined,
+
+    setRequestResult: (requestResult?: RequestResult) => set((state: RelynxState) => {
+      return {
+        ...state,
+        requestResult: requestResult
+      }
+    }),
 
     clearRequestResult: () => set((state: RelynxState) => ({
       ...state, requestResult: undefined

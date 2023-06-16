@@ -36,6 +36,7 @@ export function RequestComponent(_props: ComponentProps) {
   const storeUpdateRequestAndTree = useRequestModelStore((state) => state.storeUpdateRequestAndTree);
 
   const requestResult = useRequestModelStore((state) => state.requestResult);
+  const setRequestResult = useRequestModelStore((state) => state.setRequestResult);
   const workspace = useRequestModelStore((state) => state.workspace);
   const updateWorkspace = useRequestModelStore((state) => state.updateWorkspace);
 
@@ -118,7 +119,7 @@ export function RequestComponent(_props: ComponentProps) {
     setIsSendingRequest(true);
     // @TODO: cancel request
     backend.runRequest(backendRequest, { cancelled: false }).then((result: RequestResult) => {
-      // @TODO: updateRequestResult(result);
+      setRequestResult(result);
     }).catch(catchError(toast)).finally(() => {
       setIsSendingRequest(false);
     });

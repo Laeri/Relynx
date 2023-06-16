@@ -89,7 +89,7 @@ pub struct CollectionConfig {
 
 pub type Uuid = String;
 
-#[derive(Serialize, Deserialize, Type, Debug, Clone)]
+#[derive(Serialize, Deserialize, Type, Debug, Clone, PartialEq, Eq)]
 pub struct QueryParam {
     key: String,
     value: String,
@@ -159,11 +159,26 @@ pub fn request_to_request_model(
     }
 }
 
-#[derive(Serialize, Deserialize, Type, Debug, Clone)]
+#[derive(Serialize, Deserialize, Type, Debug, Clone, PartialEq, Eq)]
 pub struct Header {
     pub key: String,
     pub value: String,
     pub active: bool,
+}
+
+//@TODO: put this into http_header
+impl Header {
+    /// Parses an HTTP header line received from the server
+    /// It does not panic. Just returns `None` if it can not be parsed.
+    pub fn parse(line: &str) -> Option<Header> {
+        match line.find(':') {
+            Some(index) => {
+                let (name, value) = line.split_at(index);
+                Some(Header::new(name.trim(), value[1..].trim()))
+            }
+            None => None,
+        }
+    }
 }
 
 impl Header {
@@ -190,7 +205,7 @@ impl From<&HttpRestFileHeader> for Header {
     }
 }
 
-#[derive(Serialize, Deserialize, Type, Debug, Clone)]
+#[derive(Serialize, Deserialize, Type, Debug, Clone, PartialEq, Eq)]
 pub enum RequestBody {
     None,
     Multipart {
@@ -204,6 +219,21 @@ pub enum RequestBody {
     Raw {
         data: DataSource<String>,
     },
+}
+
+impl RequestBody {
+    pub fn is_none(&self) -> bool {
+        return matches!(self, RequestBody::None);
+    }
+    pub fn is_multipart(&self) -> bool {
+        return matches!(self, RequestBody::Multipart { .. });
+    }
+    pub fn is_url_encoded(&self) -> bool {
+        return matches!(self, RequestBody::UrlEncoded { .. });
+    }
+    pub fn is_raw(&self) -> bool {
+        return matches!(self, RequestBody::Raw { .. });
+    }
 }
 
 impl From<&HttpRestFileBody> for RequestBody {
@@ -222,7 +252,7 @@ impl From<&HttpRestFileBody> for RequestBody {
     }
 }
 
-#[derive(Serialize, Deserialize, Type, Debug, Clone)]
+#[derive(Serialize, Deserialize, Type, Debug, Clone, PartialEq, Eq)]
 pub struct Multipart {
     pub name: String,
     pub data: DataSource<String>,
@@ -241,7 +271,7 @@ impl From<&HttpRestfileMultipart> for Multipart {
     }
 }
 
-#[derive(Serialize, Deserialize, Type, Debug, Clone)]
+#[derive(Serialize, Deserialize, Type, Debug, Clone, PartialEq, Eq)]
 pub struct RequestModel {
     pub id: Uuid,
     pub name: String,
@@ -279,7 +309,20 @@ impl Default for RequestModel {
     }
 }
 
+pub enum GetHeadersOption {
+    /// Returns each header value as it is, if it contains multiple values within one header
+    /// comma separated such as 'SomeHeader: value1,value2,value3' the value is returned as it is
+    /// 'value1,value2,value3'
+    JustValues,
+    /// If a header value contains multiple comma separated values, split them and return each as
+    /// its own header 'value1,value2,value3' -> ['value1', 'value2', 'value3']
+    SplitMultiple,
+}
+
 impl RequestModel {
+
+    
+
     pub fn get_request_file_path(&self, parent_path: &str) -> String {
         let parent_path = std::path::Path::new(parent_path);
         let previous_path = std::path::PathBuf::from(&self.rest_file_path);
@@ -288,6 +331,29 @@ impl RequestModel {
             .join(std::path::Path::new(&self.rest_file_path))
             .join(file_name);
         path.to_string_lossy().to_string()
+    }
+
+    pub fn get_header_values(&self, key: &str, options: GetHeadersOption) -> Vec<String> {
+        let lowercase_key = key.to_lowercase();
+        let headers = self
+            .headers
+            .iter()
+            .filter(|header| header.key.to_lowercase() == lowercase_key);
+
+        match options {
+            GetHeadersOption::JustValues => headers.map(|header| header.value.clone()).collect(),
+            GetHeadersOption::SplitMultiple => headers
+                .flat_map(|header| header.value.split(','))
+                .map(str::to_string)
+                .collect(),
+        }
+    }
+
+    pub fn has_header(&self, key: &str) -> bool {
+        let key_lowercase = key.to_lowercase();
+        self.headers
+            .iter()
+            .any(|header| header.key.to_lowercase() == key_lowercase)
     }
 
     pub fn get_request_file_name(&self) -> String {
@@ -327,7 +393,7 @@ impl RequestModel {
     }
 }
 
-#[derive(Serialize, Deserialize, Type, Debug, Clone)]
+#[derive(Serialize, Deserialize, Type, Debug, Clone, PartialEq, Eq)]
 pub struct Replaced<T> {
     pub value: T,
     pub is_replaced: bool,
@@ -408,7 +474,7 @@ pub struct RequestResult {
     pub status_code: StatusCode,
     pub total_time: f64,
     pub total_result_size: f64,
-    pub content_type: ContentType,
+    pub content_type: Option<ContentType>,
 }
 
 #[derive(Serialize, Deserialize, Type, Debug)]

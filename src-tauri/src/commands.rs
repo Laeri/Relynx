@@ -1,11 +1,12 @@
 mod drag_and_drop;
+use crate::client::options::ClientOptions;
+use crate::client::Client;
 use crate::config::{load_collection_config, save_collection_config};
 use crate::error::{DisplayErrorKind, FrontendError};
 use crate::import::{postman, LoadRequestsResult};
 use crate::model::{
     AddCollectionsResult, Collection, CollectionConfig, Environment, ImportCollectionResult,
-    RequestModel, RequestResult, RunRequestCommand, SaveRequestCommand,
-    Workspace,
+    RequestModel, RequestResult, RunRequestCommand, SaveRequestCommand, Workspace,
 };
 use crate::sanitize::sanitize_filename_with_options;
 use crate::tree::{GroupOptions, RequestTreeNode, DEFAULT_OPTIONS};
@@ -13,6 +14,7 @@ pub use drag_and_drop::{
     drag_and_drop, reorder_nodes_within_parent, DragAndDropParams, DragAndDropResult,
     ReorderNodesParams,
 };
+use http_rest_file::model::RequestSettings;
 use http_rest_file::{
     model::{HttpRestFile, HttpRestFileExtension, Request},
     Serializer,
@@ -185,8 +187,42 @@ pub fn import_postman_collection(
 }
 
 #[tauri::command]
-pub fn run_request(_request_command: RunRequestCommand) -> Result<RequestResult, rspc::Error> {
-    todo!("implement")
+pub fn run_request(request_command: RunRequestCommand) -> Result<RequestResult, rspc::Error> {
+    // @TODO: cookie input file...
+    // @TODO: handle intellij redirect options
+    let mut client = Client::new(None);
+    let options = ClientOptions::default();
+
+    // @TODO: set options from request settings
+    let call = client
+        .execute(&request_command.request, &options)
+        .map_err(|http_err| {
+            eprintln!("ERROR: {:?}", http_err);
+            // @TODO:
+            FrontendError::new_with_message(
+                DisplayErrorKind::RequestSendError,
+                "There was an error when sending the request.",
+            )
+        })?;
+
+    // @TODO: what if it is not utf, what if the result is just binary, then displaying it would
+    // not make sense, maybe add an option that you don't want to see the actual result together
+    // with the redirect options
+    Ok(RequestResult {
+        result: String::from_utf8(call.response.body.to_vec()).unwrap_or_default(), // @TODO: handle non
+        // utf8 result
+        status_code: call.response.status.to_string(),
+        // @TODO @CHECK is it secs or millis?
+        total_time: call.timings.total.as_secs_f64(), // @TODO check how fine grained this should be
+        content_type: call
+            .response
+            .headers
+            .iter()
+            .find(|h| h.key.to_lowercase() == "content-type")
+            .map(|h| h.value.clone()),
+        // @TODO: @CHECK why is it f64?
+        total_result_size: call.response.body.len() as f64,
+    })
 }
 
 #[tauri::command]
@@ -560,9 +596,6 @@ pub fn delete_node(params: DeleteNodeParams) -> Result<(), rspc::Error> {
 
     Ok(())
 }
-
-
-
 
 #[tauri::command]
 pub fn load_environments(collection_path: PathBuf) -> Result<Vec<Environment>, rspc::Error> {
