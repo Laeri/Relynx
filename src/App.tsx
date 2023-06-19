@@ -20,9 +20,9 @@ export interface ToastContext {
   toast: Ref<any>,
   showSuccess: (title: string, detail: string) => void
   showInfo: (title: string, detail: string) => void
-  showWarn: (title: string, detail: string) => void
+  showWarn: (title: string, detail: string, life?: number) => void
   showError: (title: string, detail: string) => void
-  show: (params: { severity: string, summary: string, detail: string }) => void
+  show: (params: { severity: string, summary: string, detail: string, life?: number }) => void
 }
 
 // we define the context below with an actual value
@@ -53,18 +53,18 @@ function App() {
   const toastContext = {
     toast: toastRef,
     showSuccess: (title: string, detail: string) => {
-      toastContext.show({ severity: 'success', summary: title, detail: detail });
+      toastContext.show({ severity: 'success', summary: title, detail: detail, life: undefined });
     },
     showInfo: (title: string, detail: string) => {
-      toastContext.show({ severity: 'info', summary: title, detail: detail });
+      toastContext.show({ severity: 'info', summary: title, detail: detail, life: undefined });
     },
-    showWarn: (title: string, detail: string) => {
-      toastContext.show({ severity: 'warn', summary: title, detail: detail });
+    showWarn: (title: string, detail: string, life?: number) => {
+      toastContext.show({ severity: 'warn', summary: title, detail: detail, life: life });
     },
     showError: (title: string, detail: string) => {
-      toastContext.show({ severity: 'error', summary: title, detail: detail });
+      toastContext.show({ severity: 'error', summary: title, detail: detail, life: undefined });
     },
-    show: (params: { severity: string, summary: string, detail: string }) => {
+    show: (params: { severity: string, summary: string, detail: string, life?: number }) => {
       if (!toastRef?.current) {
         console.error("No toast container present to show messages");
         return
@@ -73,7 +73,7 @@ function App() {
         severity: params.severity,
         summary: params.summary,
         detail: params.detail,
-        life: 7000
+        life: params.life ?? 7000
       });
     },
   }

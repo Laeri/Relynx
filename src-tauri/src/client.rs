@@ -33,12 +33,10 @@ use std::io::Read;
 use std::str::FromStr;
 
 use crate::error::{DisplayErrorKind, FrontendError};
-use crate::model::{GetHeadersOption, Header, Multipart, RequestBody, RequestModel};
+use crate::model::{GetHeadersOption, Header, Multipart, RequestBody, RequestModel, RedirectResponse};
 
 use self::certificate::Certificate;
-use self::client_model::{
-    parse_cookies, Call, Cookie, RequestCookie, Response,
-};
+use self::client_model::{parse_cookies, Call, Cookie, RequestCookie, Response};
 use self::error::HttpError;
 use self::options::{ClientOptions, Verbosity};
 use self::timings::Timings;
@@ -111,7 +109,7 @@ impl Client {
     pub fn execute(
         &mut self,
         request_model: &RequestModel,
-        options: &ClientOptions,
+        options: &ClientOptions
         //@TODO:logger: &Logger,
     ) -> Result<Call, HttpError> {
         // Set handle attributes that have not been set or reset.
@@ -164,7 +162,7 @@ impl Client {
         self.handle.url(url.as_str()).unwrap();
         let method = &request_model.method;
         self.set_method(method);
-        // @TODO: COOKIES... self.set_cookies(&request_model.cookies);
+        self.set_cookies(&request_model.cookies());
         if let RequestBody::UrlEncoded {
             ref url_encoded_params,
         } = request_model.body
@@ -176,7 +174,8 @@ impl Client {
             ref parts,
         } = request_model.body
         {
-            self.set_multipart(boundary, parts);
+            // @TODO: log error
+            self.set_multipart(boundary, parts)?;
         }
         // @TODO: check this again
         let request_body_bytes: Option<Vec<u8>> = match request_model.body {
@@ -184,8 +183,10 @@ impl Client {
             RequestBody::Raw { ref data } => match data {
                 DataSource::Raw(ref raw_data) => Some(raw_data.as_bytes().to_vec()),
                 DataSource::FromFilepath(ref filepath) => {
-                    let content = std::fs::read(PathBuf::from(filepath))
-                        .map_err(|err| HttpError::CouldNotReadFile(PathBuf::from(filepath)))?;
+                    let filepath = PathBuf::from(filepath);
+                    let content = std::fs::read(&filepath)
+                        .map_err(|_err| HttpError::CouldNotReadFile(filepath))?; // @TODO: log
+                                                                                 // error
                     Some(content)
                 }
             },
@@ -532,7 +533,7 @@ impl Client {
     }
 
     /// Sets multipart form data.
-    fn set_multipart(&mut self, boundary: &str, parts: &[Multipart]) -> Result<(), FrontendError> {
+    fn set_multipart(&mut self, boundary: &str, parts: &[Multipart]) -> Result<(), HttpError> {
         let mut form = easy::Form::new();
         for part in parts {
             let contents = match part.data {
@@ -545,7 +546,7 @@ impl Client {
                             "Could not read data of file: '{}'. Check if the file exists.",
                             path
                         );
-                        FrontendError::new_with_message(DisplayErrorKind::RequestFileMissing, msg)
+                        HttpError::CouldNotReadFile(PathBuf::from(path))
                     })?;
                     result
                 }
@@ -568,12 +569,7 @@ impl Client {
             //@TODO what about this... .buffer(filename, data.clone())
             //                    .content_type(content_type)
 
-            curl_part.add().map_err(|err| {
-                FrontendError::new_with_message(
-                    DisplayErrorKind::CurlError,
-                    "There was an error when sending the request",
-                )
-            })?;
+            curl_part.add().map_err(|err| HttpError::FormError)?;
         }
 
         self.handle.httppost(form).unwrap();
@@ -609,11 +605,10 @@ impl Client {
 
     /// Parses HTTP response version.
     fn parse_response_version(&mut self, line: &str) -> Result<HttpVersion, HttpError> {
-        line.parse::<HttpVersion>()
-            .map_err(|err| {
-                eprintln!("{:?}", err);
-                HttpError::CouldNotParseResponse
-            })
+        line.parse::<HttpVersion>().map_err(|err| {
+            eprintln!("{:?}", err);
+            HttpError::CouldNotParseResponse
+        })
     }
 
     /// Parse headers from libcurl responses.

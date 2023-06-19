@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use http_rest_file::model::ParseError;
 use rspc::Type;
 use serde::{Deserialize, Serialize};
@@ -63,7 +65,8 @@ pub enum DisplayErrorKind {
     SaveEnvironmentsError,
     RequestFileMissing,
     CurlError,
-    RequestSendError
+    RequestSendError,
+    
 }
 
 impl std::fmt::Display for FrontendError {

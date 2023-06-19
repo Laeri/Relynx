@@ -72,6 +72,16 @@ class Backend {
     });
   }
 
+  getResponseFilepath(request_path: string): Promise<string> {
+    let result = api.query(['get_response_filepath', request_path]);
+    console.log('RESULT: ', result);
+    return result;
+  }
+
+  validateResponseFilepath(filepath: string): Promise<boolean> {
+    return api.query(['validate_response_filepath', filepath])
+  }
+
   // @TODO: check if current request one parameter?
   // Promise result contains new path??? @TODO
   saveRequest(requests: RequestModel[], collection: Collection, requestName: string): Promise<string> {

@@ -3,7 +3,8 @@ use std::{collections::HashMap, path::PathBuf};
 use http_rest_file::model::{
     DataSource, DispositionField, Header as HttpRestFileHeader, HttpMethod, HttpRestFile,
     HttpRestFileExtension, HttpVersion, Multipart as HttpRestfileMultipart, Request,
-    RequestBody as HttpRestFileBody, RequestLine, RequestSettings, UrlEncodedParam, WithDefault,
+    RequestBody as HttpRestFileBody, RequestLine, RequestSettings, SaveResponse, UrlEncodedParam,
+    WithDefault,
 };
 
 use rspc::Type;
@@ -144,6 +145,23 @@ pub fn request_to_request_model(
     value: http_rest_file::model::Request,
     path: String,
 ) -> RequestModel {
+    let redirect_response = match value.save_response {
+        Some(SaveResponse::NewFileIfExists(ref path)) => RedirectResponse {
+            save_response: true,
+            save_path: Some(path.clone()),
+            overwrite: false,
+        },
+        Some(SaveResponse::RewriteFile(ref path)) => RedirectResponse {
+            save_response: true,
+            save_path: Some(path.clone()),
+            overwrite: true,
+        },
+        None => RedirectResponse {
+            save_response: false,
+            save_path: None,
+            overwrite: true,
+        },
+    };
     RequestModel {
         id: uuid::Uuid::new_v4().to_string(),
         name: value.name.clone().unwrap_or(String::new()),
@@ -156,6 +174,7 @@ pub fn request_to_request_model(
         query_params: Vec::new(), // @TODO parse qurey from url and remove
         headers: value.headers.iter().map(Into::into).collect(),
         settings: value.settings,
+        redirect_response,
     }
 }
 
@@ -272,6 +291,43 @@ impl From<&HttpRestfileMultipart> for Multipart {
 }
 
 #[derive(Serialize, Deserialize, Type, Debug, Clone, PartialEq, Eq)]
+pub struct RedirectResponse {
+    // save response result to file or not?
+    pub save_response: bool,
+    // if the response is saved in which path
+    pub save_path: Option<PathBuf>,
+    // if the respones is saved and the file exists already overwrite or create new files?
+    pub overwrite: bool,
+}
+
+impl RedirectResponse {
+    pub fn no_save() -> Self {
+        RedirectResponse {
+            save_response: false,
+            save_path: None,
+            overwrite: true,
+        }
+    }
+
+    pub fn get_absolute_path(&self, request: &RequestModel) -> Option<PathBuf> {
+        let request_path = PathBuf::from(&request.rest_file_path);
+        let request_folder = request_path.parent()?;
+        let save_path = self.save_path.as_ref()?;
+        Some(request_folder.join(save_path))
+    }
+}
+
+impl Default for RedirectResponse {
+    fn default() -> Self {
+        RedirectResponse {
+            save_response: false,
+            save_path: None,
+            overwrite: true,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Type, Debug, Clone, PartialEq, Eq)]
 pub struct RequestModel {
     pub id: Uuid,
     pub name: String,
@@ -284,6 +340,7 @@ pub struct RequestModel {
     pub rest_file_path: String,
     pub http_version: Replaced<HttpVersion>,
     pub settings: RequestSettings,
+    pub redirect_response: RedirectResponse,
 }
 
 const DEFAULT_HTTP_EXTENSION: &str = "http";
@@ -305,6 +362,7 @@ impl Default for RequestModel {
                 is_replaced: true,
             },
             settings: RequestSettings::default(),
+            redirect_response: RedirectResponse::default(),
         }
     }
 }
@@ -320,9 +378,6 @@ pub enum GetHeadersOption {
 }
 
 impl RequestModel {
-
-    
-
     pub fn get_request_file_path(&self, parent_path: &str) -> String {
         let parent_path = std::path::Path::new(parent_path);
         let previous_path = std::path::PathBuf::from(&self.rest_file_path);
@@ -389,6 +444,7 @@ impl RequestModel {
                 is_replaced: true,
             },
             settings: RequestSettings::default(),
+            redirect_response: RedirectResponse::default(),
         }
     }
 }
@@ -475,6 +531,7 @@ pub struct RequestResult {
     pub total_time: f64,
     pub total_result_size: f64,
     pub content_type: Option<ContentType>,
+    pub warnings: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Type, Debug)]
@@ -551,6 +608,28 @@ impl From<&RequestModel> for http_rest_file::model::Request {
                 .collect(),
         };
         let target = value.url.as_str().into();
+
+        let save_response = match value.redirect_response {
+            RedirectResponse {
+                save_response: false,
+                ..
+            } => None,
+            RedirectResponse {
+                ref save_path,
+                overwrite,
+                ..
+            } => {
+                if overwrite {
+                    Some(SaveResponse::RewriteFile(
+                        save_path.clone().unwrap_or(PathBuf::new()),
+                    ))
+                } else {
+                    Some(SaveResponse::NewFileIfExists(
+                        save_path.clone().unwrap_or(PathBuf::new()),
+                    ))
+                }
+            }
+        };
         // filter out headers which have no key
         let headers: Vec<http_rest_file::model::Header> = value
             .headers
@@ -569,9 +648,13 @@ impl From<&RequestModel> for http_rest_file::model::Request {
             headers,
             comments,
             settings: value.settings.clone(),
-            redirect: None, // @TODO
             pre_request_script: None,
             response_handler: None,
+            save_response,
         }
     }
+}
+
+pub struct Cookie {
+    raw: String,
 }

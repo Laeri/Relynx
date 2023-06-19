@@ -58,7 +58,6 @@ export function newRequestSettings(partial: undefined | Partial<RequestSettings>
     no_log: false,
     no_redirect: false,
     no_cookie_jar: false,
-    use_os_credentials: false
   };
   if (partial) {
     requestSettings = { ...requestSettings, ...partial };
@@ -72,7 +71,6 @@ export function newEnvironment(partial: undefined | Partial<Environment>): Envir
     name: "New Environment",
     secrets: [],
     variables: [],
-    env_var_descriptions: []
   }
 
   if (partial) {
@@ -81,3 +79,18 @@ export function newEnvironment(partial: undefined | Partial<Environment>): Envir
   return environment;
 }
 
+export interface Cookie {
+  value: string
+}
+
+export function getCookies(requestModel: RequestModel): Cookie[] {
+  let cookies = requestModel.headers.filter((header: Header) => {
+    return header.key.toLowerCase() == "cookie";
+  }).flatMap((header: Header) => {
+    return header.value.split(",");
+  }).map((cookieValue: string) => {
+    return { value: cookieValue };
+  });
+
+  return cookies;
+}

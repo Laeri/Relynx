@@ -1,6 +1,7 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod client;
 mod commands;
 mod config;
 mod environment;
@@ -10,16 +11,16 @@ mod model;
 mod sanitize;
 mod serialize;
 mod tree;
-mod client;
 
 use commands::{
-    add_existing_collections, add_group_node, add_request_node, copy_to_clipboard, delete_node,
-    drag_and_drop, import_postman_collection, is_directory_empty, load_environments,
-    load_requests_for_collection, load_workspace, open_folder_native, remove_collection,
-    reorder_nodes_within_parent, run_request, save_environments, save_request, select_directory,
-    select_file, update_workspace, AddExistingCollectionsParams, AddGroupNodeParams,
-    AddRequestNodeParams, DeleteNodeParams, DragAndDropParams, ImportPostmanCommandParams,
-    ReorderNodesParams, SaveEnvironmentsParams, RELYNX_CONTEXT,
+    add_existing_collections, add_group_node, add_request_node, validate_response_filepath,
+    copy_to_clipboard, delete_node, drag_and_drop, get_response_filepath,
+    import_postman_collection, is_directory_empty, load_environments, load_requests_for_collection,
+    load_workspace, open_folder_native, remove_collection, reorder_nodes_within_parent,
+    run_request, save_environments, save_request, select_directory, select_file, update_workspace,
+    AddExistingCollectionsParams, AddGroupNodeParams, AddRequestNodeParams, DeleteNodeParams,
+    DragAndDropParams, ImportPostmanCommandParams, ReorderNodesParams, SaveEnvironmentsParams,
+    RELYNX_CONTEXT,
 };
 use model::{Collection, RunRequestCommand, SaveRequestCommand, Workspace};
 use rspc::Router;
@@ -97,6 +98,12 @@ fn router() -> Arc<Router> {
         })
         .query("save_environments", |t| {
             t(|_, params: SaveEnvironmentsParams| save_environments(params))
+        })
+        .query("get_response_filepath", |t| {
+            t(|_, params: PathBuf| get_response_filepath(params))
+        })
+        .query("validate_response_filepath", |t| {
+            t(|_, params: PathBuf| validate_response_filepath(params))
         })
         .build();
     Arc::new(router)

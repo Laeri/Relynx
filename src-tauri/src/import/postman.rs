@@ -5,7 +5,7 @@ use crate::config::save_workspace;
 use crate::error::{DisplayErrorKind, FrontendError};
 use crate::model::{
     Collection, ImportCollectionResult, ImportWarning, Multipart, Replaced, RequestBody,
-    RequestModel, Workspace, MessageSeverity,
+    RequestModel, Workspace, MessageSeverity, RedirectResponse,
 };
 use crate::sanitize::sanitize_filename;
 use crate::tree::{GroupOptions, RequestTreeNode};
@@ -435,6 +435,7 @@ let filename = PathBuf::from(&file_src)
                               // pre_request_script: None,
                               // response_handler: None,
                               // @TODO maybe rename redirect in http_rest_file library to output_redirect
+                redirect_response: RedirectResponse::no_save()
             }
         }
     }

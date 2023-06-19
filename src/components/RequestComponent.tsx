@@ -3,22 +3,17 @@ import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { Dropdown } from "primereact/dropdown";
 import { KeyValueRow } from "./KeyValueRow";
-// @TODO: import { RequestBodyComp } from "./RequestBodyComp";
 import { InputTextarea } from "primereact/inputtextarea";
 import { ProgressSpinner } from "primereact/progressspinner";
 import { TabPanel, TabView } from "primereact/tabview";
 import { useRequestModelStore } from "../stores/requestStore";
 import { backend } from '../rpc';
 import { RequestModel, QueryParam, Header, Collection, ImportWarning, RunRequestCommand, RequestResult, EnvironmentVariable, EnvironmentSecret, HttpMethod, RequestSettings } from '../bindings';
-//import {getAllRequestsFromTree, getRequestsInSameGroup} from "../common/treeUtils";
 import { ToastContext } from "../App";
 import { catchError } from "../common/errorhandling";
-//import RequestResult = models.RequestResult;
 import { ResultDisplay } from "./ResultDisplay";
-import { scrollMainToTop } from "../common/common";
 import { Message } from "primereact/message";
 import { hasInvalidFileBody } from "../common/requestUtils";
-import { WarningCollapsible } from "./WarningCollapsible";
 import { updatedRequestModel, newQueryParam, newRequestHeader } from '../model/model';
 import { getAllRequestsFromTree } from "../common/treeUtils";
 import { HTTP_METHODS, isCustomMethod } from "../model/request";
@@ -64,6 +59,8 @@ export function RequestComponent(_props: ComponentProps) {
 
   const [customRequestType, setCustomRequestType] = useState<string>("CUSTOM");
 
+  const [responseFilepathValid, setResponseFilepathValid] = useState<boolean>(true);
+
 
   useEffect(() => {
     //scrollMainToTop();
@@ -77,6 +74,7 @@ export function RequestComponent(_props: ComponentProps) {
       return import_warning.rest_file_path === currentRequest.rest_file_path;
     });
     setImportWarnings(importWarnings);
+    // @TODO: setOverwriteResponseFile(currentRequest.)
   }, [currentRequest]);
 
   // send request data to backend and perform libcurl request
@@ -120,12 +118,15 @@ export function RequestComponent(_props: ComponentProps) {
     // @TODO: cancel request
     backend.runRequest(backendRequest, { cancelled: false }).then((result: RequestResult) => {
       setRequestResult(result);
+      result.warnings.forEach((warning: string) => {
+        toast.showWarn('', warning, 30000);
+      });
     }).catch(catchError(toast)).finally(() => {
       setIsSendingRequest(false);
     });
   }
 
-  function updateRequest(newRequest: RequestModel, valid: boolean = true) {
+  function updateRequest(newRequest: RequestModel) {
     if (!currentCollection || !currentRequest) {
       return
     }
@@ -300,7 +301,6 @@ export function RequestComponent(_props: ComponentProps) {
 
   const updateRequestSettings = (partial: Partial<RequestSettings>) => {
     let new_settings = { ...currentRequest.settings, ...partial };
-    console.log('new settings: ', new_settings);
     let request = updatedRequestModel(currentRequest, { settings: new_settings });
     backend.saveRequest([request], currentCollection, request.name).then((filepath: string) => {
       request.rest_file_path = filepath;
@@ -329,6 +329,39 @@ export function RequestComponent(_props: ComponentProps) {
     backend.updateWorkspace(newWorkspace).then(() => {
       // do nothing
     }).catch(catchError(toast));
+  }
+
+
+  const updateSaveResponse = (shouldSaveToFile: boolean) => {
+    console.log('should save: ', shouldSaveToFile);
+    let newRequest = updatedRequestModel(currentRequest, {});
+    newRequest.redirect_response.save_response = shouldSaveToFile;
+    updateRequest(newRequest);
+  }
+
+  const updateResponseFilepath = (path: string) => {
+    let newRequest = updatedRequestModel(currentRequest, {});
+    newRequest.redirect_response.save_path = path;
+    updateRequest(newRequest);
+
+    backend.validateResponseFilepath(path).then((valid: boolean) => {
+      setResponseFilepathValid(valid);
+    }).catch(catchError);
+  }
+
+  const updateOverwriteResponse = (overwrite: boolean) => {
+    let newRequest = updatedRequestModel(currentRequest, {});
+    newRequest.redirect_response.overwrite = overwrite;
+    updateRequest(newRequest);
+
+  }
+
+  const selectResponseFilePath = () => {
+    backend.getResponseFilepath(currentRequest.rest_file_path).then((result: string) => {
+      let newRequest = updatedRequestModel(currentRequest, {});
+      newRequest.redirect_response.save_path = result;
+      updateRequest(newRequest);
+    }).catch(catchError);
   }
 
   return (
@@ -364,7 +397,6 @@ export function RequestComponent(_props: ComponentProps) {
         <div className="input" style={{ display: 'flex', flexDirection: 'row', marginTop: '30px' }}>
           <div><Dropdown disabled={isSendingRequest} optionLabel="name" value={isCustomMethod(currentRequest.method) ? "CUSTOM" : currentRequest.method} options={requestTypeOptions}
             onChange={(e) => updateRequestType(e.value)} />
-
           </div>
 
           <InputText value={currentRequest.url} onChange={(e) => updateUrl(e.target.value)} placeholder={"Url"}
@@ -465,8 +497,9 @@ export function RequestComponent(_props: ComponentProps) {
 
             <TabPanel header="Description">
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                <h2 style={{ marginBottom: '20px' }}>Description</h2>
-                <InputTextarea value={currentRequest.description}
+                <h2 >Description</h2>
+                <p style={{ marginTop: '20px' }}>Describe the current request</p>
+                <InputTextarea style={{ marginTop: '20px' }} value={currentRequest.description}
                   onChange={(e) => updateDescription(e.target.value)}
                   rows={20}
                   cols={30} autoResize={false} className={'resultText-area'} />
@@ -479,20 +512,60 @@ export function RequestComponent(_props: ComponentProps) {
                 {/* When request sending is implemented, check if all of these are needed and disable and mark those that are not present*/}
                 <div style={{ display: 'flex', alignItems: 'center' }}>
                   <Checkbox inputId="no_redirect" name="no_redirect" value="no_redirect" onChange={(e) => updateRequestSettings({ no_redirect: e.target.checked })} checked={currentRequest.settings.no_redirect ?? false} />
-                  <label htmlFor="no_redirect" style={{ marginLeft: '20px' }}>No redirect</label>
-                  <HelpTooltip style={{ marginLeft: '20px' }} text="Determines when sending a request if we should follow the redirect or not. If active no follow is done and the result is directly returned." />
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', width: '200px' }}>
+                    <label htmlFor="no_redirect" style={{ marginLeft: '20px' }}>No redirect</label>
+                    <HelpTooltip style={{ marginLeft: '20px' }} text="Determines when sending a request if we should follow the redirect or not. If active no follow is done and the result is directly returned." />
+                  </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center' }}>
+                <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center' }}>
                   <Checkbox inputId="no_cookie_jar" name="no_cookie_jar" value="no_cookie_jar" onChange={(e) => updateRequestSettings({ no_cookie_jar: e.target.checked })} checked={currentRequest.settings.no_cookie_jar ?? false} />
-                  <label htmlFor="no_cookie_jar" style={{ marginLeft: '20px' }}>No cookie jar</label>
-                  <HelpTooltip style={{ marginLeft: '20px' }} text="Prevents saving any received cookies within the http-client.cookies jar so you do not have to remove them manually everytime if you don't want them." />
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', width: '200px' }}>
+                    <label htmlFor="no_cookie_jar" style={{ marginLeft: '20px' }}>No cookie jar</label>
+                    <HelpTooltip style={{ marginLeft: '20px' }} text="Prevents saving any received cookies within the http-client.cookies jar so you do not have to remove them manually everytime if you don't want them." />
+                  </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center' }}>
+                <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center' }}>
                   <Checkbox inputId="no_log" name="no_log" value="no_log" onChange={(e) => updateRequestSettings({ no_log: e.target.checked })} checked={currentRequest.settings.no_log ?? false} />
-                  <label htmlFor="no_log" style={{ marginLeft: '20px' }}>No log</label>
-                  <HelpTooltip style={{ marginLeft: '20px' }} text="With this setting you can prevent that any response received of this request is saved in the history. Use this if the response contains sensitive data" />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', width: '200px' }}>
+                    <label htmlFor="no_log" style={{ marginLeft: '20px' }}>No log</label>
+                    <HelpTooltip style={{ marginLeft: '20px' }} text="With this setting you can prevent that any response received of this request is saved in the history. Use this if the response contains sensitive data" />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'start', marginTop: '30px' }}>
+                  <h3>Save Response</h3>
+                  <p style={{ marginTop: '20px' }}>Choose if you want to save the response of a request to a file</p>
+                  <div style={{ display: 'flex', alignItems: 'center', marginTop: '20px' }}>
+                    <Checkbox inputId="save_response" name="save_response" value="save_response" onChange={(e) => updateSaveResponse(e.target.checked ?? false)} checked={currentRequest.redirect_response.save_response} />
+                    <label htmlFor="save_response" style={{ marginLeft: '20px' }}>Save response to file</label>
+                    <HelpTooltip style={{ marginLeft: '20px' }} text="If checked the response from a request will be saved to a chosen file." />
+                  </div>
+
+                  {currentRequest.redirect_response.save_response &&
+                    <div style={{ marginTop: '30px', display: 'flex', flexDirection: 'column', alignItems: 'start' }}>
+
+                      <p style={{ textAlign: 'start' }}>Choose a path where you want to save the response. Choose a relative path that is the same for all members of your team. Consider choosing a folder or file extension that you can gitignore.</p>
+
+                      <div style={{ marginTop: '20px', display: 'flex', alignItems: 'center' }}>
+                        <InputText disabled={true} aria-invalid="true" style={{ flexGrow: 1 }} value={currentRequest.redirect_response.save_path ?? ''} onChange={(e) => { updateResponseFilepath(e.target.value) }} />
+                        <Button label={"Select new path"}
+                          onClick={selectResponseFilePath} style={{ marginLeft: '30px' }} />
+                      </div>
+                      {!responseFilepathValid &&
+                        <div className="p-error" style={{ marginTop: '20px' }}>The folder where the response should be saved doesn't exist!</div>
+                      }
+
+                      <div style={{ display: 'flex', alignItems: 'center', marginTop: '20px' }}>
+                        <Checkbox inputId="overwrite_file" name="overwrite_file" value="overwrite_file" onChange={(e) => updateOverwriteResponse(e.target.checked ?? false)} checked={currentRequest.redirect_response.overwrite} />
+                        <label htmlFor="overwrite_file" style={{ marginLeft: '20px' }}>Overwrite File </label>
+                        <HelpTooltip style={{ marginLeft: '20px' }} text="If overwrite is chosen then the file will be overwriten for every new response received. If not checked a new file will be generated with appended number -1, -2, ..." />
+                      </div>
+                    </div>
+                  }
                 </div>
               </div>
             </TabPanel>
@@ -500,9 +573,7 @@ export function RequestComponent(_props: ComponentProps) {
           </TabView>
         </div>
 
-
         {/*TODO: only show body if request type allows body???*/}
-
 
         <div className={"resultText-container"}
           style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', marginTop: '50px' }}>

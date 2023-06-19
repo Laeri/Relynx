@@ -14,7 +14,6 @@ pub use drag_and_drop::{
     drag_and_drop, reorder_nodes_within_parent, DragAndDropParams, DragAndDropResult,
     ReorderNodesParams,
 };
-use http_rest_file::model::RequestSettings;
 use http_rest_file::{
     model::{HttpRestFile, HttpRestFileExtension, Request},
     Serializer,
@@ -208,7 +207,7 @@ pub fn run_request(request_command: RunRequestCommand) -> Result<RequestResult, 
     // @TODO: what if it is not utf, what if the result is just binary, then displaying it would
     // not make sense, maybe add an option that you don't want to see the actual result together
     // with the redirect options
-    Ok(RequestResult {
+    let mut request_result = RequestResult {
         result: String::from_utf8(call.response.body.to_vec()).unwrap_or_default(), // @TODO: handle non
         // utf8 result
         status_code: call.response.status.to_string(),
@@ -222,7 +221,35 @@ pub fn run_request(request_command: RunRequestCommand) -> Result<RequestResult, 
             .map(|h| h.value.clone()),
         // @TODO: @CHECK why is it f64?
         total_result_size: call.response.body.len() as f64,
-    })
+        warnings: vec![],
+    };
+
+    let redirect_response = &request_command.request.redirect_response;
+    if redirect_response.save_response {
+        if redirect_response.save_path.is_none() {
+            request_result.warnings.push("Could not save the response to file as no path is present. Configure the response path in the request's settings or choose that the result should not be saved to a file.".to_string());
+        } else {
+            // @TODO: maybe make the path private and only allow access over this method
+            let absolute_path = redirect_response.get_absolute_path(&request_command.request);
+            // @TODO: emit a warning if we could not save the file
+            let result = std::fs::write(
+                absolute_path
+                    .clone()
+                    .unwrap_or(PathBuf::from("request_result")),
+                call.response.body,
+            );
+            if result.is_err() {
+                // @TODO: log error
+                eprintln!("ERROR: {:?}", result.unwrap_err());
+                let msg = format!(
+                    "Could not save the response to file '{}'. Check if the folder of the file exists and that you have permissions to write to it.",
+                    absolute_path.unwrap_or_default().to_string_lossy()
+                );
+                request_result.warnings.push(msg);
+            }
+        }
+    }
+    Ok(request_result)
 }
 
 #[tauri::command]
@@ -232,6 +259,8 @@ pub fn save_request(command: SaveRequestCommand) -> Result<String, rspc::Error> 
         collection: _,
         request_name: _,
     } = command;
+
+    println!("REQUESTS: {:?}", requests);
 
     if requests.is_empty() {
         return Err(FrontendError::new_with_message(
@@ -612,4 +641,45 @@ pub struct SaveEnvironmentsParams {
 pub fn save_environments(params: SaveEnvironmentsParams) -> Result<(), rspc::Error> {
     crate::environment::save_environments(params.collection_path, params.environments)
         .map_err(Into::into)
+}
+
+#[tauri::command]
+pub fn get_response_filepath(request_path: PathBuf) -> Result<PathBuf, rspc::Error> {
+    let error = FrontendError::new_with_message(
+        DisplayErrorKind::Generic,
+        "Could not resolve the file path",
+    );
+    let request_folder = request_path.parent().ok_or(error.clone())?;
+
+    let mut file_dialog_builder = tauri::api::dialog::blocking::FileDialogBuilder::default();
+    if let Some(parent) = request_path.parent() {
+        file_dialog_builder = file_dialog_builder.set_directory(parent);
+    }
+    let filepath =
+        dbg!(file_dialog_builder
+            .save_file()
+            .ok_or(rspc::Error::from(FrontendError::new(
+                DisplayErrorKind::NoPathChosen,
+            ))))?;
+
+    filepath
+        .strip_prefix(dbg!(request_folder))
+        .map(|res| res.to_owned())
+        .map_err(|_err| {
+            dbg!(_err);
+            error
+        })
+        .map_err(Into::into)
+}
+
+#[tauri::command]
+pub fn validate_response_filepath(response_file_path: PathBuf) -> Result<bool, rspc::Error> {
+    // the file path is valid if its parent (folder) exists, the file itself does not need to exist
+    // it will be created when a response is saved
+    // @TODO: error, use a different one?
+    let valid = response_file_path
+        .parent()
+        .map(|folder| folder.exists())
+        .unwrap_or(false);
+    Ok(valid)
 }
