@@ -13,7 +13,7 @@ import { catchError, displayAndLogErr } from "../common/errorhandling";
 import { NewFError } from "../model/error";
 import { ToastContext } from "../App";
 import { useRequestModelStore } from "../stores/requestStore";
-import { ActionDropdown } from "./ActionDropdown";
+import { ActionDropdown, ActionDropdownContext } from "./ActionDropdown";
 import { Button } from "primereact/button";
 import { createNewRequestNode } from "../common/requestUtils";
 import { RequestItemAsButton } from "./RequestItemAsButton";
@@ -227,6 +227,32 @@ export function RequestTreeComponent(props: ComponentProps) {
     // TODO: update server side
   }
 
+  const Actions = ({ node, toast }: { node: PrimeNode, toast: ToastContext }) => {
+    const { closeDropdown } = useContext(ActionDropdownContext);
+    return (
+      <>
+        <Button icon={'pi pi-plus'} className={'p-button p-button-text'}
+          label={"Create Request"}
+          onClick={() => { createNewRequestNode(node.groupNode as RequestTreeNode, toast, node); closeDropdown(); }} />
+        {
+          !node.groupNode?.is_file_group &&
+          <Button icon={'pi pi-plus'} className={'p-button p-button-text'}
+            label={"Create Group"}
+            onClick={() => {
+              createNewGroupNode(toast, (_node: PrimeNode) => {
+              }, props.collection, props.requestTree, node.groupNode as RequestTreeNode, node); closeDropdown();
+            }
+            } />
+        }
+
+        <Button icon={'pi pi-trash'} className={'p-button p-button-text'}
+          label={"Delete Group"}
+          onClick={() => { deleteNode(toast, props.collection, props.requestTree, node, props.currentRequest); closeDropdown(); }} />
+
+      </>
+    )
+  }
+
   const nodeTemplate = (node: any, _options: any) => {
 
     let primeNode = node as PrimeNode
@@ -250,20 +276,9 @@ export function RequestTreeComponent(props: ComponentProps) {
           </div>
 
           <ActionDropdown styles={{ flexGrow: 1, marginRight: '3px' }}>
-            <Button icon={'pi pi-plus'} className={'p-button p-button-text'}
-              label={"Create Request"}
-              onClick={() => createNewRequestNode(node.groupNode, node)} />
             {
-              !node.groupNode.IsFileGroup &&
-              <Button icon={'pi pi-plus'} className={'p-button p-button-text'}
-                label={"Create Group"}
-                onClick={() => createNewGroupNode(toast, (_node: PrimeNode) => {
-                }, props.collection, props.requestTree, node.groupNode, node)} />
+              <Actions node={node} toast={toast} />
             }
-
-            <Button icon={'pi pi-trash'} className={'p-button p-button-text'}
-              label={"Delete Group"}
-              onClick={() => deleteNode(toast, props.collection, props.requestTree, node, props.currentRequest)} />
           </ActionDropdown>
         </div>
       )
@@ -277,7 +292,7 @@ export function RequestTreeComponent(props: ComponentProps) {
             requestId={primeNode.key}
             importWarnings={props.collection.import_warnings.filter((importWarning: ImportWarning) => {
               let requestModel = primeNode.requestNode?.request as RequestModel
-              return importWarning.rest_file_path == requestModel.rest_file_path 
+              return importWarning.rest_file_path == requestModel.rest_file_path
             })}
             highlighted={props.currentRequest?.id == primeNode.key} />
           <ActionDropdown styles={{ flexGrow: 1, marginRight: '3px' }}>
