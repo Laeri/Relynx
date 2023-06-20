@@ -4,8 +4,9 @@ import { useContext } from "react";
 import { openCreateCollectionModal, openAddExistingCollectionModal, openImportCollectionModal } from "../common/modal";
 import { ToastContext } from "../App";
 import { useRequestModelStore } from "../stores/requestStore";
-import { backend } from "../rpc";
-import { AddCollectionsResult, Workspace } from "../bindings";
+import { AddCollectionsResult, Collection } from "../bindings";
+
+
 
 export interface ComponentProps {
 
@@ -20,7 +21,6 @@ export function OverviewComponent(_props: ComponentProps) {
   const toast = useContext(ToastContext);
 
   const workspace = useRequestModelStore((state) => state.workspace);
-  const updateWorkspace = useRequestModelStore((state) => state.updateWorkspace);
 
 
   const doOpenAddExistingCollectionModal = () => {
@@ -28,6 +28,7 @@ export function OverviewComponent(_props: ComponentProps) {
       // @TODO: what about errored collections?
     });
   }
+
 
   return (
     <div style={{

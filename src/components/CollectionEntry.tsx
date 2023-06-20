@@ -8,6 +8,8 @@ import { ToastContext } from "../App";
 import { useNavigate } from "react-router";
 import { Collection, Workspace } from "../bindings";
 import { backend } from "../rpc";
+import { EditCollectionNameModal } from "../components/modals/EditCollectionNameModal";
+import { create } from "react-modal-promise";
 
 interface ComponentProps {
   collection: Collection
@@ -15,9 +17,9 @@ interface ComponentProps {
 
 export function CollectionEntry(props: ComponentProps) {
 
-  const setCurrentCollection = useRequestModelStore((state) => state.setCurrentCollection)
+  const setCurrentCollection = useRequestModelStore((state) => state.setCurrentCollection);
   // @TODO: const setNewCurrentRequest = useRequestModelStore((state) => state.setNewCurrentRequest)
-  const updateWorkspace = useRequestModelStore((state) => state.updateWorkspace)
+  const updateWorkspace = useRequestModelStore((state) => state.updateWorkspace);
   const toast = useContext(ToastContext);
 
   const navigate = useNavigate();
@@ -53,8 +55,26 @@ export function CollectionEntry(props: ComponentProps) {
 
 
   const onCollectionEntryClicked = () => {
+    // @ts-ignore
+    op.current.hide();
     selectCollection(props.collection);
     navigate('/collection');
+  }
+
+  const openRenameCollectionModal = () => {
+    // @ts-ignore
+    op.current.hide();
+    const modalPromise = create(({ onResolve, onReject, isOpen }) => {
+      return <EditCollectionNameModal collection={props.collection} isOpen={isOpen} onResolve={onResolve} onReject={() => onReject()} />
+    });
+
+    modalPromise().then((newName?: string) => {
+      if (newName) {
+        toast.showSuccess(`Renamed collection to: '${newName}`, "");
+      }
+      console.log('modal promisiert');
+      // ignore
+    }).catch(catchError);
   }
 
   return (
@@ -66,7 +86,11 @@ export function CollectionEntry(props: ComponentProps) {
           onClick={toggle} />
 
         <OverlayPanel ref={op}>
-          <Button label="Remove" onClick={openDialog} outlined icon="pi pi-trash" />
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+
+            <Button label="Remove" onClick={openDialog} outlined icon="pi pi-trash" />
+            <Button style={{ marginTop: '20px' }} label="Rename" onClick={openRenameCollectionModal} outlined icon="pi pi-pencil" />
+          </div>
         </OverlayPanel>
       </div>
 

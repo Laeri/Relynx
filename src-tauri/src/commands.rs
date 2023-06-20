@@ -89,6 +89,7 @@ pub fn is_directory_empty(path: String) -> Result<bool, rspc::Error> {
 
 #[tauri::command]
 pub fn update_workspace(workspace: Workspace) -> Result<(), rspc::Error> {
+    println!("UPDATE WORKSPACE BROW {:?}", workspace);
     crate::config::save_workspace(&workspace).map_err(Into::into)
 }
 
