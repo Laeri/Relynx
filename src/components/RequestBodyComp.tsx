@@ -1,17 +1,14 @@
 import {useContext, useState} from "react";
 import {BodyType, BodyTypes, newFormProperty, translatedBodyType, updatedRequestModel} from "../models/Request";
 import {KeyValueRow} from "./KeyValueRow";
-import {SelectFile} from "../../wailsjs/go/main/App";
 import {useRequestModelStore} from "../stores/requestStore";
 import {Dropdown} from "primereact/dropdown";
 import {InputTextarea} from "primereact/inputtextarea";
 import {Button} from "primereact/button";
 import {InputText} from "primereact/inputtext";
-import FormProperty = models.FormProperty;
 import {catchError} from "../common/errorhandling";
 import {ToastContext} from "../App";
-import RequestBody = models.RequestBody;
-import RequestModel = models.RequestModel;
+import {RequestModel, RequestBody} from '../bindings';
 
 interface ComponentProps {
     updateRequest: (newRequest: RequestModel) => void
@@ -28,7 +25,7 @@ export function RequestBodyComp(props: ComponentProps) {
     const toast = useContext(ToastContext);
 
     const updateRequestBody = (requestBody: RequestBody, partial: Partial<RequestBody>) => {
-        let newRequestBody = new RequestBody({...requestBody, ...partial});
+        let newRequestBody = updateRequestBody(requestBody, partial);
         let newRequest = updatedRequestModel(currentRequest, {RequestBody: newRequestBody});
         props.updateRequest(newRequest)
     }

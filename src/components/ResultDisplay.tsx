@@ -46,7 +46,7 @@ export function ResultDisplay(props: ComponentProps) {
           style={{ marginLeft: '10px' }} />
       </div>
       <SyntaxHighlighter contentEditable={true} className={"resultArea fade-in"}
-        language={getHighlightContentType(props.requestResult.content_type)}
+        language={props.requestResult.content_type == null ? undefined : getHighlightContentType(props.requestResult.content_type)}
         style={dracula}>
         {props.requestResult.result}
       </SyntaxHighlighter>
