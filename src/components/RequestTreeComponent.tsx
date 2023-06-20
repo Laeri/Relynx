@@ -27,7 +27,7 @@ import { getDefaultGroupName } from "../common/common";
 const updateRequestTree = useRequestModelStore.getState().updateRequestTree;
 const setCurrentRequest = useRequestModelStore.getState().setCurrentRequest;
 
-export const createNewGroupNode = (toast: ToastContext, expandNode: (parent: PrimeNode) => void, collection: Collection, requestTree: RequestTree, parent: RequestTreeNode, parentPrime?: PrimeNode) => {
+export const createNewGroupNode = (toast: ToastContext, expandNode: (parentKey: string) => void, collection: Collection, requestTree: RequestTree, parent: RequestTreeNode, parentPrime?: PrimeNode) => {
   // @TODO: expand node if closed
   if (!parent) {
     let error = NewFError("createNewGroupNode.noParent", "Error during create", "Could not create the new group correctly", "no parent when creating a new group");
@@ -53,7 +53,7 @@ export const createNewGroupNode = (toast: ToastContext, expandNode: (parent: Pri
       }
       updateRequestTree(newTree);
       if (parentPrime) {
-        expandNode(parentPrime);
+        expandNode(parentPrime.key);
       }
     }).catch(catchError(toast))
   });
@@ -130,11 +130,12 @@ export function RequestTreeComponent(props: ComponentProps) {
   const [expandedKeys, setExpandedKeys] = useState<TreeExpandedKeysType>({});
   const location = useLocation();
 
-  const expandNode = (primeNode: PrimeNode) => {
+  const expandNode = (primeNodeKey: string) => {
     let newExpandedKeys: TreeExpandedKeysType = { ...expandedKeys };
-    newExpandedKeys[primeNode.key] = true;
+    newExpandedKeys[primeNodeKey] = true;
     setExpandedKeys(newExpandedKeys);
   }
+
 
   const toggleExpandedKeys = (value: TreeExpandedKeysType) => {
     setExpandedKeys(value);
@@ -202,7 +203,7 @@ export function RequestTreeComponent(props: ComponentProps) {
         }
         updateRequestTree(newTree);
         if (dropNode) {
-          expandNode(dropNode);
+          expandNode(dropNode.key);
         }
       }).catch(catchError(toast));
     }
@@ -228,14 +229,16 @@ export function RequestTreeComponent(props: ComponentProps) {
       <>
         <Button icon={'pi pi-plus'} className={'p-button p-button-text'}
           label={"Create Request"}
-          onClick={() => { createNewRequestNode(node.groupNode as RequestTreeNode, toast, node); closeDropdown(); }} />
+          onClick={() => {
+            createNewRequestNode(node.groupNode as RequestTreeNode, toast, expandNode);
+            closeDropdown();
+          }} />
         {
           !node.groupNode?.is_file_group &&
           <Button icon={'pi pi-plus'} className={'p-button p-button-text'}
             label={"Create Group"}
             onClick={() => {
-              createNewGroupNode(toast, (_node: PrimeNode) => {
-              }, props.collection, props.requestTree, node.groupNode as RequestTreeNode, node); closeDropdown();
+              createNewGroupNode(toast, expandNode, props.collection, props.requestTree, node.groupNode as RequestTreeNode, node); closeDropdown();
             }
             } />
         }

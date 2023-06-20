@@ -1,4 +1,4 @@
-import { addRequestToRequestTree, PrimeNode } from "./treeUtils";
+import { addRequestToRequestTree, findNode, PrimeNode } from "./treeUtils";
 
 import { ToastContext } from "../App";
 import { NewFError } from "../model/error";
@@ -12,7 +12,7 @@ import { Collection, RequestModel, RequestTree, RequestTreeNode } from '../bindi
 import { getDefaultRequestName } from "./common";
 
 // @TODO why is parentPrime never used?
-export const createNewRequestNode = (parent: RequestTreeNode, toast: ToastContext, _parentPrime?: PrimeNode) => {
+export const createNewRequestNode = (parent: RequestTreeNode, toast: ToastContext, expandNode: (nodeKey: string) => void) => {
   // @TODO: expand parent prime
 
   const collection = useRequestModelStore.getState().currentCollection as Collection;
@@ -23,7 +23,7 @@ export const createNewRequestNode = (parent: RequestTreeNode, toast: ToastContex
   if (!parent) {
     let error = NewFError("createNewGroupNode.noParent", "Error during create", "Could not create the new group correctly", "no parent when creating a new group");
     displayAndLogErr(error, toast);
-    return
+    return Promise.reject()
   }
 
   let requestName = getDefaultRequestName(parent);
@@ -32,7 +32,7 @@ export const createNewRequestNode = (parent: RequestTreeNode, toast: ToastContex
     return <CreateRequestModal requestName={requestName} isOpen={isOpen} onResolve={onResolve} onReject={() => onReject()} />
   });
 
-  createRequestModalPromise().then((requestName?: string) => {
+  return createRequestModalPromise().then((requestName?: string) => {
     if (!requestName) {
       return
     }
@@ -44,13 +44,14 @@ export const createNewRequestNode = (parent: RequestTreeNode, toast: ToastContex
         .map((child: RequestTreeNode) => child.request as RequestModel);
     }
 
-    backend.addRequestNode(collection, parent, requestName, requestsWithinFile).then((node: RequestTreeNode) => {
+    return backend.addRequestNode(collection, parent, requestName, requestsWithinFile).then((node: RequestTreeNode) => {
       let [newTree, error] = addRequestToRequestTree(requestTree, parent, node);
       if (error) {
         displayAndLogErr(error, toast);
       }
       updateRequestTree(newTree);
       setCurrentRequest(node.request as RequestModel);
+      expandNode(parent.id);
     }).catch(catchError(toast));
 
   });

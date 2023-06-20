@@ -226,7 +226,7 @@ export function isChildOf(requestTree: RequestTree, child: RequestTreeNode, pare
   return dragRParent?.id === parent.id;
 }
 
-function findNode(requestTree: RequestTree, id: UUID, checkModelId: boolean = false) {
+export function findNode(requestTree: RequestTree, id: UUID, checkModelId: boolean = false) {
   if (!requestTree.root) {
     return undefined;
   }
