@@ -34,8 +34,6 @@ export type SaveEnvironmentsParams = { collection_path: string; environments: En
 
 export type RunRequestCommand = { request: RequestModel; environment: Environment | null }
 
-export type ReorderNodesParams = { collection: Collection; drag_node: RequestTreeNode; drop_node: RequestTreeNode; drop_index: number }
-
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" | "TRACE" | "OPTIONS" | "CONNECT" | { CUSTOM: string }
 
 export type Header = { key: string; value: string; active: boolean }
@@ -73,6 +71,8 @@ export type MessageSeverity = "warn" | "warn" | "success" | "error"
 export type RedirectResponse = { save_response: boolean; save_path: string | null; overwrite: boolean }
 
 export type DataSource<T> = { Raw: T } | { FromFilepath: string }
+
+export type ReorderNodesParams = { collection: Collection; drag_node: RequestTreeNode; drop_node: RequestTreeNode; drop_index: number }
 
 export type EnvironmentVariable = { name: string; initial_value: string; current_value: string | null; description: string | null }
 

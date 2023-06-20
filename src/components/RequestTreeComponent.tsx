@@ -103,9 +103,9 @@ export const deleteNode = (toast: ToastContext, collection: Collection, requestT
     if (error) {
       displayAndLogErr(error, toast);
     } else {
-      let successMessage = "Request has been removed";
+      let successMessage = `Request '${treeNode.name}' has been removed`;
       if (isGroup) {
-        successMessage = "Group has been removed";
+        successMessage = `Group '${treeNode.name}' has been removed`;
       }
       toast.showSuccess(successMessage, "");
     }
@@ -149,8 +149,6 @@ export function RequestTreeComponent(props: ComponentProps) {
    */
   const onReorder = (dragNode: PrimeNode, dropNode: PrimeNode | undefined, dropIndex: number) => {
 
-    console.log('DROP INDEX FROM PRIME');
-
     // cannot drag node into itself
     if (dragNode.id === dropNode?.id) {
       return
@@ -168,7 +166,6 @@ export function RequestTreeComponent(props: ComponentProps) {
       if (parentOfDropNode) {
         dropTreeNode = parentOfDropNode
         dropIndex = parentOfDropNode.children.map((child: RequestTreeNode) => child.id).indexOf(dropNode.requestNode.id)
-        console.log('DROP INDEX COMPUTED: ', dropIndex);
       }
     }
 
@@ -200,8 +197,6 @@ export function RequestTreeComponent(props: ComponentProps) {
       }
       backend.dragAndDrop(props.collection, dragNodeParent, dragTreeNode, dropTreeNode, dropIndex).then((ddResult: DragAndDropResult) => {
         let [newTree, error] = applyDragAndDropResult(props.requestTree, dragTreeNode, ddResult);
-        console.log('NEW TREE FINAL', newTree);
-        console.log('ERROR: ', error);
         if (error) {
           displayAndLogErr(error, toast);
         }

@@ -27,7 +27,6 @@ pub struct DragAndDropResult {
 #[tauri::command]
 pub fn drag_and_drop(params: DragAndDropParams) -> Result<DragAndDropResult, rspc::Error> {
     dd_check_preconditions(&params).map_err(Into::<rspc::Error>::into)?;
-    println!("PARAMS: {:?}", params);
 
     let DragAndDropParams {
         collection,
@@ -44,7 +43,6 @@ pub fn drag_and_drop(params: DragAndDropParams) -> Result<DragAndDropResult, rsp
         .iter()
         .position(|child| child.id == drag_node.id)
         .unwrap();
-    println!("PARENT_POS: {:?}", in_parent_pos);
     drag_node_parent.children.remove(in_parent_pos);
 
     // Cases
@@ -86,6 +84,7 @@ pub fn drag_and_drop(params: DragAndDropParams) -> Result<DragAndDropResult, rsp
         new_path
     };
 
+
     // we dragged a folder/file within a folder, we only have to store the updated pathordering
     // @TODO: load CollectionConfig, update orderings for all paths within parent_node
     let config_file_path = collection.get_config_file_path();
@@ -113,6 +112,7 @@ pub fn drag_and_drop(params: DragAndDropParams) -> Result<DragAndDropResult, rsp
         drop_node.children.insert(drop_index as usize, drag_node);
     }
 
+
     // need also to update path orders when changing paths of children
     let config_file_path = collection.get_config_file_path();
     let mut collection_config = load_collection_config(&config_file_path).unwrap_or_default();
@@ -122,15 +122,16 @@ pub fn drag_and_drop(params: DragAndDropParams) -> Result<DragAndDropResult, rsp
 
     let _ = save_collection_config(&collection_config, &config_file_path);
 
+
     // if we removed the last child from the drag node then we need to remove its file as well
     let remove_drag_node_parent =
         drag_node_parent.is_file_group && drag_node_parent.children.is_empty();
-    Ok(DragAndDropResult {
+    let result = DragAndDropResult {
         new_drop_node: drop_node,
         remove_drag_node_parent,
-    })
+    };
+    Ok(result)
 }
-
 
 fn dd_check_preconditions(params: &DragAndDropParams) -> Result<(), FrontendError> {
     let DragAndDropParams {
@@ -141,7 +142,6 @@ fn dd_check_preconditions(params: &DragAndDropParams) -> Result<(), FrontendErro
         ..
     } = params;
 
-    println!("DROP INDEX: {:?}", drop_index);
     if collection.path.is_empty() {
         return Err(FrontendError::new_with_message(
             DisplayErrorKind::DragAndDropError,
@@ -216,7 +216,6 @@ fn dd_create_new_location(
     // Create new file
     // If we drop into a file group the parent (aka the file group node) has to be resaved with the
     // new requests
-    println!("DROP NODE: {:?}", drop_node);
     let request_file = if drop_node.is_file_group {
         // we drop a request into a file that already has requests, therefore save new file with
         // new request and remove old file
@@ -234,7 +233,6 @@ fn dd_create_new_location(
         let request_file: Result<HttpRestFile, ()> = drag_node.try_into();
 
         if request_file.is_err() {
-            eprintln!("ERROR {:?}", request_file.unwrap_err());
             return Err(FrontendError::new_with_message(
                 DisplayErrorKind::DragAndDropError,
                 "Cannot convert request into a request file",
@@ -313,7 +311,6 @@ fn dd_remove_old_location(
         // we can just remove the old file
     }
 }
-
 
 #[derive(Serialize, Deserialize, rspc::Type, Debug)]
 pub struct ReorderNodesParams {

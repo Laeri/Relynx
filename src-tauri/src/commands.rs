@@ -260,8 +260,6 @@ pub fn save_request(command: SaveRequestCommand) -> Result<String, rspc::Error> 
         request_name: _,
     } = command;
 
-    println!("REQUESTS: {:?}", requests);
-
     if requests.is_empty() {
         return Err(FrontendError::new_with_message(
             DisplayErrorKind::SaveRequestError,
@@ -655,20 +653,16 @@ pub fn get_response_filepath(request_path: PathBuf) -> Result<PathBuf, rspc::Err
     if let Some(parent) = request_path.parent() {
         file_dialog_builder = file_dialog_builder.set_directory(parent);
     }
-    let filepath =
-        dbg!(file_dialog_builder
-            .save_file()
-            .ok_or(rspc::Error::from(FrontendError::new(
-                DisplayErrorKind::NoPathChosen,
-            ))))?;
+    let filepath = file_dialog_builder
+        .save_file()
+        .ok_or(rspc::Error::from(FrontendError::new(
+            DisplayErrorKind::NoPathChosen,
+        )))?;
 
     filepath
-        .strip_prefix(dbg!(request_folder))
+        .strip_prefix(request_folder)
         .map(|res| res.to_owned())
-        .map_err(|_err| {
-            dbg!(_err);
-            error
-        })
+        .map_err(|_err| error)
         .map_err(Into::into)
 }
 

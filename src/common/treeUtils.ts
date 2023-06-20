@@ -304,42 +304,34 @@ export function applyDragAndDropResult(staleTree: RequestTree, dragNode: Request
 
   let newDropNode = ddResult.new_drop_node;
 
-  console.log('NEW DROP NODE: ', newDropNode);
+  let dragParentId = findParentById(staleTree, dragNode.id)?.id;
 
   let newTree;
 
   if (staleTree.root.id == newDropNode.id) {
     newTree = { root: newDropNode };
-    console.log('NEW TREE: ', newTree);
   } else {
     newTree = cloneTree(staleTree);
     let copyDropNodeParent = findParentById(newTree, newDropNode.id);
-    console.log('COPY DROPNODE PARENT: ', copyDropNodeParent);
     if (!copyDropNodeParent) {
       return [newTree, NewFError("dragAndDropResult.noCopyDropNodeParent", "Error during drag and drop", "Could not drag and drop element", "no copy drop node found")];
     }
-    copyDropNodeParent.children = copyDropNodeParent.children.map((child: RequestTreeNode) => {
-      if (child.id == newDropNode.id) {
-        return newDropNode;
-      } else {
-        return child;
-      }
+    let drop_node_index = copyDropNodeParent.children.findIndex((child: RequestTreeNode) => {
+      return child.id == newDropNode.id;
     });
-    console.log('COPY DROP NODE PARENT AFTER: ', copyDropNodeParent);
+    copyDropNodeParent.children[drop_node_index] = newDropNode;
   }
 
-  let copyDragParent = findParentById(newTree, dragNode.id);
+  let copyDragParent = findNode(newTree, dragParentId ?? '');
   if (!copyDragParent) {
     return [newTree, NewFError("dragAndDropResult.noCopyDragParent", "Error during drag and drop", "Could not drag and drop element", "no copy drag parent node found")];
   }
   // remove dragnode from parent
   copyDragParent.children = copyDragParent.children.filter((child: RequestTreeNode) => child.id !== dragNode.id);
-  console.log('copy drag parent: ', copyDragParent);
 
   // if we remove a request from a file group that is now empty we need to remove the file group (parent of dragNode)
   // from its parent instead of remove the dragNode as a child from its old parent
   if (ddResult.remove_drag_node_parent) {
-    console.log('se if');
     let copyDragGrandParent = findParentById(newTree, dragNode.id);
     if (copyDragGrandParent) {
       copyDragGrandParent.children = copyDragGrandParent.children.filter((child: RequestTreeNode) => child.id !== copyDragParent?.id);
