@@ -11,7 +11,7 @@ import { catchError } from "../common/errorhandling";
 import { create } from "react-modal-promise";
 import { CreateEnvironmentModal } from "./modals/CreateEnvironmentModal";
 import { EnvTable, RowData } from "./EnvTable";
-import { EnvironmentSecret, EnvironmentVariable, Environment } from "../bindings";
+import { EnvironmentSecret, EnvironmentVariable, Environment, Collection } from "../bindings";
 import { scrollMainToTop } from "../common/common";
 import { getUpdatedEnvironment } from "../model/request";
 import { backend } from "../rpc";
@@ -23,32 +23,30 @@ interface ComponentProps {
 
 export function EnvironmentComponent(_props: ComponentProps) {
 
-  const currentEnvironment = useRequestModelStore((state) => state.currentEnvironment)
-  const environments = useRequestModelStore((state) => state.environments)
-  const setEnvironments = useRequestModelStore((state) => state.setEnvironments)
-  const setStoreCurrentEnvironment = useRequestModelStore((state) => state.setCurrentEnvironment)
+  const environment = useRequestModelStore((state) => state.currentEnvironment);
+  const environments = useRequestModelStore((state) => state.environments);
+  const setEnvironments = useRequestModelStore((state) => state.setEnvironments);
+  const setStoreCurrentEnvironment = useRequestModelStore((state) => state.setCurrentEnvironment);
 
-  const currentCollection = useRequestModelStore((state) => state.currentCollection)
+  const collection = useRequestModelStore((state) => state.currentCollection as Collection);
 
   const toast = useContext(ToastContext)
 
   useEffect(() => {
-
-    if (currentEnvironment === undefined && environments.length > 0) {
+    if (environment === undefined && environments.length > 0) {
       setStoreCurrentEnvironment(environments[0]);
     }
-
   }, [])
 
   const updateName = (name: string) => {
-    if (!currentEnvironment) {
+    if (!environment) {
       return
     }
 
-    let oldName = currentEnvironment.name;
+    let oldName = environment.name;
 
     // TODO
-    let newEnv = getUpdatedEnvironment(currentEnvironment, { name: name });
+    let newEnv = getUpdatedEnvironment(environment, { name: name });
 
     updateEnvironmentInState(oldName, newEnv);
   }
@@ -61,31 +59,31 @@ export function EnvironmentComponent(_props: ComponentProps) {
     setStoreCurrentEnvironment(newEnvironment)
     setEnvironments(newEnvironments)
     // @ts-ignore
-    backend.saveEnvironments(currentCollection, newEnvironments).then((_result: any) => {
+    backend.saveEnvironments(collection, newEnvironments).then((_result: any) => {
       // ignored
     }).catch(catchError(toast))
   }
 
 
   const addEnvironmentVariable = () => {
-    if (!currentEnvironment) {
+    if (!environment) {
       return
     }
-    let variables = [...currentEnvironment.variables]
+    let variables = [...environment.variables]
     let newVar = newEnvironmentVariable();
     variables.push(newVar)
-    let newEnvironment = getUpdatedEnvironment(currentEnvironment, { variables: variables })
+    let newEnvironment = getUpdatedEnvironment(environment, { variables: variables })
     setStoreCurrentEnvironment(newEnvironment)
   }
 
   const addSecretVariable = () => {
-    if (!currentEnvironment) {
+    if (!environment) {
       return
     }
-    let secrets = [...currentEnvironment.secrets]
+    let secrets = [...environment.secrets]
     let newSecret = newEnvironmentSecret();
     secrets.push(newSecret)
-    let newEnvironment = getUpdatedEnvironment(currentEnvironment, { secrets: secrets })
+    let newEnvironment = getUpdatedEnvironment(environment, { secrets: secrets })
     setStoreCurrentEnvironment(newEnvironment)
   }
 
@@ -101,14 +99,13 @@ export function EnvironmentComponent(_props: ComponentProps) {
   const addEnvironment = (name: string) => {
     let newEnviron = newEnvironment({ name: name });
     let newEnvironments = [...environments, newEnviron]
-    if (!currentCollection) {
+    if (!collection) {
       return
     }
-    backend.saveEnvironments(currentCollection, newEnvironments).then(() => {
-      setEnvironments([...environments, newEnviron]);
+    backend.saveEnvironments(collection, newEnvironments).then(() => {
+      setEnvironments(newEnvironments);
       setStoreCurrentEnvironment(newEnviron);
     }).catch(catchError(toast))
-
   }
 
   const openDeleteConfirmDialog = () => {
@@ -120,12 +117,12 @@ export function EnvironmentComponent(_props: ComponentProps) {
             <Button label="No" icon="pi pi-times" onClick={() => onResolve()}
               className="p-button-text" />
             <Button label="Remove" icon="pi pi-check"
-              onClick={() => onResolve(currentEnvironment)}
+              onClick={() => onResolve(environment)}
               autoFocus />
           </div>
         } onHide={onReject}>
         <p>
-          Are you sure you want to remove the environment <b>"{currentEnvironment?.name}"</b>?
+          Are you sure you want to remove the environment <b>"{environment?.name}"</b>?
         </p>
         <br />
       </Dialog>
@@ -145,9 +142,11 @@ export function EnvironmentComponent(_props: ComponentProps) {
 
   const removeCurrentEnvironment = () => {
     let currentEnvs = environments
-    let newEnvironments = currentEnvs.filter((environment: Environment) => environment.name !== currentEnvironment?.name)
-    setEnvironments(newEnvironments)
-    setStoreCurrentEnvironment(undefined)
+    let newEnvironments = currentEnvs.filter((environment: Environment) => environment.name !== environment?.name)
+    backend.saveEnvironments(collection, newEnvironments).then(() => {
+      setEnvironments(newEnvironments)
+      setStoreCurrentEnvironment(undefined)
+    }).catch(catchError);
   }
 
   const openCreateEnvironmentDialog = () => {
@@ -164,10 +163,10 @@ export function EnvironmentComponent(_props: ComponentProps) {
   }
 
   const getRowDataVariables = (): RowData[] => {
-    if (!currentEnvironment) {
+    if (!environment) {
       return []
     }
-    let rowData = currentEnvironment.variables.map((environmentVariable: EnvironmentVariable, index: number) => {
+    let rowData = environment.variables.map((environmentVariable: EnvironmentVariable, index: number) => {
       return {
         index: index,
         name: environmentVariable.name,
@@ -181,10 +180,10 @@ export function EnvironmentComponent(_props: ComponentProps) {
   }
 
   const getRowDataSecrets = (): RowData[] => {
-    if (!currentEnvironment) {
+    if (!environment) {
       return []
     }
-    let rowData = currentEnvironment.secrets.map((secret: EnvironmentSecret, index: number) => {
+    let rowData = environment.secrets.map((secret: EnvironmentSecret, index: number) => {
       return {
         index: index,
         name: secret.name,
@@ -237,20 +236,20 @@ export function EnvironmentComponent(_props: ComponentProps) {
 
 
   const removeVariable = (rowData: RowData) => {
-    if (!currentEnvironment) {
+    if (!environment) {
       return
     }
-    let variables = currentEnvironment.variables.filter((_variable: EnvironmentVariable, index: number) => index !== rowData.index);
-    let newEnvironment = getUpdatedEnvironment(currentEnvironment, { variables: variables });
+    let variables = environment.variables.filter((_variable: EnvironmentVariable, index: number) => index !== rowData.index);
+    let newEnvironment = getUpdatedEnvironment(environment, { variables: variables });
     updateEnvironmentInState(newEnvironment.name, newEnvironment);
   }
 
   const removeSecret = (rowData: RowData) => {
-    if (!currentEnvironment) {
+    if (!environment) {
       return
     }
-    let secrets = currentEnvironment.secrets.filter((_secret: EnvironmentVariable, index: number) => index !== rowData.index);
-    let newEnvironment = getUpdatedEnvironment(currentEnvironment, { secrets: secrets });
+    let secrets = environment.secrets.filter((_secret: EnvironmentVariable, index: number) => index !== rowData.index);
+    let newEnvironment = getUpdatedEnvironment(environment, { secrets: secrets });
     updateEnvironmentInState(newEnvironment.name, newEnvironment);
   }
 
@@ -272,85 +271,80 @@ export function EnvironmentComponent(_props: ComponentProps) {
       style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '100%' }}>
 
       <h1 style={{ marginTop: '20px', marginBottom: '50px' }}>Environment</h1>
-      {
-        <div style={{ width: '100%', marginBottom: '200px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '50px' }}>
+      <div style={{ width: '100%', marginBottom: '200px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '50px' }}>
 
-            <Button icon={'pi pi-plus'} label={"Add Environment"} className={'p-button-raised'}
-              onClick={openCreateEnvironmentDialog} />
-            {environments.length > 1 &&
-              <Dropdown style={{ ...envDropdownStyle, marginLeft: '30px' }} optionLabel="name"
-                value={currentEnvironment?.name}
-                options={environmentsToOptions(environments, true)}
-                onChange={(e) => selectEnvironment(e.value)}
-                placeholder={"No Environment"} />}
-          </div>
-
-          {currentEnvironment &&
-            <>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                <h3>Name</h3>
-                <div>
-                  <InputText autoFocus={true} value={currentEnvironment.name} placeholder={"Name"}
-                    onChange={(e) => updateName(e.target.value)} style={{ marginTop: '10px' }} />
-                  <Button label="Delete" onClick={openDeleteConfirmDialog} className={'p-button-outlined'}
-                    icon="pi pi-trash" style={{ marginLeft: '50px' }} />
-                </div>
-
-              </div>
-
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'flex-start',
-                marginTop: '40px',
-                marginBottom: '20px'
-              }}>
-
-                {/*Public Variables*/}
-                <div style={envSectionStyle}>
-                  <h2 style={{ marginTop: '40px', marginBottom: '20px', textAlign: 'left' }}>Variables</h2>
-
-                  <p style={helpTextStyle}>
-                    {variableHelpText}
-                  </p>
-
-                  <EnvTable isSecret={false} rowData={varRowData}
-                    updateEnvironmentInState={updateEnvironmentInState}
-                    onRemoveRowData={removeVariable} />
-
-                  <Button icon={'pi pi-plus'} label={"Add Variable"}
-                    className={'p-button-raised p-button-text'}
-                    style={{ marginTop: '30px', maxWidth: '180px' }} onClick={addEnvironmentVariable} />
-
-                </div>
-
-                {/*Secrets*/}
-                <div style={envSectionStyle}>
-                  <h2 style={{ marginTop: '40px', marginBottom: '20px', textAlign: 'left' }}>Secrets</h2>
-
-                  <p style={helpTextStyle}>
-                    {secretHelpText}
-                  </p>
-                  <EnvTable isSecret={true} rowData={secretRowData}
-                    updateEnvironmentInState={updateEnvironmentInState}
-                    onRemoveRowData={removeSecret} />
-
-                  <Button icon={'pi pi-plus'} label={"Add Secret"} className={'p-button-raised p-button-text'}
-                    style={{ marginTop: '30px', maxWidth: '180px' }} onClick={addSecretVariable} />
-                </div>
-              </div>
-            </>
-          }
+          <Button icon={'pi pi-plus'} label={"Add Environment"} className={'p-button-raised'}
+            onClick={openCreateEnvironmentDialog} />
+          <Dropdown style={{ ...envDropdownStyle, marginLeft: '30px' }} optionLabel="name"
+            value={environment?.name}
+            options={environmentsToOptions(environments, true)}
+            onChange={(e) => selectEnvironment(e.value)}
+            placeholder={"No Environment"} />
         </div>
-      }
+
+        {environment &&
+          <>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+              <h3>Name</h3>
+              <div>
+                <InputText autoFocus={true} value={environment.name} placeholder={"Name"}
+                  onChange={(e) => updateName(e.target.value)} style={{ marginTop: '10px' }} />
+                <Button label="Delete" onClick={openDeleteConfirmDialog} className={'p-button-outlined'}
+                  icon="pi pi-trash" style={{ marginLeft: '50px' }} />
+              </div>
+
+            </div>
+
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'flex-start',
+              marginTop: '40px',
+              marginBottom: '20px'
+            }}>
+
+              {/*Public Variables*/}
+              <div style={envSectionStyle}>
+                <h2 style={{ marginTop: '40px', marginBottom: '20px', textAlign: 'left' }}>Variables</h2>
+
+                <p style={helpTextStyle}>
+                  {variableHelpText}
+                </p>
+
+                <EnvTable isSecret={false} rowData={varRowData}
+                  updateEnvironmentInState={updateEnvironmentInState}
+                  onRemoveRowData={removeVariable} />
+
+                <Button icon={'pi pi-plus'} label={"Add Variable"}
+                  className={'p-button-raised p-button-text'}
+                  style={{ marginTop: '30px', maxWidth: '180px' }} onClick={addEnvironmentVariable} />
+
+              </div>
+
+              {/*Secrets*/}
+              <div style={envSectionStyle}>
+                <h2 style={{ marginTop: '40px', marginBottom: '20px', textAlign: 'left' }}>Secrets</h2>
+
+                <p style={helpTextStyle}>
+                  {secretHelpText}
+                </p>
+                <EnvTable isSecret={true} rowData={secretRowData}
+                  updateEnvironmentInState={updateEnvironmentInState}
+                  onRemoveRowData={removeSecret} />
+
+                <Button icon={'pi pi-plus'} label={"Add Secret"} className={'p-button-raised p-button-text'}
+                  style={{ marginTop: '30px', maxWidth: '180px' }} onClick={addSecretVariable} />
+              </div>
+            </div>
+          </>
+        }
+      </div>
 
       {
         environments.length == 0 &&
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-          <span>This collection does not have any environments yet. Create a new one.</span>
-          <Button icon={'pi pi-plus'} label={"Add Environment"} className={'p-button-raised'}
-            onClick={openCreateEnvironmentDialog} style={{ marginLeft: '10px', marginTop: '80px' }} />
+          <p>This collection does not have any environments yet. Create a new one.</p>
         </div>
       }
 

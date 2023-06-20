@@ -1,6 +1,6 @@
 import { createClient } from '@rspc/client'
 import { TauriTransport } from '@rspc/tauri'
-import { Procedures, Workspace, Collection, AddCollectionsResult, ImportCollectionResult, LoadRequestsResult, RunRequestCommand, RequestResult, RequestModel, SaveRequestCommand, RequestTreeNode, DragAndDropResult, Environment } from './bindings';
+import { Procedures, Workspace, Collection, AddCollectionsResult, ImportCollectionResult, LoadRequestsResult, RunRequestCommand, RequestResult, RequestModel, SaveRequestCommand, RequestTreeNode, DragAndDropResult, Environment, ValidateGroupNameResult } from './bindings';
 import { FError } from './common/errorhandling';
 import { CancellationToken } from './model/error';
 
@@ -101,6 +101,15 @@ class Backend {
   addGroupNode(collection: Collection, parent: RequestTreeNode, groupName: string): Promise<RequestTreeNode> {
     let result = api.query(['add_group_node', { collection: collection, parent: parent, group_name: groupName }]);
     return result;
+  }
+
+  validateGroupName(old_path: string, new_name: string): Promise<ValidateGroupNameResult> {
+    return api.query(['validate_group_name', { old_path: old_path, new_name: new_name }]);
+  }
+
+  // returns new path
+  renameGroup(collection_path: string, old_path: string, new_name: string): Promise<string> {
+    return api.query(['rename_group', { collection_path: collection_path, old_path: old_path, new_name: new_name }]);
   }
 
   deleteNode(collection: Collection, node: RequestTreeNode, fileNode: RequestTreeNode | null): Promise<null> {

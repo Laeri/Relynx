@@ -31,8 +31,7 @@ nav {
     border: 1px solid #3f4b5b;
     margin:0;
     box-shadow: none;
-    flex-basis: 30%;
-    max-width: 30%;
+    min-width: 30%;
     overflow-y: auto;
 }
 

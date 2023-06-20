@@ -13,14 +13,15 @@ mod serialize;
 mod tree;
 
 use commands::{
-    add_existing_collections, add_group_node, add_request_node, validate_response_filepath,
-    copy_to_clipboard, delete_node, drag_and_drop, get_response_filepath,
-    import_postman_collection, is_directory_empty, load_environments, load_requests_for_collection,
-    load_workspace, open_folder_native, remove_collection, reorder_nodes_within_parent,
-    run_request, save_environments, save_request, select_directory, select_file, update_workspace,
-    AddExistingCollectionsParams, AddGroupNodeParams, AddRequestNodeParams, DeleteNodeParams,
-    DragAndDropParams, ImportPostmanCommandParams, ReorderNodesParams, SaveEnvironmentsParams,
-    RELYNX_CONTEXT,
+    add_existing_collections, add_group_node, add_request_node, copy_to_clipboard, delete_node,
+    drag_and_drop, get_response_filepath, import_postman_collection, is_directory_empty,
+    load_environments, load_requests_for_collection, load_workspace, open_folder_native,
+    remove_collection, reorder_nodes_within_parent, run_request, save_environments, save_request,
+    select_directory, select_file, update_workspace, validate_group_name,
+    validate_response_filepath, AddExistingCollectionsParams, AddGroupNodeParams,
+    AddRequestNodeParams, DeleteNodeParams, DragAndDropParams, ImportPostmanCommandParams,
+    RenameGroupParams, ReorderNodesParams, SaveEnvironmentsParams, ValidateGroupNameParams,
+    RELYNX_CONTEXT, rename_group,
 };
 use model::{Collection, RunRequestCommand, SaveRequestCommand, Workspace};
 use rspc::Router;
@@ -104,6 +105,12 @@ fn router() -> Arc<Router> {
         })
         .query("validate_response_filepath", |t| {
             t(|_, params: PathBuf| validate_response_filepath(params))
+        })
+        .query("validate_group_name", |t| {
+            t(|_, params: ValidateGroupNameParams| validate_group_name(params))
+        })
+        .query("rename_group", |t| {
+            t(|_, params: RenameGroupParams| rename_group(params))
         })
         .build();
     Arc::new(router)

@@ -3,7 +3,7 @@ import { Workspace, Collection, Environment, RequestModel, RequestResult, Reques
 import { getUpdateRequestTreeWithRequest } from "../common/treeUtils";
 import { newWorkspace, updatedRequestModel } from "../model/model";
 
-interface RelynxState {
+export interface RelynxState {
 
   // Workspace
   workspace: Workspace

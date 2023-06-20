@@ -78,6 +78,7 @@ export function getUpdateRequestTreeWithRequest(requestTree: RequestTree, reques
     console.error("getUpdateRequestTreeWithRequest: tree with no root encountered!");
     return requestTree;
   }
+  // @TODO @SPEED, we re create the full tree
   let newTree = newRequestTree();
   newTree.root = getUpdatedNodeWithRequest(requestTree.root, request);
 
@@ -177,6 +178,39 @@ export function addRequestToRequestTree(requestTree: RequestTree, parent: Reques
   }
   newParent.children.unshift(requestTreeNode);
   return [newTree, undefined]
+}
+
+export function renameGroupNode(requestTree: RequestTree, groupNodeId: string, { newName, newPath }: { newName: string, newPath: string }): [RequestTree, FError] {
+
+  let newTree = cloneTree(requestTree);
+
+  let groupNode = findNode(newTree, groupNodeId);
+  if (!groupNode) {
+    return [newTree, NewFError("addRequestToRequestTree.noParent", "Error during rename", "Could not rename group correctly", "Could not rename group correctly")];
+  }
+  let oldPath = groupNode.filepath;
+  groupNode.name = newName;
+  groupNode.filepath = newPath;
+  fixRenamePathsOfChildren(groupNode, oldPath);
+
+  return [newTree, undefined]
+}
+
+export function fixRenamePathsOfChildren(parent: RequestTreeNode, oldPath: string) {
+  let nodes = [...parent.children];
+  while (nodes.length > 0) {
+    let currentNode = nodes.pop();
+    if (!currentNode) {
+      continue
+    }
+    currentNode.filepath = currentNode.filepath.replace(oldPath, parent.filepath);
+    if (currentNode?.request) {
+      currentNode.request.rest_file_path = currentNode.request.rest_file_path.replace(oldPath, parent.filepath);
+    }
+    if (currentNode?.children) {
+      nodes.push(...currentNode.children);
+    }
+  }
 }
 
 export function addGroupToRequestTree(requestTree: RequestTree, parent: RequestTreeNode, newGroup: RequestTreeNode): [RequestTree, FError] {

@@ -12,7 +12,7 @@ import { useContext, useState } from "react";
 import { catchError, displayAndLogErr } from "../common/errorhandling";
 import { NewFError } from "../model/error";
 import { ToastContext } from "../App";
-import { useRequestModelStore } from "../stores/requestStore";
+import { RelynxState, useRequestModelStore } from "../stores/requestStore";
 import { ActionDropdown, ActionDropdownContext } from "./ActionDropdown";
 import { Button } from "primereact/button";
 import { createNewRequestNode } from "../common/requestUtils";
@@ -24,6 +24,7 @@ import { Collection, RequestTreeNode, RequestTree, RequestModel, ImportWarning, 
 import { backend } from '../rpc';
 import { getDefaultGroupName } from "../common/common";
 import { confirmPopup } from "primereact/confirmpopup";
+import { EditGroupNameModal } from "./modals/EditGroupNameModal";
 
 const updateRequestTree = useRequestModelStore.getState().updateRequestTree;
 const setCurrentRequest = useRequestModelStore.getState().setCurrentRequest;
@@ -127,9 +128,10 @@ interface ComponentProps {
 export function RequestTreeComponent(props: ComponentProps) {
 
   const toast = useContext(ToastContext);
-  const updateRequestTree = useRequestModelStore((state) => state.updateRequestTree)
+  const updateRequestTree = useRequestModelStore((state: RelynxState) => state.updateRequestTree)
   const [expandedKeys, setExpandedKeys] = useState<TreeExpandedKeysType>({});
   const location = useLocation();
+  const collection = useRequestModelStore((state: RelynxState) => state.currentCollection as Collection);
 
   const expandNode = (primeNodeKey: string) => {
     let newExpandedKeys: TreeExpandedKeysType = { ...expandedKeys };
@@ -244,6 +246,15 @@ export function RequestTreeComponent(props: ComponentProps) {
     });
   };
 
+  const openEditGroupNameModal = (node: PrimeNode) => {
+    const modalPromise = create(({ onResolve, onReject, isOpen }) => {
+      return <EditGroupNameModal node={node} collection={collection} isOpen={isOpen} onResolve={onResolve} onReject={() => onReject()} />
+    });
+    modalPromise().then((groupName: string) => {
+      toast.showSuccess(`Renamed group to ${groupName}`, "");
+    }).catch(catchError);
+  }
+
 
   const GroupActions = ({ node, toast }: { node: PrimeNode, toast: ToastContext }) => {
     const { closeDropdown } = useContext(ActionDropdownContext);
@@ -257,12 +268,22 @@ export function RequestTreeComponent(props: ComponentProps) {
           }} />
         {
           !node.groupNode?.is_file_group &&
-          <Button icon={'pi pi-plus'} className={'p-button p-button-text'}
-            label={"Create Group"}
-            onClick={() => {
-              createNewGroupNode(toast, expandNode, props.collection, props.requestTree, node.groupNode as RequestTreeNode, node); closeDropdown();
-            }
-            } />
+          <>
+            <Button icon={'pi pi-plus'} className={'p-button p-button-text'}
+              label={"Create Group"}
+              onClick={() => {
+                createNewGroupNode(toast, expandNode, props.collection, props.requestTree, node.groupNode as RequestTreeNode, node); closeDropdown();
+              }
+              } />
+            <Button icon={'pi pi-pencil'} className={'p-button p-button-text'}
+              label={"Rename Group"}
+              onClick={() => {
+                openEditGroupNameModal(node);
+                closeDropdown();
+              }
+              } />
+          </>
+
         }
 
         <Button icon={'pi pi-trash'} className={'p-button p-button-text'}

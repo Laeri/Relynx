@@ -190,7 +190,12 @@ pub fn run_request(request_command: RunRequestCommand) -> Result<RequestResult, 
     // @TODO: cookie input file...
     // @TODO: handle intellij redirect options
     let mut client = Client::new(None);
-    let options = ClientOptions::default();
+    let mut options = ClientOptions::default();
+    options.follow_location = !request_command
+        .request
+        .settings
+        .no_redirect
+        .unwrap_or(false);
 
     // @TODO: set options from request settings
     let call = client
@@ -534,6 +539,107 @@ pub fn add_group_node(params: AddGroupNodeParams) -> Result<RequestTreeNode, rsp
             Err(FrontendError::new_with_message(DisplayErrorKind::AddGroupNodeError, msg).into())
         }
     }
+}
+
+#[derive(Serialize, Deserialize, rspc::Type, Debug)]
+pub struct ValidateGroupNameParams {
+    old_path: PathBuf,
+    new_name: String,
+}
+
+#[derive(Serialize, Deserialize, rspc::Type, Debug)]
+pub struct ValidateGroupNameResult {
+    sanitized_name: String,
+    new_path: PathBuf,
+    path_exists_already: bool,
+}
+
+#[tauri::command]
+pub fn validate_group_name(
+    params: ValidateGroupNameParams,
+) -> Result<ValidateGroupNameResult, rspc::Error> {
+    let ValidateGroupNameParams { old_path, new_name } = params;
+
+    let sanitized_name = sanitize_filename_with_options(new_name, DEFAULT_OPTIONS);
+
+    let new_path = old_path
+        .parent()
+        .map(|parent_path| parent_path.join(&sanitized_name))
+        .ok_or_else(|| {
+            FrontendError::new_with_message(
+                DisplayErrorKind::Generic,
+                "Something is wrong with the path of the group.",
+            )
+        })?;
+
+    Ok(ValidateGroupNameResult {
+        sanitized_name,
+        path_exists_already: new_path.exists(),
+        new_path,
+    })
+}
+
+#[derive(Serialize, Deserialize, rspc::Type, Debug)]
+pub struct RenameGroupParams {
+    collection_path: PathBuf,
+    old_path: PathBuf,
+    new_name: String,
+}
+
+#[tauri::command]
+pub fn rename_group(params: RenameGroupParams) -> Result<PathBuf, rspc::Error> {
+    let RenameGroupParams {
+        collection_path,
+        old_path,
+        new_name,
+    } = params;
+
+    let new_path = old_path
+        .parent()
+        .map(|parent| parent.join(new_name))
+        .ok_or_else(|| {
+            return FrontendError::new_with_message(
+                DisplayErrorKind::Generic,
+                "Could not rename the group",
+            );
+        })
+        .map_err(Into::<rspc::Error>::into)?;
+
+    if !(old_path.starts_with(&collection_path) && new_path.starts_with(&collection_path)) {
+        return Err(FrontendError::new_with_message(
+            DisplayErrorKind::Generic,
+            "Could not rename the group",
+        )
+        .into());
+    }
+
+    if !old_path.exists() {
+        let msg = format!(
+            "The group's path: '{}' does not exist",
+            old_path.to_string_lossy()
+        );
+        return Err(FrontendError::new_with_message(DisplayErrorKind::Generic, msg).into());
+    }
+
+    if new_path.exists() {
+        let msg = format!(
+            "Cannot rename the group as there exists already a group with path: '{}'",
+            new_path.to_string_lossy()
+        );
+        return Err(FrontendError::new_with_message(DisplayErrorKind::Generic, msg).into());
+    }
+
+    std::fs::rename(&old_path, &new_path)
+        .map_err(|_err| {
+            // @TODO: Log error
+            return FrontendError::new_with_message(
+                DisplayErrorKind::Generic,
+                "Could not rename the group",
+            );
+        })
+        .map_err(Into::<rspc::Error>::into)?;
+
+    Ok(new_path)
 }
 
 #[derive(Serialize, Deserialize, rspc::Type, Debug)]

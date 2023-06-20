@@ -16,6 +16,7 @@ export type Procedures = {
         { key: "load_workspace", input: never, result: Workspace } | 
         { key: "open_folder_native", input: string, result: null } | 
         { key: "remove_collection", input: Collection, result: Workspace } | 
+        { key: "rename_group", input: RenameGroupParams, result: string } | 
         { key: "reorder_nodes_within_parent", input: ReorderNodesParams, result: RequestTreeNode } | 
         { key: "run_request", input: RunRequestCommand, result: RequestResult } | 
         { key: "save_environments", input: SaveEnvironmentsParams, result: null } | 
@@ -23,16 +24,21 @@ export type Procedures = {
         { key: "select_directory", input: never, result: string } | 
         { key: "select_file", input: never, result: string } | 
         { key: "update_workspace", input: Workspace, result: null } | 
+        { key: "validate_group_name", input: ValidateGroupNameParams, result: ValidateGroupNameResult } | 
         { key: "validate_response_filepath", input: string, result: boolean },
     mutations: never,
     subscriptions: never
 };
 
-export type ReorderNodesParams = { collection: Collection; drag_node: RequestTreeNode; drop_node: RequestTreeNode; drop_index: number }
+export type DeleteNodeParams = { collection: Collection; node: RequestTreeNode; file_node: RequestTreeNode | null }
 
 export type ImportWarning = { rest_file_path: string; is_group: boolean; message: string | null; severity: MessageSeverity | null }
 
+export type ValidateGroupNameResult = { sanitized_name: string; new_path: string; path_exists_already: boolean }
+
 export type RunRequestCommand = { request: RequestModel; environment: Environment | null }
+
+export type ValidateGroupNameParams = { old_path: string; new_name: string }
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" | "TRACE" | "OPTIONS" | "CONNECT" | { CUSTOM: string }
 
@@ -45,8 +51,6 @@ export type UrlEncodedParam = { key: string; value: string }
 export type ImportCollectionResult = { collection: Collection }
 
 export type Multipart = { name: string; data: DataSource<string>; fields: DispositionField[]; headers: Header[] }
-
-export type DeleteNodeParams = { collection: Collection; node: RequestTreeNode; file_node: RequestTreeNode | null }
 
 export type RequestBody = "None" | { Multipart: { boundary: string; parts: Multipart[] } } | { UrlEncoded: { url_encoded_params: UrlEncodedParam[] } } | { Raw: { data: DataSource<string> } }
 
@@ -80,6 +84,8 @@ export type DragAndDropResult = { new_drop_node: RequestTreeNode; remove_drag_no
 
 export type DispositionField = { key: string; value: string }
 
+export type RenameGroupParams = { collection_path: string; old_path: string; new_name: string }
+
 export type SaveEnvironmentsParams = { collection_path: string; environments: Environment[] }
 
 export type RequestModel = { id: string; name: string; description: string; method: HttpMethod; url: string; query_params: QueryParam[]; headers: Header[]; body: RequestBody; rest_file_path: string; http_version: Replaced<HttpVersion>; settings: RequestSettings; redirect_response: RedirectResponse }
@@ -88,7 +94,7 @@ export type DisplayErrorKind = "Generic" | "LoadWorkspaceError" | "ReadWorkspace
 
 export type Collection = { name: string; path: string; current_env_name: string; description: string; import_warnings: ImportWarning[] }
 
-export type AddRequestNodeParams = { collection: Collection; parent: RequestTreeNode; request_name: string; requests_in_same_file: RequestModel[] }
+export type AddGroupNodeParams = { collection: Collection; parent: RequestTreeNode; group_name: string }
 
 export type QueryParam = { key: string; value: string; active: boolean }
 
@@ -100,8 +106,10 @@ export type ImportPostmanCommandParams = { workspace: Workspace; import_postman_
 
 export type LoadRequestsResult = { request_tree: RequestTree; errs: FrontendError[] }
 
-export type AddGroupNodeParams = { collection: Collection; parent: RequestTreeNode; group_name: string }
-
 export type RequestTreeNode = { id: string; name: string; request: RequestModel | null; children: RequestTreeNode[]; filepath: string; is_file_group: boolean }
 
+export type AddRequestNodeParams = { collection: Collection; parent: RequestTreeNode; request_name: string; requests_in_same_file: RequestModel[] }
+
 export type HttpVersion = { major: number; minor: number }
+
+export type ReorderNodesParams = { collection: Collection; drag_node: RequestTreeNode; drop_node: RequestTreeNode; drop_index: number }

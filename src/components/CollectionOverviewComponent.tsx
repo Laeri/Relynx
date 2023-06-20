@@ -100,10 +100,10 @@ export function CollectionOverviewComponent(_props: ComponentProps) {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'flex-start',
-        paddingTop: '10px',
-        position: 'relative'
+        paddingTop: '50px',
+        position: 'relative',
       }}>
-        <h1>{collection?.name}</h1>
+        <h1 style={{}}>{collection?.name}</h1>
         <div style={{ marginTop: '50px', display: 'flex', justifyContent: 'space-between', width: '100%' }}>
           <div style={{ width: '100%' }} className={'overview-request-list'}>
             {requests && requests.length == 0 &&
@@ -152,11 +152,11 @@ export function CollectionOverviewComponent(_props: ComponentProps) {
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <div style={{ marginTop: '20px', display: 'flex' }}>
                   <Button icon={'pi pi-plus'} label={"Create Request"}
-                    onClick={() => { console.log('requestTree', requestTree); createNewRequestNode(requestTree.root, toast, undefined) }}
+                    onClick={() => { console.log('requestTree', requestTree); createNewRequestNode(requestTree.root, toast, () => { }) }}
                     className={"p-button-sm p-button-text p-button-raised"}
                     style={{}} />
                   <Button icon={'pi pi-plus'} label={"Create Group"}
-                    onClick={() => createNewGroupNode(toast, (_node: PrimeNode) => {
+                    onClick={() => createNewGroupNode(toast, () => {
                     }, collection as Collection, requestTree, requestTree.root, undefined)}
                     className={"p-button-sm p-button-text p-button-raised"}
                     style={{ marginLeft: '10px' }} />

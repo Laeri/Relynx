@@ -138,7 +138,6 @@ fn dd_check_preconditions(params: &DragAndDropParams) -> Result<(), FrontendErro
         collection,
         drag_node,
         drop_node,
-        drop_index,
         ..
     } = params;
 

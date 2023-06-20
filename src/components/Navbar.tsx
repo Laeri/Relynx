@@ -28,7 +28,7 @@ export function Navbar() {
     }
 
     return (
-        <nav style={{padding: '30px 5px 50px 5px', minWidth: '20%'}}>
+        <nav style={{padding: '30px 5px 50px 5px'}}>
             <h1 style={{}}>Relynx</h1>
             <div style={{marginTop: '30px', padding: '10px 30px'}}>
                 <SlideMenu
