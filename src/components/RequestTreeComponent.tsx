@@ -23,6 +23,7 @@ import { useLocation, useNavigate } from "react-router";
 import { Collection, RequestTreeNode, RequestTree, RequestModel, ImportWarning, DragAndDropResult } from '../bindings';
 import { backend } from '../rpc';
 import { getDefaultGroupName } from "../common/common";
+import { confirmPopup } from "primereact/confirmpopup";
 
 const updateRequestTree = useRequestModelStore.getState().updateRequestTree;
 const setCurrentRequest = useRequestModelStore.getState().setCurrentRequest;
@@ -223,7 +224,28 @@ export function RequestTreeComponent(props: ComponentProps) {
     // TODO: update server side
   }
 
-  const Actions = ({ node, toast }: { node: PrimeNode, toast: ToastContext }) => {
+  const confirmDeleteGroup = (event: any, onDelete: () => void, onCancel: () => void) => {
+    confirmPopup({
+      target: event.currentTarget,
+      message: 'Are you sure you want to delete this group? If the group contains any other groups and requests they will be removed as well!',
+      icon: 'pi pi-exclamation-triangle',
+      accept: onDelete,
+      reject: onCancel
+    });
+  };
+
+  const confirmDeleteRequest = (event: any, onDelete: () => void, onCancel: () => void) => {
+    confirmPopup({
+      target: event.currentTarget,
+      message: 'Are you sure you want to delete this request?',
+      icon: 'pi pi-exclamation-triangle',
+      accept: onDelete,
+      reject: onCancel
+    });
+  };
+
+
+  const GroupActions = ({ node, toast }: { node: PrimeNode, toast: ToastContext }) => {
     const { closeDropdown } = useContext(ActionDropdownContext);
     return (
       <>
@@ -245,10 +267,22 @@ export function RequestTreeComponent(props: ComponentProps) {
 
         <Button icon={'pi pi-trash'} className={'p-button p-button-text'}
           label={"Delete Group"}
-          onClick={() => { deleteNode(toast, props.collection, props.requestTree, node, props.currentRequest); closeDropdown(); }} />
+          onClick={(event: any) => {
+            confirmDeleteGroup(event, () => { deleteNode(toast, props.collection, props.requestTree, node, props.currentRequest); closeDropdown(); }, closeDropdown);
+          }} />
 
       </>
     )
+  }
+
+  const RequestActions = ({ node, toast }: { node: PrimeNode, toast: ToastContext }) => {
+    const { closeDropdown } = useContext(ActionDropdownContext);
+    return (
+      <Button icon={'pi pi-trash'} className={' p-button-text'}
+        label={"Delete Request"}
+        onClick={(event: any) => confirmDeleteRequest(event, () => { deleteNode(toast, props.collection, props.requestTree, node); closeDropdown(); }, closeDropdown)} />
+    )
+
   }
 
   const nodeTemplate = (node: any, _options: any) => {
@@ -275,7 +309,7 @@ export function RequestTreeComponent(props: ComponentProps) {
 
           <ActionDropdown styles={{ flexGrow: 1, marginRight: '3px' }}>
             {
-              <Actions node={node} toast={toast} />
+              <GroupActions node={node} toast={toast} />
             }
           </ActionDropdown>
         </div>
@@ -294,9 +328,7 @@ export function RequestTreeComponent(props: ComponentProps) {
             })}
             highlighted={props.currentRequest?.id == primeNode.key} />
           <ActionDropdown styles={{ flexGrow: 1, marginRight: '3px' }}>
-            <Button icon={'pi pi-trash'} className={' p-button-text'}
-              label={"Delete Request"}
-              onClick={() => deleteNode(toast, props.collection, props.requestTree, node)} />
+            <RequestActions toast={toast} node={node} />
           </ActionDropdown>
 
         </div>
