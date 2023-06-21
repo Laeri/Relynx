@@ -9,7 +9,7 @@ import {
   reorderReplace,
   requestTreeToPrimeNodes
 } from "../common/treeUtils";
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { catchError, displayAndLogErr } from "../common/errorhandling";
 import { NewFError } from "../model/error";
 import { ToastContext } from "../App";
@@ -122,8 +122,7 @@ interface ComponentProps {
 
   currentRequest?: RequestModel
 
-  withBackgroundColor: boolean
-
+  withBackgroundColor: boolean,
 }
 
 export function RequestTreeComponent(props: ComponentProps) {
@@ -140,7 +139,6 @@ export function RequestTreeComponent(props: ComponentProps) {
     newExpandedKeys[primeNodeKey] = true;
     setExpandedKeys(newExpandedKeys);
   }
-
 
   const toggleExpandedKeys = (value: TreeExpandedKeysType) => {
     setExpandedKeys(value);

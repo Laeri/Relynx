@@ -3,6 +3,7 @@ import './App.css';
 import 'primereact/resources/primereact.min.css';
 import '../node_modules/primeicons/primeicons.css';
 import './theme.css';
+//import '../node_modules/primereact/resources/themes/nova/theme.css'
 import { Workspace } from './bindings';
 import { OverviewComponent } from './pages/OverviewComponent';
 import { MemoryRouter, Routes, Route } from 'react-router';

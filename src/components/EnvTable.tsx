@@ -22,8 +22,8 @@ export interface RowData {
   index: number,
   name: string,
   initialValue: string,
-  currentValue: string | null,
-  description: string | null,
+  currentValue: string,
+  description: string,
   persistToFile?: boolean,
   invalid?: boolean
   error?: string
@@ -98,11 +98,14 @@ export function EnvTable(props: ComponentProps) {
           let newSecret = newEnvironmentSecret()
           newSecret.name = rowData.name
           newSecret.initial_value = rowData.initialValue;
-          newSecret.current_value = rowData.currentValue;
+          if (rowData.currentValue && rowData.currentValue !== "") {
+            newSecret.current_value = rowData.currentValue;
+          } else {
+            newSecret.current_value = null;
+          }
           newSecret.persist_to_file = secret.persist_to_file // isn't edited here but by the checkbox...
           if (rowData.description && rowData.description !== "") {
             newSecret.description = rowData.description;
-
           } else {
             newSecret.description = null;
           }
@@ -118,6 +121,11 @@ export function EnvTable(props: ComponentProps) {
           let newVar = newEnvironmentVariable();
           newVar.name = rowData.name;
           newVar.initial_value = rowData.initialValue;
+          if (rowData.currentValue && rowData.currentValue !== "") {
+            newVar.current_value = rowData.currentValue;
+          } else {
+            newVar.current_value = null;
+          }
           newVar.current_value = rowData.currentValue;
           if (rowData.description && rowData.description !== "") {
             newVar.description = rowData.description;

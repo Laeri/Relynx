@@ -6235,3 +6235,10 @@
 .p-accordion-header-text {
   display: flex;
 }
+
+
+/* Fix datatable cell being too large on edit */
+.p-cell-editing .p-inputtext {
+  width: 100%;
+}
+

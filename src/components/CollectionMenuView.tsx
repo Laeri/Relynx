@@ -1,5 +1,5 @@
 import { useRequestModelStore } from "../stores/requestStore";
-import { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { Button } from "primereact/button";
 import { PrimeNode, } from "../common/treeUtils";
 import { ToastContext } from "../App";
@@ -23,13 +23,6 @@ export function CollectionMenuView(props: ComponentProps) {
   const requestTree = useRequestModelStore((state) => state.requestTree) as RequestTree;// @TODO check that request tree is not null
 
   const currentRequest = useRequestModelStore((state) => state.currentRequest);
-
-  const setCurrentEnvironment = useRequestModelStore((state) => state.setCurrentEnvironment);
-
-  /*
-  const updateEnvironments = useRequestModelStore((state) => state.updateEnvironments);
-
-*/
 
   const updateRequestTree = useRequestModelStore((state) => state.updateRequestTree);
   const [initFinished, setInitFinished] = useState<boolean>(false);
@@ -65,7 +58,9 @@ export function CollectionMenuView(props: ComponentProps) {
 
 
   const newRequestNode = (parent: RequestTreeNode, parentPrime?: PrimeNode) => {
-    createNewRequestNode(parent, toast, parentPrime);
+    createNewRequestNode(parent, toast, (_nodeId: string) => {
+      // ignore, we do not want to expand as the request is added to the top level node (root)
+    });
   }
 
   return (
@@ -80,7 +75,7 @@ export function CollectionMenuView(props: ComponentProps) {
                 className={"p-button-sm p-button-text p-button-raised"}
                 style={{}} />
               <Button icon={'pi pi-plus'} label={"Create Group"}
-                onClick={() => createNewGroupNode(toast, (_node: PrimeNode) => {
+                onClick={() => createNewGroupNode(toast, (_node: string) => {
                 }, collection, requestTree, requestTree.root, undefined)}
                 className={"p-button-sm p-button-text p-button-raised"}
                 style={{ marginLeft: '10px' }} />
@@ -88,7 +83,6 @@ export function CollectionMenuView(props: ComponentProps) {
             {
               initFinished && <RequestTreeComponent requestTree={requestTree} collection={collection}
                 currentRequest={currentRequest} withBackgroundColor={true} />
-
             }
 
           </div>
