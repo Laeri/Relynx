@@ -66,9 +66,8 @@ pub struct ImportWarning {
 #[derive(Serialize, Deserialize, Type, Debug)]
 pub struct AddCollectionsResult {
     pub workspace: Workspace,
-    pub any_collections_found: bool,
-    pub num_imported: i32,
-    pub errored_collections: Vec<String>, // @TODO
+    pub num_imported: u32,
+    pub errored_collections: Vec<PathBuf>, // @TODO
 }
 
 #[derive(Serialize, Deserialize, Type, Debug)]
@@ -659,8 +658,4 @@ impl From<&RequestModel> for http_rest_file::model::Request {
             save_response,
         }
     }
-}
-
-pub struct Cookie {
-    raw: String,
 }

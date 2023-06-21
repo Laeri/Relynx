@@ -1,7 +1,7 @@
 import { Card } from "primereact/card";
 import { Button } from "primereact/button";
 import { useContext } from "react";
-import { openCreateCollectionModal, openAddExistingCollectionModal, openImportCollectionModal } from "../common/modal";
+import { openCreateCollectionModal, openAddExistingCollectionsModal, openImportCollectionModal } from "../common/modal";
 import { ToastContext } from "../App";
 import { useRequestModelStore } from "../stores/requestStore";
 import { AddCollectionsResult, Collection } from "../bindings";
@@ -24,7 +24,7 @@ export function OverviewComponent(_props: ComponentProps) {
 
 
   const doOpenAddExistingCollectionModal = () => {
-    openAddExistingCollectionModal(workspace, toast).then((_result: void | AddCollectionsResult) => {
+    openAddExistingCollectionsModal(workspace, toast).then((_result: void | AddCollectionsResult) => {
       // @TODO: what about errored collections?
     });
   }

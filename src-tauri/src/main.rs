@@ -14,14 +14,15 @@ mod tree;
 
 use commands::{
     add_existing_collections, add_group_node, add_request_node, copy_to_clipboard, delete_node,
-    drag_and_drop, get_response_filepath, import_postman_collection, is_directory_empty,
-     load_environments, load_requests_for_collection, load_workspace,
-    open_folder_native, remove_collection, rename_group, reorder_nodes_within_parent, run_request,
-    save_environments, save_request, select_directory, select_file, update_workspace,
-    validate_group_name, validate_response_filepath, AddExistingCollectionsParams,
-    AddGroupNodeParams, AddRequestNodeParams, DeleteNodeParams, DragAndDropParams,
-    ImportPostmanCommandParams, RenameGroupParams, ReorderNodesParams, SaveEnvironmentsParams,
-    ValidateGroupNameParams, RELYNX_CONTEXT,
+    drag_and_drop, get_response_filepath, hide_group, import_jetbrains_folder_command,
+    import_postman_collection, is_directory_empty, load_environments, load_requests_for_collection,
+    load_workspace, open_folder_native, remove_collection, rename_group,
+    reorder_nodes_within_parent, run_request, save_environments, save_request, select_directory,
+    select_file, update_workspace, validate_group_name, validate_response_filepath,
+    AddExistingCollectionsParams, AddGroupNodeParams, AddRequestNodeParams, DeleteNodeParams,
+    DragAndDropParams, ImportJetbrainsHttpFolderParams, ImportPostmanCommandParams,
+    RenameGroupParams, ReorderNodesParams, SaveEnvironmentsParams, ValidateGroupNameParams,
+    RELYNX_CONTEXT,
 };
 use model::{Collection, RunRequestCommand, SaveRequestCommand, Workspace};
 use rspc::Router;
@@ -30,89 +31,96 @@ use tauri::Manager;
 use tauri_plugin_log::LogTarget;
 
 fn router() -> Arc<Router> {
-    let router = Router::new()
-        // change the bindings filename to your liking
-        .config(rspc::Config::new().export_ts_bindings("../src/bindings.d.ts"))
-        //.query("greet", |t| t(|_, name: String| greet(&name)))
-        .query("load_workspace", |t| t(|_, ()| load_workspace()))
-        .query("remove_collection", |t| {
-            t(|_, collection: Collection| remove_collection(collection))
-        })
-        .query("select_directory", |t| t(|_, ()| select_directory()))
-        .query("select_file", |t| t(|_, ()| select_file()))
-        .query("is_directory_empty", |t| {
-            t(|_, path: PathBuf| is_directory_empty(path))
-        })
-        .query("update_workspace", |t| {
-            t(|_, workspace: Workspace| update_workspace(workspace))
-        })
-        .query("add_existing_collections", |t| {
-            t(|_, params: AddExistingCollectionsParams| {
-                add_existing_collections(params.path, params.workspace)
+    let router =
+        Router::new()
+            // change the bindings filename to your liking
+            .config(rspc::Config::new().export_ts_bindings("../src/bindings.d.ts"))
+            //.query("greet", |t| t(|_, name: String| greet(&name)))
+            .query("load_workspace", |t| t(|_, ()| load_workspace()))
+            .query("remove_collection", |t| {
+                t(|_, collection: Collection| remove_collection(collection))
             })
-        })
-        .query("load_requests_for_collection", |t| {
-            t(|_, collection: Collection| load_requests_for_collection(collection))
-        })
-        .query("import_postman_collection", |t| {
-            t(|_, params: ImportPostmanCommandParams| {
-                import_postman_collection(
-                    params.workspace,
-                    params.import_postman_path,
-                    params.import_result_path,
-                )
+            .query("select_directory", |t| t(|_, ()| select_directory()))
+            .query("select_file", |t| t(|_, ()| select_file()))
+            .query("is_directory_empty", |t| {
+                t(|_, path: PathBuf| is_directory_empty(path))
             })
-        })
-        .query("run_request", |t| {
-            t(|_, command: RunRequestCommand| run_request(command))
-        })
-        .query("save_request", |t| {
-            t(|_, command: SaveRequestCommand| save_request(command))
-        })
-        .query("copy_to_clipboard", |t| {
-            t(|_, string: String| copy_to_clipboard(string))
-        })
-        .query("open_folder_native", |t| {
-            t(|_, path: String| {
-                let mutex = RELYNX_CONTEXT.lock().unwrap();
-                let handle = mutex.app_handle.as_ref().unwrap();
-                open_folder_native(handle, &path)
+            .query("update_workspace", |t| {
+                t(|_, workspace: Workspace| update_workspace(workspace))
             })
-        })
-        .query("add_request_node", |t| {
-            t(|_, params: AddRequestNodeParams| add_request_node(params))
-        })
-        .query("add_group_node", |t| {
-            t(|_, params: AddGroupNodeParams| add_group_node(params))
-        })
-        .query("delete_node", |t| {
-            t(|_, params: DeleteNodeParams| delete_node(params))
-        })
-        .query("drag_and_drop", |t| {
-            t(|_, params: DragAndDropParams| drag_and_drop(params))
-        })
-        .query("reorder_nodes_within_parent", |t| {
-            t(|_, params: ReorderNodesParams| reorder_nodes_within_parent(params))
-        })
-        .query("load_environments", |t| {
-            t(|_, collection_path: PathBuf| load_environments(collection_path))
-        })
-        .query("save_environments", |t| {
-            t(|_, params: SaveEnvironmentsParams| save_environments(params))
-        })
-        .query("get_response_filepath", |t| {
-            t(|_, params: PathBuf| get_response_filepath(params))
-        })
-        .query("validate_response_filepath", |t| {
-            t(|_, params: PathBuf| validate_response_filepath(params))
-        })
-        .query("validate_group_name", |t| {
-            t(|_, params: ValidateGroupNameParams| validate_group_name(params))
-        })
-        .query("rename_group", |t| {
-            t(|_, params: RenameGroupParams| rename_group(params))
-        })
-        .build();
+            .query("add_existing_collections", |t| {
+                t(|_, params: AddExistingCollectionsParams| {
+                    add_existing_collections(params.path, params.workspace)
+                })
+            })
+            .query("load_requests_for_collection", |t| {
+                t(|_, collection: Collection| load_requests_for_collection(collection))
+            })
+            .query("import_postman_collection", |t| {
+                t(|_, params: ImportPostmanCommandParams| {
+                    import_postman_collection(
+                        params.workspace,
+                        params.import_postman_path,
+                        params.import_result_path,
+                    )
+                })
+            })
+            .query("import_jetbrains_folder", |t| {
+                t(|_, params: ImportJetbrainsHttpFolderParams| {
+                    import_jetbrains_folder_command(params)
+                })
+            })
+            .query("run_request", |t| {
+                t(|_, command: RunRequestCommand| run_request(command))
+            })
+            .query("save_request", |t| {
+                t(|_, command: SaveRequestCommand| save_request(command))
+            })
+            .query("copy_to_clipboard", |t| {
+                t(|_, string: String| copy_to_clipboard(string))
+            })
+            .query("open_folder_native", |t| {
+                t(|_, path: String| {
+                    let mutex = RELYNX_CONTEXT.lock().unwrap();
+                    let handle = mutex.app_handle.as_ref().unwrap();
+                    open_folder_native(handle, &path)
+                })
+            })
+            .query("add_request_node", |t| {
+                t(|_, params: AddRequestNodeParams| add_request_node(params))
+            })
+            .query("add_group_node", |t| {
+                t(|_, params: AddGroupNodeParams| add_group_node(params))
+            })
+            .query("delete_node", |t| {
+                t(|_, params: DeleteNodeParams| delete_node(params))
+            })
+            .query("drag_and_drop", |t| {
+                t(|_, params: DragAndDropParams| drag_and_drop(params))
+            })
+            .query("reorder_nodes_within_parent", |t| {
+                t(|_, params: ReorderNodesParams| reorder_nodes_within_parent(params))
+            })
+            .query("load_environments", |t| {
+                t(|_, collection_path: PathBuf| load_environments(collection_path))
+            })
+            .query("save_environments", |t| {
+                t(|_, params: SaveEnvironmentsParams| save_environments(params))
+            })
+            .query("get_response_filepath", |t| {
+                t(|_, params: PathBuf| get_response_filepath(params))
+            })
+            .query("validate_response_filepath", |t| {
+                t(|_, params: PathBuf| validate_response_filepath(params))
+            })
+            .query("validate_group_name", |t| {
+                t(|_, params: ValidateGroupNameParams| validate_group_name(params))
+            })
+            .query("rename_group", |t| {
+                t(|_, params: RenameGroupParams| rename_group(params))
+            })
+            .query("hide_group", |t| t(|_, params: PathBuf| hide_group(params)))
+            .build();
     Arc::new(router)
 }
 

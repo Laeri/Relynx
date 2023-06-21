@@ -1,41 +1,37 @@
 import { Dialog } from "primereact/dialog";
 import { Button } from "primereact/button";
-import { InputText } from "primereact/inputtext";
 import { useContext, useState } from "react";
-import { backend } from "../../rpc";
 import { ToastContext } from "../../App";
-import { catchError } from "../../common/errorhandling";
-import { Message } from "primereact/message";
-import { ScrollPanel } from 'primereact/scrollpanel';
+import { RadioButton } from "primereact/radiobutton";
+import { InputText } from "primereact/inputtext";
+import { RelynxState, useRequestModelStore } from "../../stores/requestStore";
+import { Collection } from "../../bindings";
 
 interface ComponentProps {
   isOpen: boolean
-  onResolve: (result?: { collectionName: string, collectionPath: string, importCollectionFilepath: string }) => void
+  onResolve: (result?: { importType: ImportType, collectionName: string}) => void
   onReject: () => void
+}
+
+export enum ImportType {
+  Postman,
+  JetbrainsHttpRest
 }
 
 export function ImportCollectionModal(props: ComponentProps) {
 
-  const [collectionName, _setCollectionName] = useState<string>("");
-  const [collectionPath, setCollectionPath] = useState<string>("");
-  const [importCollectionFilepath, setImportCollectionFilepath] = useState<string>("");
+  const [importType, setImportType] = useState<ImportType>(ImportType.Postman);
+  const [collectionName, setCollectionName] = useState<string>("");
+  const [nameExists, setNameExists] = useState<boolean>(false);
+  const workspace = useRequestModelStore((state: RelynxState) => state.workspace);
 
-  const toast = useContext(ToastContext);
 
-  const importCollectionFilePicker = () => {
-    backend.selectFile()
-      .then((result: string) => {
-        setImportCollectionFilepath(result);
-      })
-      .catch(catchError(toast));
-  }
-
-  const openCollectionDirectoryPicker = () => {
-    backend.selectDirectory()
-      .then((result: string) => {
-        setCollectionPath(result);
-      })
-      .catch(catchError(toast));
+  const updateCollectionName = (newName: string) => {
+    setCollectionName(newName);
+    let nameExists = workspace.collections.some((col: Collection) => col.name === newName);
+    console.log('name exists', workspace.collections);
+    console.log('new name: ', newName);
+    setNameExists(nameExists);
   }
 
   return (
@@ -46,10 +42,8 @@ export function ImportCollectionModal(props: ComponentProps) {
         <div>
           <Button label="Cancel" icon="pi pi-times" className={'p-button-secondary p-button-text'}
             onClick={() => props.onResolve()} />
-          <Button label="Import" icon="pi pi-check" onClick={() => props.onResolve({
-            collectionName,
-            collectionPath,
-            importCollectionFilepath
+          <Button disabled={collectionName === "" || nameExists} label="Continue" icon="pi pi-check" onClick={() => props.onResolve({
+            importType: importType, collectionName: collectionName
           })}
             style={{ marginLeft: '80px' }} />
         </div>
@@ -58,51 +52,28 @@ export function ImportCollectionModal(props: ComponentProps) {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'flex-start',
-        marginBottom: '50px',
+        marginBottom: '10px',
         marginTop: '0px'
       }}>
-        <h3 style={{ marginTop: '30px', marginBottom: '20px' }}>Postman Collection File</h3>
-        <p style={{}}>Choose the postman collection json file that you want to import</p>
-        <div style={{ display: 'flex', width: '100%', marginTop: '10px' }}>
-          <Button label={"Choose"}
-            onClick={importCollectionFilePicker} style={{}} />
-          <InputText autoFocus={true} value={importCollectionFilepath} style={{ flexGrow: 1, marginLeft: '20px' }}
-            disabled={true} />
-        </div>
-
-
-        <h3 style={{ marginTop: '30px', marginBottom: '20px' }}>Target Location</h3>
-        <p style={{}}>Where do you want to store the imported collection?</p>
-        <div style={{ marginTop: '10px', display: 'flex', width: '100%' }}>
-          <Button label={"Choose Empty Folder"}
-            onClick={openCollectionDirectoryPicker} style={{}} />
-          <InputText value={collectionPath} style={{ flexGrow: 1, marginLeft: '20px' }} disabled={true} />
-        </div>
-
-
-        <ScrollPanel style={{ marginTop: '30px', width: '100%', height: '150px' }}>
-          <Message severity="warn" text="Postman Import Caveats" />
-          <div>
-
-            <ul style={{ marginTop: '20px', textAlign: 'left' }}>
-              <li style={{}}>
-                <p>
-                  Postman requests have hidden headers that are not visible in their UI but will be sent with the request.
-                  For example, body content length, the user-agent, content type, etc.
-                  These will not be included in the import and have to be added manually if they are required for your request.
-                </p>
-              </li>
-
-              <li style={{ marginTop: '10px' }}>
-                <p>
-                  If your request uses files as input you might want to check that they were included in the import correctly.
-                  In case a request file is missing the request itself will have a warning symbol.
-                </p>
-              </li>
-            </ul>
+        <h3 style={{ marginTop: '30px', marginBottom: '20px' }}>Import type</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <RadioButton inputId="postman" name="postman" value={ImportType.Postman} onChange={(e: any) => setImportType(e.value)} checked={importType === ImportType.Postman} />
+            <label htmlFor="postman" style={{ marginLeft: '20px' }} className="ml-2">Postman Collection (v2.1.0)</label>
           </div>
-        </ScrollPanel>
-
+          <div style={{ marginTop: '30px', display: 'flex', alignItems: 'center' }}>
+            <RadioButton inputId="jetbrains-http-rest" name="postman" value={ImportType.JetbrainsHttpRest} onChange={(e: any) => setImportType(e.value)} checked={importType === ImportType.JetbrainsHttpRest} />
+            <label htmlFor="jetbrains-http-rest" style={{ marginLeft: '20px' }} >Jetbrains Folder (containing .http or .rest files)</label>
+          </div>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', marginTop: '30px' }}>
+          <h3>Collection Name</h3>
+          <p style={{ marginTop: '20px' }}>Choose a name for your import collection</p>
+          <InputText style={{ marginTop: '10px' }} value={collectionName} onChange={(e: any) => { updateCollectionName(e.target.value) }} />
+        </div>
+        <div style={{marginTop: '10px', minHeight: '30px'}}>
+          {nameExists && <p className="p-error">A collection with the same name exists already</p>}
+        </div>
       </div>
 
     </Dialog>

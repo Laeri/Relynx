@@ -1,9 +1,12 @@
 mod drag_and_drop;
 use crate::client::options::ClientOptions;
 use crate::client::Client;
-use crate::config::{load_collection_config, save_collection_config};
+use crate::config::{load_collection_config, save_collection_config, save_workspace};
 use crate::error::{DisplayErrorKind, FrontendError};
-use crate::import::{postman, LoadRequestsResult};
+use crate::import::{
+    create_jetbrains_collection, import_jetbrains_folder, postman, LoadRequestsResult,
+    RELYNX_IGNORE_FILE,
+};
 use crate::model::{
     AddCollectionsResult, Collection, CollectionConfig, Environment, ImportCollectionResult,
     RequestModel, RequestResult, RunRequestCommand, SaveRequestCommand, Workspace,
@@ -92,17 +95,16 @@ pub fn is_directory_empty(path: PathBuf) -> Result<bool, rspc::Error> {
 
 #[tauri::command]
 pub fn update_workspace(workspace: Workspace) -> Result<(), rspc::Error> {
-    println!("UPDATE WORKSPACE BROW {:?}", workspace);
     crate::config::save_workspace(&workspace).map_err(Into::into)
 }
 
 #[tauri::command]
 pub fn add_existing_collections(
-    path: String,
+    path: PathBuf,
     mut workspace: Workspace,
 ) -> Result<AddCollectionsResult, rspc::Error> {
     let mut collection_config_files: Vec<std::path::PathBuf> = Vec::new();
-    for entry in WalkDir::new(path).into_iter().flatten() {
+    for entry in WalkDir::new(&path).into_iter().flatten() {
         if entry.file_type().is_file() {
             let filename = entry.file_name();
             // is there a json file for this collection?
@@ -110,23 +112,24 @@ pub fn add_existing_collections(
                 filename.to_str().unwrap_or(""),
                 crate::config::COLLECTION_CONFIGFILE
             ) {
-                collection_config_files.push(std::path::PathBuf::from(filename))
+                collection_config_files.push(entry.into_path())
             }
         }
     }
 
-    let mut errored_paths: Vec<&PathBuf> = Vec::new();
+    let mut errored_paths: Vec<PathBuf> = Vec::new();
     let mut configs: Vec<CollectionConfig> = Vec::new();
     let mut collections: Vec<Collection> = Vec::new();
 
     for config_path in collection_config_files.iter() {
         let content = std::fs::read_to_string(config_path);
         if content.is_err() {
-            errored_paths.push(config_path);
+            errored_paths.push(config_path.clone());
             continue;
         }
         let content = content.unwrap();
-        if let Ok(config) = serde_json::from_str::<CollectionConfig>(&content) {
+        let deserialized = serde_json::from_str::<CollectionConfig>(&content);
+        if let Ok(config) = deserialized {
             let path_buf = config_path
                 .parent()
                 .map(|path| path.to_owned())
@@ -142,22 +145,53 @@ pub fn add_existing_collections(
             configs.push(config);
             collections.push(collection);
         } else {
-            errored_paths.push(config_path);
+            errored_paths.push(config_path.clone());
             continue;
         }
     }
 
+    // if no collection is found (aka no .relynx json file) then add the chosen path as a
+    // collection itself and generate a new config file
+    if collections.is_empty() {
+        let mut name = path
+            .file_name()
+            .map(|os_str| os_str.to_string_lossy().to_string())
+            .unwrap_or("New Collection".to_string())
+            .to_uppercase();
+        let existing_names = workspace
+            .collections
+            .iter()
+            .map(|col| col.name.clone())
+            .collect::<Vec<String>>();
+        let mut index = 0;
+        loop {
+            let current = format!("{}_{}", name, index);
+            if !existing_names.contains(&current) {
+                name = current;
+                break;
+            }
+            index += 1;
+        }
+        let collection = create_jetbrains_collection(path, name);
+        if collection.is_ok() {
+            collections.push(collection.unwrap());
+        }
+    }
+
+    let mut num_imported = collections.len() as u32;
+
     // @TODO check that none are already within the workspace!
     workspace.collections.append(&mut collections);
 
+    // @TODO: log error
+    if let Err(_) = save_workspace(&workspace) {
+        num_imported = 0;
+    }
+
     Ok(AddCollectionsResult {
         workspace,
-        num_imported: collections.len() as i32, // @TODO error?
-        errored_collections: errored_paths
-            .iter()
-            .map(|path| path.to_string_lossy().to_string())
-            .collect(), // @TODO error?
-        any_collections_found: !collections.is_empty(),
+        num_imported, // @TODO error?
+        errored_collections: errored_paths,
     })
 }
 
@@ -177,7 +211,7 @@ pub struct ImportPostmanCommandParams {
 
 #[derive(Serialize, Deserialize, rspc::Type, Debug)]
 pub struct AddExistingCollectionsParams {
-    pub path: String,
+    pub path: PathBuf,
     pub workspace: Workspace,
 }
 
@@ -188,6 +222,25 @@ pub fn import_postman_collection(
     import_result_path: PathBuf,
 ) -> Result<ImportCollectionResult, rspc::Error> {
     postman::import(workspace, import_postman_path, import_result_path).map_err(Into::into)
+}
+
+#[derive(Serialize, Deserialize, rspc::Type, Debug)]
+pub struct ImportJetbrainsHttpFolderParams {
+    pub workspace: Workspace,
+    pub import_jetbrains_folder: PathBuf,
+    pub collection_name: String,
+}
+
+#[tauri::command]
+pub fn import_jetbrains_folder_command(
+    params: ImportJetbrainsHttpFolderParams,
+) -> Result<Workspace, rspc::Error> {
+    let result = import_jetbrains_folder(
+        params.workspace,
+        params.import_jetbrains_folder,
+        params.collection_name,
+    );
+    result.map_err(Into::into)
 }
 
 #[tauri::command]
@@ -791,4 +844,28 @@ pub fn validate_response_filepath(response_file_path: PathBuf) -> Result<bool, r
         .map(|folder| folder.exists())
         .unwrap_or(false);
     Ok(valid)
+}
+
+#[tauri::command]
+/// A folder is hidden if it contains a '.relynxignore' file (constant), then it will not be
+/// displayed as a group
+pub fn hide_group(path: PathBuf) -> Result<(), rspc::Error> {
+    if !path.exists() || !path.is_dir() {
+        return Err(FrontendError::new_with_message(
+            DisplayErrorKind::Generic,
+            "Could not hide group".to_string(),
+        )
+        .into());
+    }
+
+    let ignorefile_path = path.join(RELYNX_IGNORE_FILE);
+    std::fs::write(ignorefile_path, "").map_err(|_err| {
+        // @TODO: log error
+        Into::<rspc::Error>::into(FrontendError::new_with_message(
+            DisplayErrorKind::Generic,
+            "Could not hide group",
+        ))
+    })?;
+
+    Ok(())
 }

@@ -2,6 +2,7 @@ import { Tree, TreeDragDropEvent, TreeExpandedKeysType } from "primereact/tree";
 import {
   addGroupToRequestTree,
   applyDragAndDropResult,
+  findNode,
   findParent,
   isChildOf, isModelSomewhereWithinGroup,
   PrimeNode, removeNodeFromRequestTree,
@@ -132,6 +133,7 @@ export function RequestTreeComponent(props: ComponentProps) {
   const [expandedKeys, setExpandedKeys] = useState<TreeExpandedKeysType>({});
   const location = useLocation();
   const collection = useRequestModelStore((state: RelynxState) => state.currentCollection as Collection);
+  const requestTree = useRequestModelStore((state: RelynxState) => state.requestTree as RequestTree);
 
   const expandNode = (primeNodeKey: string) => {
     let newExpandedKeys: TreeExpandedKeysType = { ...expandedKeys };
@@ -255,6 +257,24 @@ export function RequestTreeComponent(props: ComponentProps) {
     }).catch(catchError);
   }
 
+  const confirmHideGroup = (event: any, onDelete: () => void, onCancel: () => void) => {
+    confirmPopup({
+      target: event.currentTarget,
+      message: "Are you sure you want to hide this group? Remove the '.relynxignore' file within it's folder to unhide later.",
+      icon: 'pi pi-exclamation-triangle',
+      accept: onDelete,
+      reject: onCancel
+    });
+  };
+
+  const hideGroup = (node: PrimeNode) => {
+    backend.hideGroup(node.groupNode?.filepath as string).then(() => {
+      let [newTree, _error] = removeNodeFromRequestTree(requestTree, node.groupNode as RequestTreeNode);
+      updateRequestTree(newTree);
+      toast.showSuccess(`Group '${node.label}' is now hidden`, "");
+    }).catch(catchError);
+  }
+
 
   const GroupActions = ({ node, toast }: { node: PrimeNode, toast: ToastContext }) => {
     const { closeDropdown } = useContext(ActionDropdownContext);
@@ -282,6 +302,13 @@ export function RequestTreeComponent(props: ComponentProps) {
                 closeDropdown();
               }
               } />
+            <Button icon={'pi pi-search-minus'} className={'p-button p-button-text'}
+              label={"Hide Group"}
+              onClick={(event) => {
+                confirmHideGroup(event, () => { hideGroup(node); closeDropdown(); }, () => { closeDropdown(); });
+              }
+              } />
+
           </>
 
         }

@@ -40,7 +40,9 @@ class Backend {
   }
 
   addExistingCollections(path: string, workspace: Workspace): Promise<AddCollectionsResult> {
-    return api.query(['add_existing_collections', { path, workspace }]);
+    let result = api.query(['add_existing_collections', { path, workspace }]);
+    console.log("RESULT: ", result);
+    return result;
   }
 
   loadRequestsForCollection(collection: Collection): Promise<LoadRequestsResult> {
@@ -57,7 +59,13 @@ class Backend {
   }
 
   importPostmanCollection(workspace: Workspace, import_postman_path: string, import_result_path: string): Promise<ImportCollectionResult> {
-    return api.query(['import_postman_collection', { workspace, import_postman_path, import_result_path }]);
+    let result = api.query(['import_postman_collection', { workspace, import_postman_path, import_result_path }]);
+    return result;
+  }
+
+  importJetbrainsFolder(workspace: Workspace, import_jetbrains_folder: string, collection_name: string): Promise<Workspace> {
+    let result = api.query(['import_jetbrains_folder', { workspace, import_jetbrains_folder, collection_name }]);
+    return result;
   }
 
   runRequest(runRequestCommand: RunRequestCommand, cancellationToken: CancellationToken): Promise<RequestResult> {
@@ -126,6 +134,13 @@ class Backend {
     let result = api.query(['reorder_nodes_within_parent', { collection: collection, drag_node: dragNode, drop_node: dropNode, drop_index: dropIndex }]);
     return result;
   }
+
+  // collection *Collection, dragNode *RequestTreeNode, dropNode *RequestTreeNode, dropIndex int
+  hideGroup(path: string): Promise<null> {
+    return api.query(['hide_group', path]);
+  }
+
+
 
   logFrontendError(error: FError): Promise<void> {
     // @TODO: IMPLEMENT

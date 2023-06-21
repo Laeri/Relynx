@@ -109,8 +109,8 @@ export function CollectionEntry(props: ComponentProps) {
         <OverlayPanel ref={op}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
 
-            <Button label="Remove" onClick={openDialog} outlined icon="pi pi-trash" />
-            <Button style={{ marginTop: '20px' }} label="Rename" onClick={openRenameCollectionModal} outlined icon="pi pi-pencil" />
+            <Button style={{}} label="Rename" onClick={openRenameCollectionModal} outlined icon="pi pi-pencil" />
+            <Button style={{ marginTop: '20px' }} label="Remove" onClick={openDialog} outlined icon="pi pi-trash" />
           </div>
         </OverlayPanel>
       </div>

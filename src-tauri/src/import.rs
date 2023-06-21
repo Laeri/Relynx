@@ -1,13 +1,13 @@
-use std::{cell::RefCell, collections::HashMap};
+use std::{cell::RefCell, collections::HashMap, fs, path::PathBuf};
 
 use rspc::Type;
 use serde::{Deserialize, Serialize};
-use walkdir::WalkDir;
+use walkdir::{DirEntry, WalkDir};
 
 use crate::{
-    config::load_collection_config,
-    error::FrontendError,
-    model::{request_to_request_model, Collection, ImportWarning},
+    config::{load_collection_config, save_collection_config, save_workspace},
+    error::{DisplayErrorKind, FrontendError},
+    model::{request_to_request_model, Collection, CollectionConfig, ImportWarning, Workspace},
     tree::{GroupOptions, RequestTree, RequestTreeNode},
 };
 use http_rest_file::parser::Parser as RestFileParser;
@@ -29,6 +29,23 @@ pub struct LoadRequestsResult {
     pub errs: Vec<FrontendError>,
 }
 
+pub const RELYNX_IGNORE_FILE: &str = ".relynxignore";
+
+fn hidden_relynx_folder(entry: &DirEntry) -> bool {
+    let path = entry.path();
+    if path.is_file() {
+        return false;
+    }
+    let in_folder = fs::read_dir(path);
+    if in_folder.is_err() {
+        return false;
+    }
+    in_folder
+        .unwrap()
+        .flatten()
+        .any(|item| item.file_name() == RELYNX_IGNORE_FILE)
+}
+
 pub fn load_requests_for_collection(
     collection: &Collection,
 ) -> Result<LoadRequestsResult, FrontendError> {
@@ -38,7 +55,9 @@ pub fn load_requests_for_collection(
         collection.path.to_string_lossy().to_string(),
     ));
 
-    for entry in WalkDir::new(&collection.path).into_iter().flatten() {
+    let walker = WalkDir::new(&collection.path).into_iter();
+
+    for entry in walker.filter_entry(|e| !hidden_relynx_folder(e)).flatten() {
         // handle root node separately
         if entry.path().to_string_lossy() == collection.path.to_string_lossy() {
             continue;
@@ -85,7 +104,6 @@ pub fn load_requests_for_collection(
 
     let collection_config =
         load_collection_config(&collection.get_config_file_path()).unwrap_or_default();
-    println!("Collection config: {:?}", collection_config);
 
     let mut parents: Vec<&mut RequestTreeNode> = vec![&mut root];
     while !parents.is_empty() {
@@ -113,10 +131,53 @@ pub fn load_requests_for_collection(
         };
     }
 
-    println!("REQUEST TREE ROOT: {:?}", root);
-
     Ok(LoadRequestsResult {
         request_tree: RequestTree { root },
         errs: parse_errs,
     })
+}
+
+pub fn create_jetbrains_collection(
+    path: PathBuf,
+    collection_name: String,
+) -> Result<Collection, ()> {
+    let mut collection_config = CollectionConfig::default();
+    collection_config.name = collection_name;
+    let collection = Collection {
+        name: collection_config.name.clone(),
+        path: path.clone(),
+        description: "".to_string(),
+        current_env_name: "".to_string(),
+        import_warnings: Vec::new(),
+        path_exists: true,
+    };
+
+    if let Ok(_) = save_collection_config(&collection_config, &collection.get_config_file_path()) {
+        return Ok(collection);
+    }
+    return Err(());
+}
+
+pub fn import_jetbrains_folder(
+    mut workspace: Workspace,
+    jetbrains_folder: PathBuf,
+    collection_name: String,
+) -> Result<Workspace, FrontendError> {
+    let result = create_jetbrains_collection(jetbrains_folder, collection_name);
+    if result.is_err() {
+        return Err(FrontendError::new_with_message(
+            DisplayErrorKind::Generic,
+            "Could not import collection".to_string(),
+        ));
+    }
+    let collection = result.unwrap();
+    workspace.collections.push(collection);
+    let result = save_workspace(&workspace);
+    if result.is_err() {
+        return Err(FrontendError::new_with_message(
+            DisplayErrorKind::Generic,
+            "Could not import collection completely".to_string(),
+        ));
+    }
+    return Ok(workspace);
 }

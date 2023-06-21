@@ -12,7 +12,7 @@ interface ComponentProps {
   onReject: () => void,
 }
 
-export function AddCollectionModal(props: ComponentProps) {
+export function AddExistingCollectionsModal(props: ComponentProps) {
 
   const [collectionPath, setCollectionPath] = useState<string>("");
 
@@ -47,7 +47,10 @@ export function AddCollectionModal(props: ComponentProps) {
         marginTop: '10px'
       }}>
         <h3 style={{ marginTop: '10px', marginBottom: '10px' }}>Folder</h3>
-        <p style={{ marginBottom: '20px' }}>Choose a folder which contains an existing relynx collection</p>
+        <p style={{ marginBottom: '20px' }}>Choose a folder which contains an existing relynx collection.
+          If there are multiple collections then all will be added that are existing relync collections (they contain a 'relynx.collection.json' file).
+          Otherwise a new collection will be created with the given path.
+        </p>
         <div style={{ display: 'flex', width: '100%' }}>
           <Button label={"Open"}
             onClick={openCollectionDirectoryPicker} style={{}} />
