@@ -34,11 +34,13 @@ pub fn load_requests_for_collection(
 ) -> Result<LoadRequestsResult, FrontendError> {
     let mut parse_errs: Vec<FrontendError> = Vec::new();
     let mut nodes: HashMap<String, Vec<RefCell<RequestTreeNode>>> = HashMap::new();
-    let mut root = RequestTreeNode::new_group(GroupOptions::FullPath(collection.path.clone()));
+    let mut root = RequestTreeNode::new_group(GroupOptions::FullPath(
+        collection.path.to_string_lossy().to_string(),
+    ));
 
     for entry in WalkDir::new(&collection.path).into_iter().flatten() {
         // handle root node separately
-        if entry.path().to_string_lossy() == collection.path {
+        if entry.path().to_string_lossy() == collection.path.to_string_lossy() {
             continue;
         }
         // @TODO: error

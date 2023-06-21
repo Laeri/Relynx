@@ -18,10 +18,16 @@ pub struct Workspace {
 #[derive(Serialize, Deserialize, Type, Debug, Clone)]
 pub struct Collection {
     pub name: String,
-    pub path: String,
+    pub path: PathBuf,
     pub current_env_name: String,
     pub description: String,
     pub import_warnings: Vec<ImportWarning>,
+    #[serde(default = "default_path_exists")]
+    pub path_exists: bool,
+}
+
+fn default_path_exists() -> bool {
+    true
 }
 
 impl Collection {

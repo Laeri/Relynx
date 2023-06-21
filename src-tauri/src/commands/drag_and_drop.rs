@@ -84,7 +84,6 @@ pub fn drag_and_drop(params: DragAndDropParams) -> Result<DragAndDropResult, rsp
         new_path
     };
 
-
     // we dragged a folder/file within a folder, we only have to store the updated pathordering
     // @TODO: load CollectionConfig, update orderings for all paths within parent_node
     let config_file_path = collection.get_config_file_path();
@@ -112,7 +111,6 @@ pub fn drag_and_drop(params: DragAndDropParams) -> Result<DragAndDropResult, rsp
         drop_node.children.insert(drop_index as usize, drag_node);
     }
 
-
     // need also to update path orders when changing paths of children
     let config_file_path = collection.get_config_file_path();
     let mut collection_config = load_collection_config(&config_file_path).unwrap_or_default();
@@ -121,7 +119,6 @@ pub fn drag_and_drop(params: DragAndDropParams) -> Result<DragAndDropResult, rsp
     correct_children_paths(&mut drop_node, path_orders);
 
     let _ = save_collection_config(&collection_config, &config_file_path);
-
 
     // if we removed the last child from the drag node then we need to remove its file as well
     let remove_drag_node_parent =
@@ -141,21 +138,27 @@ fn dd_check_preconditions(params: &DragAndDropParams) -> Result<(), FrontendErro
         ..
     } = params;
 
-    if collection.path.is_empty() {
+    if !collection.path.exists() {
         return Err(FrontendError::new_with_message(
             DisplayErrorKind::DragAndDropError,
             "Invalid collection given, collection has no path",
         ));
     }
 
-    if !drag_node.filepath.starts_with(&collection.path) {
+    if !drag_node
+        .filepath
+        .starts_with(&collection.path.to_string_lossy().to_string())
+    {
         return Err(FrontendError::new_with_message(
             DisplayErrorKind::DragAndDropError,
             "The drag node is not within the given collection",
         ));
     }
 
-    if !drop_node.filepath.starts_with(&collection.path) {
+    if !drop_node
+        .filepath
+        .starts_with(&collection.path.to_string_lossy().to_string())
+    {
         return Err(FrontendError::new_with_message(
             DisplayErrorKind::DragAndDropError,
             "The drop node is not within the given collection",

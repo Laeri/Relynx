@@ -47,7 +47,7 @@ export function AddCollectionModal(props: ComponentProps) {
         marginTop: '10px'
       }}>
         <h3 style={{ marginTop: '10px', marginBottom: '10px' }}>Folder</h3>
-        <p style={{ marginBottom: '20px' }}>Choose a folder which contains an existing collection</p>
+        <p style={{ marginBottom: '20px' }}>Choose a folder which contains an existing relynx collection</p>
         <div style={{ display: 'flex', width: '100%' }}>
           <Button label={"Open"}
             onClick={openCollectionDirectoryPicker} style={{}} />

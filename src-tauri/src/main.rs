@@ -15,13 +15,13 @@ mod tree;
 use commands::{
     add_existing_collections, add_group_node, add_request_node, copy_to_clipboard, delete_node,
     drag_and_drop, get_response_filepath, import_postman_collection, is_directory_empty,
-    load_environments, load_requests_for_collection, load_workspace, open_folder_native,
-    remove_collection, reorder_nodes_within_parent, run_request, save_environments, save_request,
-    select_directory, select_file, update_workspace, validate_group_name,
-    validate_response_filepath, AddExistingCollectionsParams, AddGroupNodeParams,
-    AddRequestNodeParams, DeleteNodeParams, DragAndDropParams, ImportPostmanCommandParams,
-    RenameGroupParams, ReorderNodesParams, SaveEnvironmentsParams, ValidateGroupNameParams,
-    RELYNX_CONTEXT, rename_group,
+     load_environments, load_requests_for_collection, load_workspace,
+    open_folder_native, remove_collection, rename_group, reorder_nodes_within_parent, run_request,
+    save_environments, save_request, select_directory, select_file, update_workspace,
+    validate_group_name, validate_response_filepath, AddExistingCollectionsParams,
+    AddGroupNodeParams, AddRequestNodeParams, DeleteNodeParams, DragAndDropParams,
+    ImportPostmanCommandParams, RenameGroupParams, ReorderNodesParams, SaveEnvironmentsParams,
+    ValidateGroupNameParams, RELYNX_CONTEXT,
 };
 use model::{Collection, RunRequestCommand, SaveRequestCommand, Workspace};
 use rspc::Router;
@@ -41,7 +41,7 @@ fn router() -> Arc<Router> {
         .query("select_directory", |t| t(|_, ()| select_directory()))
         .query("select_file", |t| t(|_, ()| select_file()))
         .query("is_directory_empty", |t| {
-            t(|_, path: String| is_directory_empty(path))
+            t(|_, path: PathBuf| is_directory_empty(path))
         })
         .query("update_workspace", |t| {
             t(|_, workspace: Workspace| update_workspace(workspace))

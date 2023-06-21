@@ -10,6 +10,7 @@ import { Collection, Workspace } from "../bindings";
 import { backend } from "../rpc";
 import { EditCollectionNameModal } from "../components/modals/EditCollectionNameModal";
 import { create } from "react-modal-promise";
+import { Tooltip } from "primereact/tooltip";
 
 interface ComponentProps {
   collection: Collection
@@ -77,11 +78,31 @@ export function CollectionEntry(props: ComponentProps) {
     }).catch(catchError);
   }
 
+  // it can be null as the path_exists flag is kept from serializing to file, 
+  // rspc marks it as optional in this case when creating the bindings
+  // it has to be set explicitely to false, otherwise it is considered as true
+  const canOpenCollection = (props.collection.path_exists ?? true);
+
   return (
     <>
       <div style={{ display: "flex", justifyContent: 'space-between', alignItems: 'center' }}>
-        <Button onClick={onCollectionEntryClicked} label={props.collection.name} className="p-button-text"
+        <Button disabled={!canOpenCollection} onClick={onCollectionEntryClicked} label={props.collection.name} className="p-button-text"
           style={{ 'display': 'block', marginTop: '5px', flexGrow: 1, textAlign: 'left' }} />
+        {
+          !canOpenCollection &&
+          <>
+            <Tooltip target={`.warn-collection`} />
+
+            <i className="warn-collection pi p-error pi-exclamation-triangle"
+              data-pr-tooltip={`The folder of this collection is missing. It might have either been renamed or removed.\nPrevious path: '${props.collection.path}'.\nRemove and readd the collection from the new location.`}
+              data-pr-position="right"
+              data-pr-at="right+5 top"
+              data-pr-my="left center-2"
+              style={{ fontSize: '1.5rem', marginRight: '30px', cursor: 'pointer' }}>
+            </i>
+          </>
+
+        }
         <Button icon={'pi pi-ellipsis-h'} className={' p-button-text'} style={{ maxHeight: '10px' }}
           onClick={toggle} />
 

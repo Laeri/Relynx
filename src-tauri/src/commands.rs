@@ -82,9 +82,12 @@ pub fn select_file() -> Result<String, rspc::Error> {
 }
 
 #[tauri::command]
-pub fn is_directory_empty(path: String) -> Result<bool, rspc::Error> {
-    let path = std::path::Path::new(&path);
-    Ok(path.exists())
+pub fn is_directory_empty(path: PathBuf) -> Result<bool, rspc::Error> {
+    let it = std::fs::read_dir(&path);
+    if it.is_err() {
+        return Ok(false);
+    }
+    Ok(it.unwrap().count() == 0)
 }
 
 #[tauri::command]
@@ -124,16 +127,17 @@ pub fn add_existing_collections(
         }
         let content = content.unwrap();
         if let Ok(config) = serde_json::from_str::<CollectionConfig>(&content) {
+            let path_buf = config_path
+                .parent()
+                .map(|path| path.to_owned())
+                .unwrap_or_default();
             let collection = Collection {
                 name: config.name.clone(),
-                path: config_path
-                    .parent()
-                    .and_then(|path| path.to_str())
-                    .unwrap_or("")
-                    .to_string(),
+                path: path_buf,
                 description: "".to_string(),
                 current_env_name: "".to_string(),
                 import_warnings: Vec::new(),
+                path_exists: true,
             };
             configs.push(config);
             collections.push(collection);
@@ -167,8 +171,8 @@ pub fn load_requests_for_collection(
 #[derive(Serialize, Deserialize, rspc::Type, Debug)]
 pub struct ImportPostmanCommandParams {
     pub workspace: Workspace,
-    pub import_postman_path: String,
-    pub import_result_path: String,
+    pub import_postman_path: PathBuf,
+    pub import_result_path: PathBuf,
 }
 
 #[derive(Serialize, Deserialize, rspc::Type, Debug)]
@@ -180,8 +184,8 @@ pub struct AddExistingCollectionsParams {
 #[tauri::command]
 pub fn import_postman_collection(
     workspace: Workspace,
-    import_postman_path: String,
-    import_result_path: String,
+    import_postman_path: PathBuf,
+    import_result_path: PathBuf,
 ) -> Result<ImportCollectionResult, rspc::Error> {
     postman::import(workspace, import_postman_path, import_result_path).map_err(Into::into)
 }
@@ -445,12 +449,7 @@ pub fn add_request_node(params: AddRequestNodeParams) -> Result<RequestTreeNode,
         )
     };
 
-    if !file_model
-        .path
-        .to_string_lossy()
-        .to_string()
-        .starts_with(&collection.path)
-    {
+    if !file_model.path.starts_with(&collection.path) {
         let msg = "Could not crate new request".to_string();
         return Err(FrontendError::new_with_message(DisplayErrorKind::Generic, msg).into());
     }
@@ -482,10 +481,15 @@ pub fn add_group_node(params: AddGroupNodeParams) -> Result<RequestTreeNode, rsp
         .into());
     }
 
-    if !params.parent.filepath.starts_with(&params.collection.path) {
+    if !params
+        .parent
+        .filepath
+        .starts_with(&params.collection.path.to_string_lossy().to_string())
+    {
         let msg = format!(
             "The path: '{}' is not within the collection: '{}'",
-            params.parent.filepath, params.collection.path
+            params.parent.filepath,
+            params.collection.path.to_string_lossy()
         );
         return Err(
             FrontendError::new_with_message(DisplayErrorKind::AddGroupNodeError, msg).into(),
@@ -662,10 +666,14 @@ pub fn delete_node(params: DeleteNodeParams) -> Result<(), rspc::Error> {
         .into());
     }
 
-    if !node.filepath.starts_with(&collection.path) {
-        let msg = format!(
+    if !node
+        .filepath
+        .starts_with(&collection.path.to_string_lossy().to_string())
+    {
+        let msg =
+            format!(
             "The node: '{}' with path: '{}' is not within collection: '{}', collectionPath: '{}'",
-            node.name, node.filepath, collection.name, collection.path
+            node.name, node.filepath, collection.name, collection.path.to_string_lossy()
         );
         return Err(FrontendError::new_with_message(DisplayErrorKind::NodeDeleteError, msg).into());
     }

@@ -19,8 +19,8 @@ use postman_collection::PostmanCollection;
 
 pub fn import(
     mut workspace: Workspace,
-    import_path: String,
-    result_path: String,
+    import_path: PathBuf,
+    result_path: PathBuf,
 ) -> Result<ImportCollectionResult, FrontendError> {
     match postman_collection::from_path(import_path) {
         Ok(collection) => {
@@ -163,7 +163,7 @@ fn item_names(items: &Vec<Items>) -> Vec<String> {
 }
 
 fn postman_to_request_tree(
-    import_result_path: String,
+    import_result_path: PathBuf,
     collection: postman_collection::v2_1_0::Spec,
 ) -> Collection {
     let children_names = item_names(&collection.item);
@@ -178,7 +178,7 @@ fn postman_to_request_tree(
             let _ = into_request_tree_node(
                 item,
                 &children_names[index],
-                &PathBuf::from(&import_result_path),
+                &import_result_path,
                 &mut import_warnings,
             );
         });
@@ -193,7 +193,7 @@ fn postman_to_request_tree(
             }
             None => String::new(),
         },
-
+        path_exists: true,
         import_warnings,
         current_env_name: String::new(),
     };

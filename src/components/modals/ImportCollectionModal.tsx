@@ -7,7 +7,6 @@ import { ToastContext } from "../../App";
 import { catchError } from "../../common/errorhandling";
 import { Message } from "primereact/message";
 import { ScrollPanel } from 'primereact/scrollpanel';
-import { Accordion, AccordionTab } from "primereact/accordion";
 
 interface ComponentProps {
   isOpen: boolean

@@ -31,8 +31,14 @@ pub fn load_workspace() -> Result<Workspace, FrontendError> {
 
     let content = std::fs::read_to_string(workspace_file_path)
         .map_err(|_io_err| FrontendError::new(DisplayErrorKind::ReadWorkspaceFileError))?;
-    let workspace: Workspace = dbg!(serde_json::from_str(&content)
+    let mut workspace: Workspace = dbg!(serde_json::from_str(&content)
         .map_err(|_err| FrontendError::new(DisplayErrorKind::DeserializeWorkspaceError)))?;
+
+    // for each collection check if the path of it's folder actually exists
+    // use this in the frontend to mark them as not available until the path is fixed
+    workspace.collections.iter_mut().for_each(|collection| {
+        collection.path_exists = collection.path.exists();
+    });
 
     Ok(workspace)
 }
