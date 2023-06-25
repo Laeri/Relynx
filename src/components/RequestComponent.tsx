@@ -332,10 +332,9 @@ export function RequestComponent(_props: ComponentProps) {
   }
 
   const cancelCurrentRequest = () => {
-    console.log('before cancel');
     cancelToken.cancelled = true;
     setIsSendingRequest(false);
-    backend.cancelCurlRequest().then(()=>{}).catch(catchError);
+    // @TODO: cancel in backend as well... backend.cancelCurlRequest().then(()=>{}).catch(catchError);
   }
 
   return (

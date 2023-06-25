@@ -869,3 +869,4 @@ pub fn hide_group(path: PathBuf) -> Result<(), rspc::Error> {
 
     Ok(())
 }
+

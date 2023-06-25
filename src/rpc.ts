@@ -155,11 +155,6 @@ class Backend {
     return api.query(['hide_group', path]);
   }
 
-  cancelCurlRequest(): Promise<null> {
-    return api.mutation(['cancel_curl_request']);
-  }
-
-
   logFrontendError(error: FError): Promise<void> {
     // @TODO: IMPLEMENT
     return Promise.resolve();
