@@ -92,10 +92,10 @@ export function KeyValueRow(props: ComponentProps) {
       justifyContent: 'flex-start',
       alignItems: 'center'
     }}>
-      <div style={{ flexGrow: 1, display: 'flex', maxWidth: '800px' }}>
+      <div style={{ flexGrow: 1, display: 'flex', maxWidth: '800px', minWidth: '0' }}>
         <InputText value={props.keyProperty} onChange={updateKey} placeholder={props.keyLabel}
-          style={{ flexGrow: 1 }} />
-        <Mention style={{ flexGrow: 1, marginLeft: '20px' }} suggestions={suggestions} onSearch={onSearch}
+          style={{ flexGrow: 1, minWidth: 0 }} />
+        <Mention style={{ flexGrow: 1, marginLeft: '20px', minWidth: 0 }} suggestions={suggestions} onSearch={onSearch}
           field="Name" trigger={triggerKeySequence}
           value={props.valueProperty}
           onChange={updateValue}
@@ -105,7 +105,7 @@ export function KeyValueRow(props: ComponentProps) {
           itemTemplate={itemTemplate} />
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', marginLeft: '30px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', marginLeft: '30px', minWidth: '0' }}>
         <Checkbox onChange={updateActive} checked={props.active} style={{ height: '100%' }}
           title={"Active"}></Checkbox>
         <Button onClick={props.remove} icon="pi pi-times"

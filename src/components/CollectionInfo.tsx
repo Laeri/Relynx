@@ -68,13 +68,13 @@ export function CollectionInfo(props: ComponentProps) {
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
 
         <div style={{
-          marginTop: '10px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'flex-start',
-          maxWidth: '100%'
+          maxWidth: '100%',
+          marginTop: '10px'
         }}>
-          {props.displayPathTitle && <span>Path</span>}
+          {props.displayPathTitle && <h3>Path</h3>}
           <div style={{
             flexShrink: 1,
             minWidth: 0,
@@ -82,45 +82,48 @@ export function CollectionInfo(props: ComponentProps) {
             display: 'flex',
             alignItems: 'center',
             marginTop: '10px',
-            flexWrap: 'wrap'
           }}>
-            <InputText disabled={false} value={props.collection.path}
-              style={{ height: '30px', flexShrink: 1, minWidth: 0 }} />
+            <InputText tooltip={props.collection.path} disabled={false} value={props.collection.path}
+              style={{ height: '30px', flexShrink: 1, minWidth: 0, direction: 'rtl' }} />
             <Button icon="pi pi-folder-open" className={"p-button-text"}
+              tooltip={`Open folder: ${props.collection.path}`}
               style={{ width: '30px', height: '30px', marginLeft: '5px' }}
               onClick={() => backend.openFolderNative(props.collection.path)} />
           </div>
         </div>
 
 
-      </div>
-      <div style={{ marginTop: '20px' }}>
-        {
-          hasEnvironments &&
-          <>
-            <div style={{ display: 'flex', alignItems: 'center', width: '100%', flexWrap: 'wrap' }}>
-              <i className={"pi pi-box"} style={{ marginRight: '7px' }} />
-              <Dropdown style={envDropdownStyle}
-                tooltip={"Choose your environment for running requests"} optionLabel="name"
-                value={currentEnvironment?.name}
-                options={environmentsToOptions(environments, true)}
-                onChange={(e) => selectEnvironment(e.value)} placeholder={"No Environment"} />
-              <Button tooltip={"Edit Environments"} onClick={editEnvironments} icon={"pi pi-pencil"}
-                className={"p-button-raised p-button-text"} style={{ minWidth: 0 }} />
+        <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '100%' }}>
+          {props.displayPathTitle && <h3>Environment</h3>}
+
+          {
+            hasEnvironments &&
+            <div style={{ marginTop: '10px', width: '100%' }}>
+              <div style={{ display: 'flex', alignItems: 'center', maxWidth: '100%' }}>
+                <i className={"pi pi-box"} style={{ marginRight: '7px' }} />
+                <Dropdown style={{ ...envDropdownStyle, minWidth: 0 }}
+                  tooltip={currentEnvironment !== undefined ? currentEnvironment.name : "Choose your environment for running requests"} optionLabel="name"
+                  value={currentEnvironment?.name}
+                  options={environmentsToOptions(environments, true)}
+                  onChange={(e) => selectEnvironment(e.value)} placeholder={"No Environment"}
+                />
+                <Button tooltip={"Edit Environments"} onClick={editEnvironments} icon={"pi pi-pencil"}
+                  className={"p-button-raised p-button-text"} style={{ minWidth: 0, marginLeft: '5px' }} />
+              </div>
             </div>
-          </>
-        }
-        {
-          !hasEnvironments &&
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <Button onClick={editEnvironments} className={"p-button-raised p-button-text"}
-              style={{ display: 'flex', alignItems: 'center' }}>
-              <span className={"pi pi-box"} />
-              <span className={""} style={{ marginLeft: '10px' }}>Environment</span>
-              <span className={"pi pi-pencil"} style={{ marginLeft: '10px' }} />
-            </Button>
-          </div>
-        }
+          }
+          {
+            !hasEnvironments &&
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <Button onClick={editEnvironments} className={"p-button-raised p-button-text"}
+                style={{ display: 'flex', alignItems: 'center' }}>
+                <span className={"pi pi-box"} />
+                <span className={""} style={{ marginLeft: '10px' }}>Environment</span>
+                <span className={"pi pi-pencil"} style={{ marginLeft: '10px' }} />
+              </Button>
+            </div>
+          }
+        </div>
       </div>
     </div>
   )

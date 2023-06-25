@@ -271,10 +271,11 @@ export function EnvironmentComponent(_props: ComponentProps) {
       style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '100%' }}>
 
       <h1 style={{ marginTop: '20px', marginBottom: '50px' }}>Environment</h1>
+      <p style={{ textAlign: 'left', marginBottom: '20px' }}>Create an environment that defines variables and secrets which can be inserted in your requests.</p>
       <div style={{ width: '100%', marginBottom: '200px' }}>
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '50px' }}>
 
-          <Button icon={'pi pi-plus'} label={"Add Environment"} className={'p-button-raised'}
+          <Button icon={'pi pi-plus'} label={"Create Environment"} className={'p-button-raised'}
             onClick={openCreateEnvironmentDialog} />
           <Dropdown style={{ ...envDropdownStyle, marginLeft: '30px' }} optionLabel="name"
             value={environment?.name}
@@ -339,15 +340,14 @@ export function EnvironmentComponent(_props: ComponentProps) {
             </div>
           </>
         }
+        {
+          environments.length == 0 &&
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+            <p>This collection does not have any environments yet. Create a new one.</p>
+          </div>
+        }
+
       </div>
-
-      {
-        environments.length == 0 &&
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-          <p>This collection does not have any environments yet. Create a new one.</p>
-        </div>
-      }
-
     </div>
   )
 }

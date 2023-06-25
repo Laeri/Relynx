@@ -11,6 +11,24 @@
   -webkit-text-size-adjust: 100%;
 }
 
+@media (max-width: 720px){
+    :root {
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 640px){
+    :root {
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 320px){
+    :root {
+        font-size: 10px;
+    }
+}
+
 /* From previous */
 html {
     background-color: rgba(27, 38, 54, 1);

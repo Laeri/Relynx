@@ -51,7 +51,7 @@ export function OverviewComponent(_props: ComponentProps) {
           subTitle={"Create a new collection in an empty folder"} style={cardStyle}
           className={"main-card"}
           footer={<Button label="New Collection" icon="pi pi-plus" onClick={() => openCreateCollectionModal(workspace)}
-            style={{}} />}
+            style={{minWidth: 0}} />}
         />
         <Card title={<><i className={"pi pi-plus mr-2"} />Add Existing</>}
           subTitle={"Add existing relynx collection from folder"} className={"main-card ml-8"} style={cardStyle}

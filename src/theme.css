@@ -6128,11 +6128,6 @@
     display: flex;
 }
 
-/* for flexbox */
-* {
-    min-width: 0;
-}
-
 .p-accordion.p-accordion-thin .p-accordion-header {
     height: 37px;
 }
@@ -6240,5 +6235,10 @@
 /* Fix datatable cell being too large on edit */
 .p-cell-editing .p-inputtext {
   width: 100%;
+}
+
+/* Fix tab view, that each link is a bit spaced out*/
+li + li > .p-tabview-nav-link {
+  margin-left: 5px !important;
 }
 

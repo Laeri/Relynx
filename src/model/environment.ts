@@ -11,7 +11,6 @@ export const environmentsToOptions = (environments: Environment[], withNone: boo
 }
 
 export const envDropdownStyle = {
-  maxWidth: '150px'
 }
 
 export function getUpdatedEnvironment(environment: Environment, partial: Partial<Environment>): Environment {

@@ -71,9 +71,24 @@ class Backend {
   runRequest(runRequestCommand: RunRequestCommand, cancellationToken: CancellationToken): Promise<RequestResult> {
     return new Promise((resolve, reject) => {
       if (cancellationToken.cancelled) {
+        console.log('cancelled');
         return
       }
-      api.query(['run_request', runRequestCommand]).then((result: any) => resolve(result)).catch((cancel_val: any) => reject(cancel_val))
+      api.mutation(['run_request', runRequestCommand]).then((result: any) => {
+        if (cancellationToken.cancelled) {
+          console.log('cancelled');
+          return
+        }
+        console.log('resolved');
+        resolve(result);
+      }).catch((cancel_val: any) => {
+        if (cancellationToken.cancelled) {
+          console.log('cancelled');
+          return
+        }
+        console.log('resolved')
+        reject(cancel_val)
+      });
     });
   }
 
@@ -140,6 +155,9 @@ class Backend {
     return api.query(['hide_group', path]);
   }
 
+  cancelCurlRequest(): Promise<null> {
+    return api.mutation(['cancel_curl_request']);
+  }
 
 
   logFrontendError(error: FError): Promise<void> {
