@@ -257,7 +257,11 @@ pub fn run_request(request_command: RunRequestCommand) -> Result<RequestResult, 
 
     // @TODO: set options from request settings
     let call = client
-        .execute(&request_command.request, &options)
+        .execute(
+            &request_command.request,
+            &options,
+            request_command.environment.as_ref(),
+        )
         .map_err(|http_err| {
             eprintln!("ERROR: {:?}", http_err);
             // @TODO:

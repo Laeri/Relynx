@@ -383,6 +383,77 @@ pub enum GetHeadersOption {
 }
 
 impl RequestModel {
+    pub fn get_url_with_env(&self, env: Option<&Environment>) -> String {
+        if env.is_none() {
+            return self.url;
+        }
+        let env = env.unwrap();
+        env.replace_values_in_str(&self.url)
+    }
+
+    pub fn get_query_params_with_env(&self, env: Option<&Environment>) -> Vec<QueryParam> {
+        if env.is_none() {
+            return self.query_params;
+        }
+        let env = env.unwrap();
+        self.query_params
+            .iter()
+            .map(|query_param| {
+                let mut new_param = query_param.clone();
+                new_param.value = env.replace_values_in_str(&new_param.value);
+                new_param
+            })
+            .collect()
+    }
+
+    pub fn get_headers_with_env(&self, env: Option<&Environment>) -> Vec<Header> {
+        if env.is_none() {
+            return self.headers;
+        }
+        let env = env.unwrap();
+        self.headers
+            .iter()
+            .map(|header| {
+                let mut new_header = header.clone();
+                new_header.value = env.replace_values_in_str(&new_header.value);
+                new_header
+            })
+            .collect()
+    }
+
+    pub fn get_url_encoded_params_with_env(
+        &self,
+        env: Option<&Environment>,
+    ) -> Option<Vec<UrlEncodedParam>> {
+        if let RequestBody::UrlEncoded {
+            ref url_encoded_params,
+        } = self.body
+        {
+            if env.is_none() {
+                Some(
+                    url_encoded_params
+                        .iter()
+                        .map(|param| param.clone())
+                        .collect(),
+                )
+            } else {
+                let env = env.unwrap();
+                Some(
+                    url_encoded_params
+                        .iter()
+                        .map(|param| {
+                            let mut new_param = param.clone();
+                            new_param.value = env.replace_values_in_str(&new_param.value);
+                            new_param
+                        })
+                        .collect(),
+                )
+            }
+        } else {
+            None
+        }
+    }
+
     pub fn get_request_file_path(&self, parent_path: &str) -> String {
         let parent_path = std::path::Path::new(parent_path);
         let previous_path = std::path::PathBuf::from(&self.rest_file_path);
@@ -518,6 +589,26 @@ impl Environment {
             secrets: vec![],
         }
     }
+
+    pub fn replace_values_in_str(&self, str: &str) -> String {
+        let mut result = str.to_string();
+        for variable in self.variables {
+            let replace_key = format!("{{{}}}", variable.name);
+            if result.contains(&replace_key) {
+                let value = variable.current_value.unwrap_or(variable.initial_value);
+                result = result.replace(&replace_key, &value);
+            }
+        }
+
+        for secret in self.secrets {
+            let replace_key = format!("{{{}}}", secret.name);
+            if result.contains(&replace_key) {
+                let value = secret.current_value.unwrap_or(secret.initial_value);
+                result = result.replace(&replace_key, &value);
+            }
+        }
+        result
+    }
 }
 
 #[derive(Serialize, Deserialize, Type, Debug)]
@@ -531,7 +622,7 @@ pub type StatusCode = String;
 
 #[derive(Serialize, Deserialize, Type, Debug)]
 pub struct RequestResult {
-    pub id: Uuid, // internal id, not from request itself 
+    pub id: Uuid, // internal id, not from request itself
     pub result: String,
     pub status_code: StatusCode,
     pub total_time: f64,
@@ -539,7 +630,7 @@ pub struct RequestResult {
     pub content_type: Option<ContentType>,
     pub warnings: Vec<String>,
     pub result_file: Option<PathBuf>,
-    pub result_file_folder: Option<PathBuf>
+    pub result_file_folder: Option<PathBuf>,
 }
 
 #[derive(Serialize, Deserialize, Type, Debug)]

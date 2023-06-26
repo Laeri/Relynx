@@ -16,8 +16,7 @@ interface ComponentProps {
   updateActive: (active: boolean) => void
   remove: () => void
   style: any,
-  currentEnvironment?: Environment,
-  withHeader?: { keyHeader: string, valueHeader: string }
+  currentEnvironment?: Environment
 }
 
 const triggerKeySequence = '{{';
@@ -85,29 +84,18 @@ export function KeyValueRow(props: ComponentProps) {
 
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-
-      {props.withHeader !== undefined &&
-        <div style={{ flexGrow: 1, display: 'flex', width: '100%', minWidth: '0', justifyContent: 'space-between' }}>
-          <div style={{ width: '30%' }}>Name</div>
-          <div style={{ width: '40%' }}>Value </div>
-          <div style={{ width: '10%', display: 'flex', justifyContent: 'center', textAlign: 'center' }}>Active</div>
-          <div style={{ width: '10%' }}>Actions</div>
-        </div>
-      }
-
-      <div style={{
-        ...props.style,
-        flexGrow: 1,
-        width: '100%',
-        display: 'flex',
-        justifyContent: 'flex-start',
-        alignItems: 'center',
-      }}>
-
+    <div style={{
+      ...props.style,
+      flexGrow: 1,
+      width: '100%',
+      display: 'flex',
+      justifyContent: 'flex-start',
+      alignItems: 'center'
+    }}>
+      <div style={{ flexGrow: 1, display: 'flex', maxWidth: '800px', minWidth: '0' }}>
         <InputText value={props.keyProperty} onChange={updateKey} placeholder={props.keyLabel}
-          style={{ flexGrow: 1, minWidth: 0, width: '30%', height: '45px' }} />
-        <Mention style={{ width: '40%', marginLeft: '20px', minWidth: 0, height: '45px' }} suggestions={suggestions} onSearch={onSearch}
+          style={{ flexGrow: 1, minWidth: 0 }} />
+        <Mention style={{ flexGrow: 1, marginLeft: '20px', minWidth: 0 }} suggestions={suggestions} onSearch={onSearch}
           field="Name" trigger={triggerKeySequence}
           value={props.valueProperty}
           onChange={updateValue}
@@ -115,13 +103,16 @@ export function KeyValueRow(props: ComponentProps) {
           onKeyDownCapture={handlePreventKeyEnterEvent}
           inputRef={inputRef}
           itemTemplate={itemTemplate} />
+      </div>
 
-        <Checkbox onChange={updateActive} checked={props.active} style={{ height: '100%', width: '10%' }}
+      <div style={{ display: 'flex', alignItems: 'center', marginLeft: '30px', minWidth: '0' }}>
+        <Checkbox onChange={updateActive} checked={props.active} style={{ height: '100%' }}
           title={"Active"}></Checkbox>
         <Button onClick={props.remove} icon="pi pi-times"
           className="p-button-rounded p-button-danger p-button-text" aria-label="Cancel"
-          style={{ width: '10%' }} />
+          style={{ marginLeft: '10px' }} />
       </div>
+
     </div>
   )
 }

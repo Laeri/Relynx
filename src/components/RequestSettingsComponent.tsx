@@ -56,7 +56,7 @@ export function RequestSettingsComponent(props: ComponentProps) {
     }).catch(catchError);
   }
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+    <div className="headers-block" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
       <h2 style={{ marginBottom: '20px' }}>RequestSettings</h2>
       {/* When request sending is implemented, check if all of these are needed and disable and mark those that are not present*/}
       <div style={{ display: 'flex', alignItems: 'center' }}>

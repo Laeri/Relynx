@@ -436,8 +436,8 @@ export function RequestComponent(_props: ComponentProps) {
         style={{ marginTop: '50px', width: '100%', display: 'flex', flexDirection: 'column' }}>
         <TabView activeIndex={activeIndex} onTabChange={(e) => setActiveIndex(e.index)}>
 
-          <TabPanel header="Query Params">
-            <div className=""
+          <TabPanel header="Query Params" >
+            <div className="headers-block"
               style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
               <h2 style={{ marginBottom: '20px' }}>Query Params</h2>
               {
@@ -452,6 +452,7 @@ export function RequestComponent(_props: ComponentProps) {
                     remove={() => removeQueryParam(queryParam)}
                     style={{ marginTop: '20px' }}
                     currentEnvironment={currentEnvironment}
+                    withHeader={index == 0 ? { keyHeader: "Name", valueHeader: "Value" } : undefined}
                   />
                 })
               }
@@ -477,6 +478,7 @@ export function RequestComponent(_props: ComponentProps) {
                     remove={() => removeHeader(header)}
                     style={{ marginTop: '20px' }}
                     currentEnvironment={currentEnvironment}
+                    withHeader={index == 0 ? { keyHeader: 'Name', valueHeader: "Value" } : undefined}
                   />
                 })
               }
@@ -486,13 +488,8 @@ export function RequestComponent(_props: ComponentProps) {
             </div>
           </TabPanel>
 
-          <TabPanel header="Request Body">
-            {/*@TODO*/}
-            {/* <RequestBodyComp updateRequest={updateRequest} /> */}
-          </TabPanel>
-
           <TabPanel header="Description">
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+            <div className="headers-block" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
               <h2 >Description</h2>
               <p style={{ marginTop: '20px' }}>Describe the current request</p>
               <InputTextarea style={{ marginTop: '20px' }} value={currentRequest.description}

@@ -32,8 +32,9 @@ use http_rest_file::model::{DataSource, HttpMethod, HttpVersion, UrlEncodedParam
 use std::io::Read;
 use std::str::FromStr;
 
-use crate::error::{DisplayErrorKind, FrontendError};
-use crate::model::{GetHeadersOption, Header, Multipart, RequestBody, RequestModel, RedirectResponse};
+use crate::model::{
+    Environment, GetHeadersOption, Header, Multipart, RequestBody, RequestModel,
+};
 
 use self::certificate::Certificate;
 use self::client_model::{parse_cookies, Call, Cookie, RequestCookie, Response};
@@ -109,8 +110,8 @@ impl Client {
     pub fn execute(
         &mut self,
         request_model: &RequestModel,
-        options: &ClientOptions
-        //@TODO:logger: &Logger,
+        options: &ClientOptions, //@TODO:logger: &Logger,
+        environment: Option<&Environment>,
     ) -> Result<Call, HttpError> {
         // Set handle attributes that have not been set or reset.
 
@@ -157,17 +158,18 @@ impl Client {
 
         self.set_ssl_options(options.ssl_no_revoke);
 
-        let url = &request_model.url; //self.generate_url(&request_spec.url, &""); // @TODO: what do we do with our
-                                      // query string?
+        let url = &request_model.get_url_with_env(environment); //self.generate_url(&request_spec.url, &""); // @TODO: what do we do with our
+                                                        // query string?
         self.handle.url(url.as_str()).unwrap();
         let method = &request_model.method;
         self.set_method(method);
         self.set_cookies(&request_model.cookies());
-        if let RequestBody::UrlEncoded {
-            ref url_encoded_params,
-        } = request_model.body
-        {
-            self.set_form_url_encoded(&url_encoded_params)
+        if let RequestBody::UrlEncoded { .. } = request_model.body {
+            self.set_form_url_encoded(
+                &request_model
+                    .get_url_encoded_params_with_env(environment)
+                    .unwrap(),
+            );
         }
         if let RequestBody::Multipart {
             ref boundary,
@@ -199,7 +201,7 @@ impl Client {
             self.set_body(bytes);
         }
         //let mut request_body_bytes: &[u8] = &request_model.body.bytes();
-        self.set_headers(request_model, options);
+        self.set_headers(request_model, options, environment);
 
         let start = Utc::now();
         let verbose = options.verbosity.is_some();
@@ -444,10 +446,15 @@ impl Client {
     }
 
     /// Sets HTTP headers.
-    fn set_headers(&mut self, request: &RequestModel, options: &ClientOptions) {
+    fn set_headers(
+        &mut self,
+        request: &RequestModel,
+        options: &ClientOptions,
+        env: Option<&Environment>,
+    ) {
         let mut list = easy::List::new();
 
-        for header in &request.headers {
+        for header in &request.get_headers_with_env(env) {
             list.append(format!("{}: {}", header.key, header.value).as_str())
                 .unwrap();
         }
