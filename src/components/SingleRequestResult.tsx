@@ -8,6 +8,7 @@ import { StatusCodeTag } from './StatusCodeTag';
 import { CopyToClipboard } from "./CopyToClipboard";
 import { backend } from "../rpc";
 import { useMemo } from "react";
+import { InputText } from "primereact/inputtext";
 
 interface ComponentProps {
   requestResult: RequestResult,
@@ -47,9 +48,9 @@ export function SingleRequestResult(props: ComponentProps) {
           style={{ marginLeft: '10px' }} />
       </div>
       {props.requestResult.result_file &&
-        <div style={{ marginTop: '10px' }}>
-          Output saved in file: <Tag value={props.requestResult.result_file}></Tag>
-          <CopyToClipboard value={props.requestResult.result_file} />
+        <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
+          <div><span>Output saved in file: </span><InputText style={{ marginLeft: '5px', direction: 'rtl' }} contentEditable={false} value={props.requestResult.result_file} /></div>
+          <CopyToClipboard value={props.requestResult.result_file} tooltip={"Copy Path To Clipboard"} />
           <Button icon="pi pi-folder-open" className={"p-button-text"}
             tooltip={`Open folder: ${props.requestResult?.result_file_folder}`}
             style={{ width: '30px', height: '30px', marginLeft: '5px' }}

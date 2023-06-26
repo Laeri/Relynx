@@ -69,6 +69,7 @@ pub fn load_requests_for_collection(
             {
                 match RestFileParser::parse_file(entry.path()) {
                     Ok(mut model) => {
+                        println!("MODEL PARSED: {:?}", model);
                         let path = entry.path().to_string_lossy().to_string();
 
                         let node = if model.requests.len() == 1 {

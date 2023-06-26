@@ -74,7 +74,8 @@ class Backend {
         console.log('cancelled');
         return
       }
-      api.query(['run_request', runRequestCommand]).then((result: any) => {
+      api.query(['run_request', runRequestCommand]).then((result: RequestResult) => {
+        console.log('RESULT: ', result)
         if (cancellationToken.cancelled) {
           console.log('cancelled');
           return

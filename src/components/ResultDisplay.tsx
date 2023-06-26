@@ -20,8 +20,7 @@ export function ResultDisplay(props: ComponentProps) {
     <div className={"resultText-container"}
       style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', marginTop: '10px', marginBottom: '30px' }}>
 
-      <SendRequestButton style={{marginBottom: '20px'}} overwriteLabel={props.requestResult !== undefined ? "Resend" : "Send"} disabled={props.requestSendDisabled} doRequest={props.sendRequest} cancelRequest={props.cancelRequest} isSendingRequest={props.isSendingRequest} />
-
+      <SendRequestButton style={{ marginBottom: '20px' }} overwriteLabel={props.requestResult !== undefined ? "Resend" : "Send"} disabled={props.requestSendDisabled} doRequest={props.sendRequest} cancelRequest={props.cancelRequest} isSendingRequest={props.isSendingRequest} />
       <div style={{ width: '100%' }}>
         {
           props.isSendingRequest && <ProgressSpinner style={{ maxHeight: '80px' }} />

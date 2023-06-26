@@ -76,6 +76,7 @@ export function RequestComponent(_props: ComponentProps) {
     if (!currentRequest) {
       return
     }
+    console.log('CURRENT REQUEST:  ', currentRequest);
     setTmpRequestName(currentRequest.name);
 
     let importWarnings: ImportWarning[] = (currentCollection as Collection).import_warnings.filter((import_warning: ImportWarning) => {
@@ -395,9 +396,7 @@ export function RequestComponent(_props: ComponentProps) {
 
         <InputText value={currentRequest.url} onChange={(e) => updateUrl(e.target.value)} placeholder={"Url"}
           style={{ maxWidth: '300px', marginLeft: '20px', flexGrow: 1 }} disabled={isSendingRequest} />
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <SendRequestButton style={{marginBottom: '10px'}} isSendingRequest={isSendingRequest} cancelRequest={cancelCurrentRequest} doRequest={doRequest} disabled={isSendingRequest || currentRequest.url == ""} />
-        </div>
+        <SendRequestButton style={{ marginLeft: '20px' }} isSendingRequest={isSendingRequest} cancelRequest={cancelCurrentRequest} doRequest={doRequest} disabled={isSendingRequest || currentRequest.url == ""} />
       </div>
       <Button label="Show Result" style={{ marginTop: '20px', display: 'flex', alignItems: 'center' }} icon={isSendingRequest ? "pi pi-spin pi-spinner" : "pi pi-chevron-down"} onClick={showResult} text />
       <Dialog header="Result" closeOnEscape={true} maximizable={true} dismissableMask={true} visible={resultVisible} style={{ width: '70vw' }} onHide={() => setResultVisible(false)}>

@@ -156,8 +156,7 @@ pub fn add_existing_collections(
         let mut name = path
             .file_name()
             .map(|os_str| os_str.to_string_lossy().to_string())
-            .unwrap_or("New Collection".to_string())
-            .to_uppercase();
+            .unwrap_or("New Collection".to_string());
         let existing_names = workspace
             .collections
             .iter()
