@@ -1,9 +1,8 @@
-import { createContext, Ref, useContext, useEffect, useRef } from 'react';
 import './App.css';
+import { createContext, Ref, useContext, useEffect, useRef } from 'react';
 import 'primereact/resources/primereact.min.css';
 import '../node_modules/primeicons/primeicons.css';
 import './theme.css';
-//import '../node_modules/primereact/resources/themes/nova/theme.css'
 import { Workspace } from './bindings';
 import { OverviewComponent } from './pages/OverviewComponent';
 import { MemoryRouter, Routes, Route } from 'react-router';
@@ -20,7 +19,7 @@ import { EnvironmentComponent } from './components/EnvironmentComponent';
 export interface ToastContext {
   toast: Ref<any>,
   showSuccess: (title: string, detail: string) => void
-  showInfo: (title: string, detail: string) => void
+  showInfo: (title: string, detail: string, life?: number) => void
   showWarn: (title: string, detail: string, life?: number) => void
   showError: (title: string, detail: string) => void
   show: (params: { severity: string, summary: string, detail: string, life?: number }) => void
@@ -56,8 +55,8 @@ function App() {
     showSuccess: (title: string, detail: string) => {
       toastContext.show({ severity: 'success', summary: title, detail: detail, life: undefined });
     },
-    showInfo: (title: string, detail: string) => {
-      toastContext.show({ severity: 'info', summary: title, detail: detail, life: undefined });
+    showInfo: (title: string, detail: string, life?: number) => {
+      toastContext.show({ severity: 'info', summary: title, detail: detail, life: life });
     },
     showWarn: (title: string, detail: string, life?: number) => {
       toastContext.show({ severity: 'warn', summary: title, detail: detail, life: life });

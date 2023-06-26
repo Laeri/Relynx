@@ -26,7 +26,6 @@ export function ActionDropdown(props: ComponentProps) {
     ref.current.hide();
   }
 
-
   return (
     <ActionDropdownContext.Provider value={{ closeDropdown: handleCloseDropdown }}>
       <div>

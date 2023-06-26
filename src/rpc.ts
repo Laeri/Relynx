@@ -74,7 +74,7 @@ class Backend {
         console.log('cancelled');
         return
       }
-      api.mutation(['run_request', runRequestCommand]).then((result: any) => {
+      api.query(['run_request', runRequestCommand]).then((result: any) => {
         if (cancellationToken.cancelled) {
           console.log('cancelled');
           return

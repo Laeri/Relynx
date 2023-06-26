@@ -31,7 +31,7 @@ nav {
     border: 1px solid #3f4b5b;
     margin:0;
     box-shadow: none;
-    overflow-y: auto;
+/*    overflow-y: hidden;*/
 }
 
 nav.navbar-normal {
@@ -42,15 +42,15 @@ nav.navbar-normal {
   transition: min-width 0.5s ease-in-out;
 }
 
-nav .nav-content {
-  padding: '10px 30px';
+nav > .nav-content {
+  padding: 10px 10px;
 }
 
-@media (max-width: 720px){
-nav.navbar-normal .nav-content {
-  padding: '10px 0px';
-}
-}
+@media (max-width: 720px){ 
+  nav.navbar-normal .nav-content { 
+   padding: 10px 0px; 
+  }
+} 
 
 nav.navbar-enlarged {
   min-width: 45%;
@@ -96,3 +96,13 @@ main {
     width: 33%;
 }
 
+
+/* Scroll inner part of request tree without the search bar !*/
+.request-tree.p-tree {
+  height: 100%;
+}
+.request-tree .p-tree-container {
+  height: 90%;
+  overflow-y: auto;
+  margin-top: 10px;
+}

@@ -531,12 +531,15 @@ pub type StatusCode = String;
 
 #[derive(Serialize, Deserialize, Type, Debug)]
 pub struct RequestResult {
+    pub id: Uuid, // internal id, not from request itself 
     pub result: String,
     pub status_code: StatusCode,
     pub total_time: f64,
     pub total_result_size: f64,
     pub content_type: Option<ContentType>,
     pub warnings: Vec<String>,
+    pub result_file: Option<PathBuf>,
+    pub result_file_folder: Option<PathBuf>
 }
 
 #[derive(Serialize, Deserialize, Type, Debug)]

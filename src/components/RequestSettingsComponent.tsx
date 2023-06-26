@@ -101,7 +101,7 @@ export function RequestSettingsComponent(props: ComponentProps) {
 
             <div style={{ marginTop: '20px', display: 'flex', alignItems: 'center' }}>
               <InputText disabled={true} aria-invalid="true" style={{ flexGrow: 1 }} value={props.request.redirect_response.save_path ?? ''} onChange={(e) => { updateResponseFilepath(e.target.value) }} />
-              <Button label={"Select new path"}
+              <Button label={"Choose filepath"}
                 onClick={selectResponseFilePath} style={{ marginLeft: '30px' }} />
             </div>
             {!responseFilepathValid &&

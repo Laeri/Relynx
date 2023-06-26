@@ -1,56 +1,66 @@
-import { getHighlightContentType } from "../common/common";
-import { dracula } from "react-syntax-highlighter/dist/cjs/styles/hljs";
-import SyntaxHighlighter from "react-syntax-highlighter";
+import { Accordion, AccordionTab } from 'primereact/accordion';
+import { ProgressSpinner } from 'primereact/progressspinner';
 import { RequestResult } from '../bindings';
-import { Tag } from "primereact/tag";
-import { Button } from "primereact/button";
-import { StatusCodeTag } from './StatusCodeTag';
+import { SendRequestButton } from './SendRequestButton';
+import { SingleRequestResult } from "./SingleRequestResult";
 
 interface ComponentProps {
   requestResult?: RequestResult,
-  copyResultToClipboard: () => void
-  clearResultText: () => void
+  resultHistory: RequestResult[],
+  isSendingRequest: boolean,
+  requestSendDisabled: boolean,
+  clearResult: (result: RequestResult) => void,
+  sendRequest: () => void,
+  cancelRequest: () => void
 }
 
 export function ResultDisplay(props: ComponentProps) {
 
-  if (!props.requestResult) {
-    return (<></>);
-  }
-
-  const timeInMs = `${Math.floor(props.requestResult.total_time * 1000)} ms`
-
   return (
-    props.requestResult && <div>
-      <div
-        style={{ display: 'flex', justifyContent: 'flex-end', flexGrow: 1, width: '100%', alignItems: 'center' }}>
-        {props.requestResult && props.requestResult.status_code && <>
-          <StatusCodeTag statusCode={props.requestResult.status_code} style={{ marginRight: '5px' }} />
+    <div className={"resultText-container"}
+      style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', marginTop: '10px', marginBottom: '30px' }}>
 
-          <Tag value={props.requestResult.content_type} style={{ maxHeight: '25px', marginRight: '5px' }} />
+      <SendRequestButton style={{marginBottom: '20px'}} overwriteLabel={props.requestResult !== undefined ? "Resend" : "Send"} disabled={props.requestSendDisabled} doRequest={props.sendRequest} cancelRequest={props.cancelRequest} isSendingRequest={props.isSendingRequest} />
 
-          <Tag value={timeInMs}
-            className={".result-time"}
-            style={{ maxHeight: '25px', marginRight: '5px', backgroundColor: 'lightgray' }} />
+      <div style={{ width: '100%' }}>
+        {
+          props.isSendingRequest && <ProgressSpinner style={{ maxHeight: '80px' }} />
+        }
+        <div>
+          {
+            (props.requestResult === undefined && props.resultHistory.length === 0 && !props.isSendingRequest) &&
+            <div className="fade-in-fast" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+              <h2>No Request Has Been Sent Yet</h2>
+              <p style={{ marginTop: '20px' }}>
+                There are no request results present. Send a request to get a new result.
+              </p>
+            </div>
+          }
 
-          <Tag value={`${props.requestResult.total_result_size}B`}
-            style={{ maxHeight: '25px', marginRight: '10px', backgroundColor: 'lightgray' }} />
-        </>}
-        <Button icon={"pi pi-copy"} onClick={props.copyResultToClipboard}
-          tooltip={"Copy to clipboard"}
-          className={"p-button-rounded p-button-text"} aria-label={"Copy to clipboard"}
-          style={{ marginLeft: '10px' }}></Button>
-        <Button onClick={props.clearResultText} icon="pi pi-times"
-          tooltip={"Clear result"}
-          className="p-button-rounded p-button-danger p-button-text" aria-label="Cancel"
-          style={{ marginLeft: '10px' }} />
+          {
+
+            (!props.isSendingRequest && props.requestResult) &&
+            <SingleRequestResult requestResult={props.requestResult} clearResult={props.clearResult} />
+          }
+
+          {
+            /* first element is already shown at the top, if no current request then it is not within the history and we can display it*/
+            (props.resultHistory.length > 0) &&
+            <div style={{ marginTop: '30px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '100%' }}>
+              <h3>History</h3>
+              <div style={{ marginTop: '20px', width: '100%' }}>
+                <Accordion style={{ width: '100%', marginBottom: '30px' }}>
+                  {props.resultHistory.map((result: RequestResult, index: number) => {
+                    return <AccordionTab header={`Result ${(props.resultHistory.length - index)}`} style={{ width: '100%' }}>
+                      <SingleRequestResult requestResult={result} clearResult={props.clearResult} key={index} />
+                    </AccordionTab>
+                  })}
+                </Accordion>
+              </div>
+            </div>
+          }
+        </div>
       </div>
-      <SyntaxHighlighter contentEditable={true} className={"resultArea fade-in"}
-        language={props.requestResult.content_type == null ? undefined : getHighlightContentType(props.requestResult.content_type)}
-        style={dracula}>
-        {props.requestResult.result}
-      </SyntaxHighlighter>
     </div>
-
   )
 }

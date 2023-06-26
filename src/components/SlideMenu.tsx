@@ -14,7 +14,7 @@ export function SlideMenu(props: ComponentProps) {
     const location = useLocation();
 
     return (
-        <div>
+        <div style={{height: '100%', display: 'flex', flexDirection: 'column', flexGrow: 1}}>
             {location?.pathname != '/' &&
                 <div style={{display: 'flex', flexDirection: 'column'}}>
                     <div style={{display: 'flex', width: '100%', justifyContent: 'flex-start'}}>

@@ -245,6 +245,7 @@ pub fn import_jetbrains_folder_command(
 
 #[tauri::command]
 pub fn run_request(request_command: RunRequestCommand) -> Result<RequestResult, rspc::Error> {
+    println!("Command: {:?}", request_command);
     // @TODO: cookie input file...
     // @TODO: handle intellij redirect options
     let mut client = Client::new(None);
@@ -271,6 +272,7 @@ pub fn run_request(request_command: RunRequestCommand) -> Result<RequestResult, 
     // not make sense, maybe add an option that you don't want to see the actual result together
     // with the redirect options
     let mut request_result = RequestResult {
+        id: uuid::Uuid::new_v4().to_string(),
         result: String::from_utf8(call.response.body.to_vec()).unwrap_or_default(), // @TODO: handle non
         // utf8 result
         status_code: call.response.status.to_string(),
@@ -285,6 +287,8 @@ pub fn run_request(request_command: RunRequestCommand) -> Result<RequestResult, 
         // @TODO: @CHECK why is it f64?
         total_result_size: call.response.body.len() as f64,
         warnings: vec![],
+        result_file: None,
+        result_file_folder: None,
     };
 
     let redirect_response = &request_command.request.redirect_response;
@@ -293,20 +297,23 @@ pub fn run_request(request_command: RunRequestCommand) -> Result<RequestResult, 
             request_result.warnings.push("Could not save the response to file as no path is present. Configure the response path in the request's settings or choose that the result should not be saved to a file.".to_string());
         } else {
             // @TODO: maybe make the path private and only allow access over this method
-            let absolute_path = redirect_response.get_absolute_path(&request_command.request);
+            let absolute_path = redirect_response
+                .get_absolute_path(&request_command.request)
+                .clone()
+                .unwrap_or(PathBuf::from("request_result"));
+
             // @TODO: emit a warning if we could not save the file
-            let result = std::fs::write(
-                absolute_path
-                    .clone()
-                    .unwrap_or(PathBuf::from("request_result")),
-                call.response.body,
-            );
+            let result = std::fs::write(&absolute_path, call.response.body);
+            request_result.result_file = Some(absolute_path.clone());
+            let parent_path = absolute_path.parent();
+            request_result.result_file_folder = parent_path.map(|p| p.to_path_buf());
+
             if result.is_err() {
                 // @TODO: log error
                 eprintln!("ERROR: {:?}", result.unwrap_err());
                 let msg = format!(
                     "Could not save the response to file '{}'. Check if the folder of the file exists and that you have permissions to write to it.",
-                    absolute_path.unwrap_or_default().to_string_lossy()
+                    absolute_path.to_string_lossy()
                 );
                 request_result.warnings.push(msg);
             }
@@ -869,4 +876,3 @@ pub fn hide_group(path: PathBuf) -> Result<(), rspc::Error> {
 
     Ok(())
 }
-

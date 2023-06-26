@@ -2,7 +2,6 @@ import { Tree, TreeDragDropEvent, TreeExpandedKeysType } from "primereact/tree";
 import {
   addGroupToRequestTree,
   applyDragAndDropResult,
-  findNode,
   findParent,
   isChildOf, isModelSomewhereWithinGroup,
   PrimeNode, removeNodeFromRequestTree,
@@ -311,8 +310,7 @@ export function RequestTreeComponent(props: ComponentProps) {
 
         }
 
-        <Button icon={'pi pi-trash'} className={'p-button p-button-text'}
-          label={"Delete Group"}
+        <Button icon={'pi pi-trash'} text={true} label={"Delete Group"}
           onClick={(event: any) => {
             confirmDeleteGroup(event, () => { deleteNode(toast, props.collection, props.requestTree, node, props.currentRequest); closeDropdown(); }, closeDropdown);
           }} />
@@ -383,7 +381,7 @@ export function RequestTreeComponent(props: ComponentProps) {
   }
 
   return (
-    <Tree className={"p-tree-no-background-color"} value={requestTreeToPrimeNodes(props.requestTree)}
+    <Tree className={"p-tree-no-background-color request-tree"} value={requestTreeToPrimeNodes(props.requestTree)}
       nodeTemplate={nodeTemplate}
       dragdropScope="collectionTree"
       expandedKeys={expandedKeys}

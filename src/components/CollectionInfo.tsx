@@ -2,7 +2,7 @@ import { InputText } from "primereact/inputtext";
 import { Button } from "primereact/button";
 import { backend } from '../rpc';
 import { Dropdown } from "primereact/dropdown";
-import { useContext, useEffect } from "react";
+import { useContext } from "react";
 import { useRequestModelStore } from "../stores/requestStore";
 import { catchError } from "../common/errorhandling";
 import { ToastContext } from "../App";
@@ -83,7 +83,7 @@ export function CollectionInfo(props: ComponentProps) {
             alignItems: 'center',
             marginTop: '10px',
           }}>
-            <InputText tooltip={props.collection.path} disabled={false} value={props.collection.path}
+            <InputText  disabled={false} value={props.collection.path}
               style={{ height: '30px', flexShrink: 1, minWidth: 0, direction: 'rtl' }} />
             <Button icon="pi pi-folder-open" className={"p-button-text"}
               tooltip={`Open folder: ${props.collection.path}`}
@@ -108,7 +108,7 @@ export function CollectionInfo(props: ComponentProps) {
                   onChange={(e) => selectEnvironment(e.value)} placeholder={"No Environment"}
                 />
                 <Button tooltip={"Edit Environments"} onClick={editEnvironments} icon={"pi pi-pencil"}
-                  className={"p-button-raised p-button-text"} style={{ minWidth: 0, marginLeft: '5px' }} />
+                  text={true} style={{ minWidth: 0, marginLeft: '5px' }} />
               </div>
             </div>
           }

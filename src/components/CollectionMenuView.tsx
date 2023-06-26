@@ -11,6 +11,7 @@ import { Collection, RequestTree, RequestTreeNode } from "../bindings";
 import { backend } from '../rpc';
 import { LoadRequestsResult } from "../bindings";
 import { catchError, formatParseErrorsMsg } from "../common/errorhandling";
+import { ProgressSpinner } from "primereact/progressspinner";
 
 interface ComponentProps {
   collection: Collection
@@ -64,10 +65,10 @@ export function CollectionMenuView(props: ComponentProps) {
   }
 
   return (
-    <div className={"fade-in-fast"} style={{ display: 'flex', flexDirection: 'column' }}>
+    <div className={"fade-in-fast"} style={{ display: 'flex', flexDirection: 'column', height: '100%', flexGrow: 1 }}>
       {props.collection && <>
         {
-          <div>
+          <div style={{ height: '100%', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
             <CollectionInfo collection={props.collection} displayPathTitle={false} />
             <div style={{ marginTop: '20px', display: 'flex' }}>
               <Button icon={'pi pi-plus'} label={"Create Request"}
@@ -80,11 +81,17 @@ export function CollectionMenuView(props: ComponentProps) {
                 className={"p-button-sm p-button-text p-button-raised"}
                 style={{ marginLeft: '10px' }} />
             </div>
-            {
-              initFinished && <RequestTreeComponent requestTree={requestTree} collection={collection}
-                currentRequest={currentRequest} withBackgroundColor={true} />
-            }
 
+            {/*@TODO: max height needed otherwise child grows out of parent div and within request tree the list will not be scrolled*/}
+            <div style={{ maxHeight: '400px', display: 'flex', flexDirection: 'column', paddingRight: '5px', flexGrow: 1, marginTop: '20px' }}>
+              {
+                initFinished && <RequestTreeComponent requestTree={requestTree} collection={collection}
+                  currentRequest={currentRequest} withBackgroundColor={true} />
+              }
+              {
+                !initFinished && <ProgressSpinner/>
+              }
+            </div>
           </div>
         }
       </>

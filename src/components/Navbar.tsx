@@ -3,8 +3,7 @@ import { useRequestModelStore } from "../stores/requestStore";
 import { SlideMenu } from "./SlideMenu";
 import { CollectionMenuView } from "./CollectionMenuView";
 import { CollectionEntry } from "./CollectionEntry";
-// @TODO import {openCreateCollectionModal, openImportCollectionModal} from "../common/modal";
-import { Workspace, Collection } from "../bindings";
+import { Collection } from "../bindings";
 import { Route, Routes, useLocation, useNavigate } from "react-router";
 import { useState } from "react";
 
@@ -44,7 +43,7 @@ export function Navbar() {
   }
 
   return (
-    <nav style={{ padding: '30px 5px 50px 5px', position: 'relative' }} className={`${navbarSize == NavbarSizes.Normal ? 'navbar-normal' : ''} ${navbarSize == NavbarSizes.Enlarged ? 'navbar-enlarged' : ''}`} >
+    <nav style={{ padding: '30px 5px 10px 5px', position: 'relative', height: '100%', display: 'flex', flexDirection: 'column' }} className={`${navbarSize == NavbarSizes.Normal ? 'navbar-normal' : ''} ${navbarSize == NavbarSizes.Enlarged ? 'navbar-enlarged' : ''}`} >
       <h1 style={{}}>Relynx</h1>
 
       {navbarSize == NavbarSizes.Normal && <Button onClick={enlargeNavbar} icon="pi pi-chevron-right" text size="small" style={{ position: 'absolute', right: '8px', top: '8px' }} />
@@ -53,7 +52,7 @@ export function Navbar() {
       {navbarSize == NavbarSizes.Enlarged && <Button onClick={shrinkNavbarToNormal} icon="pi pi-chevron-left" text size="small" style={{ position: 'absolute', right: '8px', top: '8px' }} />
       }
 
-      <div className="nav-content" style={{ marginTop: '30px', }}>
+      <div className="nav-content" style={{ marginTop: '30px', flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
         <SlideMenu
           onSubtitleClicked={onSubtitleClicked}
           onBackClicked={onBackClicked}
@@ -62,7 +61,7 @@ export function Navbar() {
           <Routes>
             <Route path="" element={
 
-              <div className={"fade-in-fast"}>
+              <div className={"fade-in-fast"} style={{ height: '100%', display: 'flex', flexDirection: 'column', flexGrow: '1' }}>
 
                 <h2>Collections</h2>
                 <div style={{
@@ -77,7 +76,9 @@ export function Navbar() {
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'left',
-                  marginTop: '30px'
+                  marginTop: '30px',
+                  height: '100%',
+                  flexGrow: 1
                 }}>
                   {workspace.collections.map((collection: Collection, index: number) => {
                     return (

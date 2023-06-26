@@ -6242,3 +6242,18 @@ li + li > .p-tabview-nav-link {
   margin-left: 5px !important;
 }
 
+
+/* Fix close icon in overlay panel*/
+.p-overlaypanel .p-overlaypanel-close {
+  top: 3px;
+  right: 3px;
+  border-radius: 0;
+  background: none;
+  color: white;
+}
+
+/* @TODO fix maximizable icon having a round focus border for dialogs */
+/* .p-dialog-header-icon.p-dialog-header-maximize:focus { */
+/*   border: none !important; */
+/* } */
+
