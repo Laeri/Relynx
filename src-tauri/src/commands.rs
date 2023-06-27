@@ -256,7 +256,7 @@ pub fn run_request(request_command: RunRequestCommand) -> Result<RequestResult, 
         .unwrap_or(false);
 
     // @TODO: set options from request settings
-    let call = client
+    let call = dbg!(client
         .execute(
             &request_command.request,
             &options,
@@ -269,7 +269,7 @@ pub fn run_request(request_command: RunRequestCommand) -> Result<RequestResult, 
                 DisplayErrorKind::RequestSendError,
                 "There was an error when sending the request.",
             )
-        })?;
+        }))?;
 
     // @TODO: what if it is not utf, what if the result is just binary, then displaying it would
     // not make sense, maybe add an option that you don't want to see the actual result together
@@ -804,7 +804,7 @@ pub fn delete_node(params: DeleteNodeParams) -> Result<(), rspc::Error> {
 
 #[tauri::command]
 pub fn load_environments(collection_path: PathBuf) -> Result<Vec<Environment>, rspc::Error> {
-    crate::environment::load_environments(collection_path).map_err(Into::into)
+    dbg!(crate::environment::load_environments(collection_path).map_err(Into::into))
 }
 
 #[derive(Serialize, Deserialize, rspc::Type, Debug)]

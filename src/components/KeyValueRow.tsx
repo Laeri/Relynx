@@ -51,19 +51,15 @@ export function KeyValueRow(props: ComponentProps) {
   // @TODO: for the moment prevent enter key, we will need to create a patch for the primereact library to fix this as
   // replace does not work with
   const handlePreventKeyEnterEvent = (event: any) => {
-    if (event.key == 'Enter') {
-      event.preventDefault();
-      event.stopPropagation();
-    }
+
   }
   const [suggestions, setSuggestions] = useState<any>([]);
 
   const itemTemplate = (suggestion: EnvironmentVariable | EnvironmentSecret) => {
     return (
-      <div className="flex align-items-center" onClick={(_event: any) => handleItemSelected(suggestion)}>
-        <span className="flex flex-column ml-2">
-          {suggestion.name}
-        </span>
+      <div className="flex align-items-center" >        <span className="flex flex-column ml-2">
+        {suggestion.name}
+      </span>
       </div>
     );
   }
@@ -89,8 +85,8 @@ export function KeyValueRow(props: ComponentProps) {
 
       {props.withHeader !== undefined &&
         <div style={{ flexGrow: 1, display: 'flex', width: '100%', minWidth: '0', justifyContent: 'space-between' }}>
-          <div style={{ width: '30%' }}>Name</div>
-          <div style={{ width: '40%' }}>Value </div>
+          <div style={{ width: '30%', textAlign: 'left' }}>Name</div>
+          <div style={{ width: '40%', textAlign: 'left' }}>Value </div>
           <div style={{ width: '10%', display: 'flex', justifyContent: 'center', textAlign: 'center' }}>Active</div>
           <div style={{ width: '10%' }}>Actions</div>
         </div>
@@ -106,13 +102,14 @@ export function KeyValueRow(props: ComponentProps) {
       }}>
 
         <InputText value={props.keyProperty} onChange={updateKey} placeholder={props.keyLabel}
-          style={{ flexGrow: 1, minWidth: 0, width: '30%', height: '45px' }} />
-        <Mention style={{ width: '40%', marginLeft: '20px', minWidth: 0, height: '45px' }} suggestions={suggestions} onSearch={onSearch}
+          style={{ minWidth: 0, width: '30%', height: '45px' }} />
+        <Mention style={{ width: '40%', flexGrow: 1, marginLeft: '20px', minWidth: 0, height: '45px' }}
+          suggestions={suggestions}
+          onSearch={onSearch}
           field="Name" trigger={triggerKeySequence}
           value={props.valueProperty}
           onChange={updateValue}
           placeholder={props.valueLabel}
-          onKeyDownCapture={handlePreventKeyEnterEvent}
           inputRef={inputRef}
           itemTemplate={itemTemplate} />
 

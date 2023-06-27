@@ -385,7 +385,7 @@ pub enum GetHeadersOption {
 impl RequestModel {
     pub fn get_url_with_env(&self, env: Option<&Environment>) -> String {
         if env.is_none() {
-            return self.url;
+            return self.url.clone();
         }
         let env = env.unwrap();
         env.replace_values_in_str(&self.url)
@@ -393,7 +393,7 @@ impl RequestModel {
 
     pub fn get_query_params_with_env(&self, env: Option<&Environment>) -> Vec<QueryParam> {
         if env.is_none() {
-            return self.query_params;
+            return self.query_params.clone();
         }
         let env = env.unwrap();
         self.query_params
@@ -408,7 +408,7 @@ impl RequestModel {
 
     pub fn get_headers_with_env(&self, env: Option<&Environment>) -> Vec<Header> {
         if env.is_none() {
-            return self.headers;
+            return self.headers.clone();
         }
         let env = env.unwrap();
         self.headers
@@ -592,19 +592,25 @@ impl Environment {
 
     pub fn replace_values_in_str(&self, str: &str) -> String {
         let mut result = str.to_string();
-        for variable in self.variables {
-            let replace_key = format!("{{{}}}", variable.name);
+        for variable in &self.variables {
+            let replace_key = "{{".to_string() + &variable.name + "}}";
             if result.contains(&replace_key) {
-                let value = variable.current_value.unwrap_or(variable.initial_value);
-                result = result.replace(&replace_key, &value);
+                let value = variable
+                    .current_value
+                    .as_ref()
+                    .unwrap_or(&variable.initial_value);
+                result = result.replace(&replace_key, value);
             }
         }
 
-        for secret in self.secrets {
+        for secret in &self.secrets {
             let replace_key = format!("{{{}}}", secret.name);
             if result.contains(&replace_key) {
-                let value = secret.current_value.unwrap_or(secret.initial_value);
-                result = result.replace(&replace_key, &value);
+                let value = secret
+                    .current_value
+                    .as_ref()
+                    .unwrap_or(&secret.initial_value);
+                result = result.replace(&replace_key, value);
             }
         }
         result

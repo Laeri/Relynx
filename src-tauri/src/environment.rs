@@ -12,7 +12,7 @@ pub const HTTP_ENV_FILENAME: &str = "http-client.env.json";
 pub const PRIVATE_HTTP_ENV_FILENAME: &str = "http-client.private.env.json";
 
 // values could be anything in the json, but when we load the environment all variables are strings
-pub type EnvKeyValues = HashMap<String, serde_json::Value>;
+pub type EnvKeyValues = HashMap<String, String>;
 pub type EnvFileStructure = HashMap<String, EnvKeyValues>;
 
 pub fn load_environments(collection_path: PathBuf) -> Result<Vec<Environment>, FrontendError> {
@@ -21,7 +21,7 @@ pub fn load_environments(collection_path: PathBuf) -> Result<Vec<Environment>, F
 
     let mut environments: HashMap<String, Environment> = HashMap::new();
 
-    let env_structure = load_env_structure(env_path, &collection_path)?;
+    let env_structure = dbg!(load_env_structure(env_path, &collection_path))?;
 
     for (env_name, key_val_map) in env_structure.iter() {
         let variables: Vec<EnvironmentVariable> = key_val_map
@@ -111,7 +111,7 @@ pub fn load_environments(collection_path: PathBuf) -> Result<Vec<Environment>, F
         // @TODO: log warning
     }
 
-    Ok(environments.into_values().into_iter().collect())
+    Ok(dbg!(environments.into_values().into_iter().collect()))
 }
 
 impl TryFrom<&EnvironmentVariable> for SingleEnvVarDescription {
@@ -178,7 +178,7 @@ pub fn save_environments(
             env_key_values.insert(
                 variable.name.clone(),
                 // @TODO: log error
-                serde_json::to_value(variable.initial_value.clone()).unwrap_or_default(),
+                variable.initial_value.clone(),
             );
         }
 
@@ -190,7 +190,7 @@ pub fn save_environments(
             private_env_key_values.insert(
                 secret.name.clone(),
                 // @TODO: log error
-                serde_json::to_value(&secret.initial_value).unwrap_or_default(),
+                secret.initial_value.clone(),
             );
         }
 

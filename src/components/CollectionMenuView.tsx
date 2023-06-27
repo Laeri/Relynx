@@ -1,5 +1,5 @@
 import { useRequestModelStore } from "../stores/requestStore";
-import React, { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { Button } from "primereact/button";
 import { PrimeNode, } from "../common/treeUtils";
 import { ToastContext } from "../App";
@@ -30,21 +30,8 @@ export function CollectionMenuView(props: ComponentProps) {
 
   const toast = useContext(ToastContext);
 
-  /* 
-*  
- LoadEnvironmentsForCollection(collection).then((environments: Environment[]) => {
-     updateEnvironments(environments);
-     let currentEnvironment = undefined;
-     if (collection.CurrentEnvName) {
-         currentEnvironment = environments.find((environment: Environment) => environment.Name == collection.CurrentEnvName);
-     }
-     setCurrentEnvironment(currentEnvironment);
- }).catch(catchError(toast));  
-*/
   useEffect(() => {
     backend.loadRequestsForCollection(collection).then((result: LoadRequestsResult) => {
-
-      console.log('RESULT: ', result);
       if (result.errs.length > 0) {
         let allParseErrors = formatParseErrorsMsg(result.errs);
         toast.showError("Error loading requests", allParseErrors);
@@ -52,7 +39,6 @@ export function CollectionMenuView(props: ComponentProps) {
       updateRequestTree(result.request_tree);
       setInitFinished(true);
     }).catch(catchError(toast));
-
   }, []);
 
   // eslint-disable-line react-hooks/exhaustive-deps
@@ -89,7 +75,7 @@ export function CollectionMenuView(props: ComponentProps) {
                   currentRequest={currentRequest} withBackgroundColor={true} />
               }
               {
-                !initFinished && <ProgressSpinner/>
+                !initFinished && <ProgressSpinner />
               }
             </div>
           </div>
