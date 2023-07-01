@@ -6,6 +6,7 @@ import { MultipartBody } from "./MultipartBody";
 import { UrlEncodedBody } from "./UrlEncodedBody";
 import { RawTypes, TextBody } from "./TextBody";
 import { Divider } from "primereact/divider";
+import { BinaryFileComp } from "./BinaryFileComp";
 
 interface ComponentProps {
   updateRequest: (newRequest: RequestModel) => void,
@@ -27,6 +28,8 @@ export function RequestBodyComp(props: ComponentProps) {
   const [rawTextBody, setRawTextBody] = useState<RequestBodyRaw>({ Raw: { data: { Raw: "" } } });
   const [rawTextFileBody, setRawTextFileBody] = useState<RequestBodyRaw>({ Raw: { data: { FromFilepath: "" } } });
   const [rawType, setRawType] = useState<RawType>("text");
+
+  const [binaryFileBody, setBinaryFileBody] = useState<RequestBodyRaw>({ Raw: { data: { FromFilepath: "" } } });
 
   const updateBodyType = () => {
 
@@ -113,7 +116,9 @@ export function RequestBodyComp(props: ComponentProps) {
     }
 
     if (newType === BodyTypes.binary_file) {
-      // @TODO
+      newRequest.body = binaryFileBody;
+      props.updateRequest;
+      return
     }
 
     if (newType === BodyTypes.no_body) {
@@ -170,6 +175,15 @@ export function RequestBodyComp(props: ComponentProps) {
     }
   }
 
+  const updateBinaryFilePath = (newPath: string) => {
+    let newBody = structuredClone(binaryFileBody);
+    (newBody.Raw.data as DataSourceFromFilepath).FromFilepath = newPath;
+    setBinaryFileBody(newBody);
+    let newRequest = structuredClone(props.request);
+    newRequest.body = newBody;
+    props.updateRequest(newRequest);
+  }
+
   return (
     <>
       {
@@ -195,6 +209,11 @@ export function RequestBodyComp(props: ComponentProps) {
           {
             (currentBodyType === BodyTypes.form_urlencoded) &&
             <UrlEncodedBody body={urlEncodedBody} />
+          }
+
+          {
+            (currentBodyType === BodyTypes.binary_file) &&
+            <BinaryFileComp path={(binaryFileBody.Raw.data as DataSourceFromFilepath).FromFilepath} updatePath={updateBinaryFilePath} />
           }
 
           {

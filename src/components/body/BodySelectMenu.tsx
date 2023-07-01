@@ -110,15 +110,15 @@ const menuNodes = [
   // },
 
   {
-    key: newUUID(),
+    key: BodyTypes.binary_file,
     selectable: true,
     label: 'Binary File',
-    data: { type: 'binary_file', isText: false },
+    data: { type: BodyTypes.binary_file, isText: false },
     children: [
     ]
   },
   {
-    key: newUUID(),
+    key: "no_body",
     selectable: true,
     label: 'No Body',
     data: { type: 'no_body', isText: false },

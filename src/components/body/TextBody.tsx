@@ -9,6 +9,7 @@ import { DataSourceFromFilepath, DataSourceRaw, RequestBodyRaw } from "../../mod
 import { backend } from "../../rpc";
 import { RelynxState, useRequestModelStore } from "../../stores/requestStore";
 import { CopyToClipboard } from "../CopyToClipboard";
+import { Filepicker } from "../Filepicker";
 import { RawType } from "./RequestBodyComp";
 
 interface ComponentProps {
@@ -53,12 +54,6 @@ export function TextBody(props: ComponentProps) {
     props.updateBody(newBody);
   }
 
-  const chooseFile = () => {
-    backend.chooseFileRelativeTo(currentRequest?.rest_file_path).then((file: string) => {
-      updatePath(file);
-    }).catch(catchError);
-  }
-
   const updateRawType = (event: any) => {
     let newRawType = event.value.key;
     props.updateRawType(newRawType);
@@ -86,15 +81,7 @@ export function TextBody(props: ComponentProps) {
         (props.rawType == "file") &&
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
           <h3>File</h3>
-
-          <label style={{ marginTop: '20px', flexBasis: '15%', textAlign: 'start' }}>Path (relative to request): </label>
-          <div style={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'flex-start', marginTop: '10px' }}>
-            <InputText disabled={true} style={{}} value={path} />
-            {
-              path !== "" && <CopyToClipboard value={path} />
-            }
-          </div>
-          <Button style={{ marginTop: '20px' }} label={"Choose File"} onClick={chooseFile} />
+          <Filepicker path={path} updatePath={updatePath} relativeBase={currentRequest.rest_file_path} />
         </div>
       }
     </div>
