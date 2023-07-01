@@ -22,6 +22,7 @@ import { CancellationToken } from "../model/error";
 import { Dialog } from "primereact/dialog";
 import { ResultDisplay } from "./ResultDisplay";
 import { SendRequestButton } from "./SendRequestButton";
+import { RequestBodyComp } from "./body/RequestBodyComp";
 
 interface ComponentProps {
 }
@@ -487,6 +488,11 @@ export function RequestComponent(_props: ComponentProps) {
                 style={{ margin: '40px 0px' }} />
             </div>
           </TabPanel>
+
+          <TabPanel header="Body">
+            <RequestBodyComp updateRequest={updateRequest} request={currentRequest} />
+          </TabPanel>
+
 
           <TabPanel header="Description">
             <div className="headers-block" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>

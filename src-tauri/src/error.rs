@@ -66,7 +66,6 @@ pub enum DisplayErrorKind {
     RequestFileMissing,
     CurlError,
     RequestSendError,
-    
 }
 
 impl std::fmt::Display for FrontendError {

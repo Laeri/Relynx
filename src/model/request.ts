@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 
-import { RequestModel, RequestBody, HttpMethod, Environment } from '../bindings';
+import { RequestModel, RequestBody, HttpMethod, Environment, Header, DataSource, Multipart, UrlEncodedParam } from '../bindings';
 import { DEFAULT_HTTP_VERSION, newQueryParam, newRequestHeader, newRequestSettings, newEnvironment } from './model';
 
 
@@ -17,7 +17,7 @@ export const HTTP_METHODS = {
 
 export function requestMethodToString(method: HttpMethod) {
   if (isCustomMethod(method)) {
-    return (method as {CUSTOM: string}).CUSTOM;
+    return (method as { CUSTOM: string }).CUSTOM;
   } else {
     return method as string;
   }
@@ -31,40 +31,17 @@ export function isCustomMethod(method: HttpMethod) {
   }
 }
 
-export type BodyType = "NONE" | "PLAIN_TEXT" | "FORM_URL_ENCODED" | "JSON" | "GRAPHQL" | "BINARY_FILE" | "FORM_DATA"
 
 export type UUID = string
 
-export const BodyTypes = {
-  NONE: "NONE" as BodyType,
-  PLAIN_TEXT: "PLAIN_TEXT" as BodyType,
-  FORM_URL_ENCODED: "FORM_URL_ENCODED" as BodyType,
-  JSON: "JSON" as BodyType,
-  BINARY_FILE: "BINARY_FILE" as BodyType,
-  FORM_DATA: "FORM_DATA" as BodyType,
-  GRAPHQL: "GRAPHQL" as BodyType
-}
+export type RequestBodyNone = "None";
+export type RequestBodyMultipart = { Multipart: { boundary: string; parts: Multipart[] } };
+export type RequestBodyUrlEncoded = { UrlEncoded: { url_encoded_params: UrlEncodedParam[] } };
+export type RequestBodyRaw = { Raw: { data: DataSource<string> } };
 
-export function translatedBodyType(bodyType: BodyType): string {
-  switch (bodyType) {
-    case BodyTypes.NONE:
-      return 'None'
-    case BodyTypes.PLAIN_TEXT:
-      return 'Plain Text'
-    case BodyTypes.FORM_URL_ENCODED:
-      return "Form URL Encoded"
-    case BodyTypes.JSON:
-      return "JSON"
-    case BodyTypes.BINARY_FILE:
-      return "Binary File"
-    case BodyTypes.FORM_DATA:
-      return "Form Data"
-    case BodyTypes.GRAPHQL:
-      return "GraphQL"
-    default:
-      throw new Error("Missing translation in Request.translatedBodyTypes")
-  }
-}
+export type DataSourceRaw<T> = { Raw: T };
+export type DataSourceFromFilepath = { FromFilepath: string };
+
 
 // @TODO:
 export function newRequestBody(): RequestBody {
@@ -101,7 +78,8 @@ export function newRequestModel(partial: Partial<RequestModel>): RequestModel {
     body: newRequestBody(),
     rest_file_path: "",
     http_version: { value: DEFAULT_HTTP_VERSION, is_replaced: true },
-    settings: newRequestSettings(undefined)
+    settings: newRequestSettings(undefined),
+    redirect_response: { save_response: false, save_path: null, overwrite: true }
   }
 
   if (partial) {
@@ -169,6 +147,66 @@ const HttpStatusText: { [key: string]: string; } = {
 export function getStatusTextForCode(codeStr: string) {
   let text = HttpStatusText[codeStr]
   return text ?? ""
+}
+
+export function get_content_type(requestModel: RequestModel): string | undefined {
+  let contentTypeHeader = requestModel.headers.find((header: Header) => {
+    return header.key.toLowerCase() == "content-type";
+  });
+  return contentTypeHeader?.value;
+}
+
+export function hasContentType(requestModel: RequestModel, contentType: string): boolean {
+  let requestContentType = get_content_type(requestModel);
+  if (requestContentType === undefined || requestContentType === null) {
+    return false;
+  }
+  return requestContentType.split(";").some((part: string) => part === contentType);
+}
+
+export function getRawText(requestBody: RequestBody): string | undefined {
+  let rawTextBody = requestBody as RequestBodyRaw;
+  return (rawTextBody.Raw.data as DataSourceRaw<string>).Raw
+}
+
+export class RequestBodyWrapper {
+
+  private requestBody: RequestBody;
+
+  constructor(requestBody: RequestBody) {
+    this.requestBody = requestBody;
+  }
+
+  getRawText(): string | undefined {
+    let rawTextBody = this.requestBody as RequestBodyRaw;
+    return (rawTextBody.Raw.data as DataSourceRaw<string>).Raw
+  }
+
+  getRawFilepath(): string | undefined {
+    let rawTextBody = this.requestBody as RequestBodyRaw;
+    return (rawTextBody.Raw.data as DataSourceFromFilepath).FromFilepath;
+  }
+}
+
+export function newMultipartPart(): Multipart {
+  return { data: { Raw: "" }, disposition: { name: "", filename: null, filename_star: null }, headers: [] };
+}
+
+
+export function removeHeader(request: RequestModel, headerKey: string) {
+  let headerKeyLower = headerKey.toLowerCase();
+  request.headers = request.headers.filter((header: Header) => header.key.toLowerCase() !== headerKeyLower);
+}
+
+// @TODO: handle multiple headers with same key...
+export function setHeader(request: RequestModel, header: Header) {
+  let headerKeyLower = header.key.toLowerCase();
+  let index = request.headers.findIndex((header: Header) => header.key.toLowerCase() == headerKeyLower);
+  if (index !== -1) {
+    request.headers[index] = header;
+  } else {
+    request.headers.push(header);
+  }
 }
 
 

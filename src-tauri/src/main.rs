@@ -11,18 +11,19 @@ mod model;
 mod sanitize;
 mod serialize;
 mod tree;
+mod pathdiff;
 
 use commands::{
-    add_existing_collections, add_group_node, add_request_node, copy_to_clipboard, delete_node,
-    drag_and_drop, get_response_filepath, hide_group, import_jetbrains_folder_command,
-    import_postman_collection, is_directory_empty, load_environments, load_requests_for_collection,
-    load_workspace, open_folder_native, remove_collection, rename_group,
-    reorder_nodes_within_parent, run_request, save_environments, save_request, select_directory,
-    select_file, update_workspace, validate_group_name, validate_response_filepath,
-    AddExistingCollectionsParams, AddGroupNodeParams, AddRequestNodeParams, DeleteNodeParams,
-    DragAndDropParams, ImportJetbrainsHttpFolderParams, ImportPostmanCommandParams,
-    RenameGroupParams, ReorderNodesParams, SaveEnvironmentsParams, ValidateGroupNameParams,
-    RELYNX_CONTEXT,
+    add_existing_collections, add_group_node, add_request_node, choose_file_relative_to,
+    copy_to_clipboard, delete_node, drag_and_drop, get_response_filepath, hide_group,
+    import_jetbrains_folder_command, import_postman_collection, is_directory_empty,
+    load_environments, load_requests_for_collection, load_workspace, open_folder_native,
+    remove_collection, rename_group, reorder_nodes_within_parent, run_request, save_environments,
+    save_request, select_directory, select_file, update_workspace, validate_group_name,
+    validate_response_filepath, AddExistingCollectionsParams, AddGroupNodeParams,
+    AddRequestNodeParams, ChooseFileRelativeToParams, DeleteNodeParams, DragAndDropParams,
+    ImportJetbrainsHttpFolderParams, ImportPostmanCommandParams, RenameGroupParams,
+    ReorderNodesParams, SaveEnvironmentsParams, ValidateGroupNameParams, RELYNX_CONTEXT,
 };
 use model::{Collection, RunRequestCommand, SaveRequestCommand, Workspace};
 use rspc::Router;
@@ -120,6 +121,9 @@ fn router() -> Arc<Router> {
                 t(|_, params: RenameGroupParams| rename_group(params))
             })
             .query("hide_group", |t| t(|_, params: PathBuf| hide_group(params)))
+            .query("choose_file_relative_to", |t| {
+                t(|_, params: ChooseFileRelativeToParams| choose_file_relative_to(params))
+            })
             .build();
     Arc::new(router)
 }

@@ -4,13 +4,13 @@ use std::path::PathBuf;
 use crate::config::save_workspace;
 use crate::error::{DisplayErrorKind, FrontendError};
 use crate::model::{
-    Collection, ImportCollectionResult, ImportWarning, Multipart, Replaced, RequestBody,
-    RequestModel, Workspace, MessageSeverity, RedirectResponse,
+    Collection, ImportCollectionResult, ImportWarning, MessageSeverity, Multipart,
+    RedirectResponse, Replaced, RequestBody, RequestModel, Workspace,
 };
 use crate::sanitize::sanitize_filename;
 use crate::tree::{GroupOptions, RequestTreeNode};
 use http_rest_file::model::{
-    DataSource, HttpMethod, HttpVersion, RequestSettings, UrlEncodedParam,
+    DataSource, DispositionField, HttpMethod, HttpVersion, RequestSettings, UrlEncodedParam,
     WithDefault,
 };
 use http_rest_file::Serializer;
@@ -73,7 +73,7 @@ fn into_request_tree_node(
                 rest_file_path: path.to_string_lossy().to_string(),
                 is_group: false,
                 severity: Some(MessageSeverity::ERROR),
-                message: None
+                message: None,
             });
             ()
         })?;
@@ -84,7 +84,7 @@ fn into_request_tree_node(
                 rest_file_path: path.to_string_lossy().to_string(),
                 is_group: false,
                 severity: Some(MessageSeverity::ERROR),
-                message: None
+                message: None,
             });
 
             ()
@@ -102,7 +102,7 @@ fn into_request_tree_node(
                 rest_file_path: path.to_string_lossy().to_string(),
                 is_group: true,
                 severity: Some(MessageSeverity::ERROR),
-                message: None
+                message: None,
             });
             ()
         })?;
@@ -123,7 +123,12 @@ fn into_request_tree_node(
     return Ok(group);
 }
 
-fn next_free_name(base_name: &str, index: u32, existing_names: &HashMap<String, ()>, is_request: bool) -> String {
+fn next_free_name(
+    base_name: &str,
+    index: u32,
+    existing_names: &HashMap<String, ()>,
+    is_request: bool,
+) -> String {
     let mut index = index;
     let extension = if is_request {
         http_rest_file::model::HttpRestFileExtension::Http.get_extension()
@@ -281,7 +286,7 @@ fn transform_request(
                                     _ => DataSource::Raw(String::new()),
                                 };
                                 RequestBody::Raw { data }
-                            }
+                            },
                             Some(Mode::Raw) => RequestBody::Raw {
                                 data: http_rest_file::model::DataSource::Raw(
                                     postman_body.raw.clone().unwrap_or_default(),
@@ -330,31 +335,24 @@ fn transform_request(
                                                 }
                                                 None => String::new(),
                                             };
-let filename = PathBuf::from(&file_src)
+                                        let filename = PathBuf::from(&file_src)
                                                 .file_name()
                                                 .unwrap_or_default()
                                                 .to_string_lossy()
                                                 .to_string();
 
- let disposition_fields: Vec<http_rest_file::model::DispositionField> = vec![
-                                                    http_rest_file::model::DispositionField::new(
-                                                        "filename", filename,
-                                                    ),
-                                                ];
+                                        let disposition: http_rest_file::model::DispositionField = http_rest_file::model::DispositionField::new_with_filename(name.clone(),Some(filename));
 
-
-                                                                                        parts.push(crate::model::Multipart {
+                                        parts.push(crate::model::Multipart {
                                                 headers,
-                                                name,
-                                                fields: disposition_fields,                                                 data: DataSource::FromFilepath(
+                                            disposition,                                                                                                 data: DataSource::FromFilepath(
                                                     file_src.to_string(),
                                                 ),
                                             })
                                         } else {
                                             parts.push(Multipart {
-                                                name,
                                                 headers,
-                                                fields: vec![],
+                                                disposition: DispositionField::new(name),
                                                 data: DataSource::Raw(
                                                     form_param.value.clone().unwrap_or_default(),
                                                 ),
@@ -367,7 +365,7 @@ let filename = PathBuf::from(&file_src)
                                     boundary: "----boundary----".to_string(),
                                     parts,
                                 }
-                            }
+                            },
                             Some(Mode::Urlencoded) => {
                                 let url_encoded_params: Vec<
                                     http_rest_file::model::UrlEncodedParam,
@@ -393,16 +391,16 @@ let filename = PathBuf::from(&file_src)
                                     "Content-Type",
                                     "application/json",
                                 ));
-                            let graphql = serde_json::to_string(&postman_body.graphql.clone().unwrap_or_default());
-                            if graphql.is_err() {
-                                import_warnings.push(ImportWarning { rest_file_path: request_path.to_string_lossy().to_string(),  is_group: false, message: Some("GraphQl Body could not be imported".to_string()), severity: Some(MessageSeverity::Warn) });
-                                DataSource::Raw(String::new()); 
-                            } 
-                                RequestBody::Raw {
-                                    data: DataSource::Raw(graphql.unwrap_or_default()) 
+                                let graphql = serde_json::to_string(&postman_body.graphql.clone().unwrap_or_default());
+                                if graphql.is_err() {
+                                    import_warnings.push(ImportWarning { rest_file_path: request_path.to_string_lossy().to_string(),  is_group: false, message: Some("GraphQl Body could not be imported".to_string()), severity: Some(MessageSeverity::Warn) });
+                                    DataSource::Raw(String::new());
                                 }
-                        }, 
-                            None => RequestBody::None,
+                                RequestBody::Raw {
+                                    data: DataSource::Raw(graphql.unwrap_or_default())
+                                }
+                            },
+                            None => RequestBody::None
                         }
                     });
 
@@ -432,10 +430,10 @@ let filename = PathBuf::from(&file_src)
                 settings: RequestSettings::default(),
                 query_params: vec![],
                 http_version, // scripts are not imported from postman
-                              // pre_request_script: None,
-                              // response_handler: None,
-                              // @TODO maybe rename redirect in http_rest_file library to output_redirect
-                redirect_response: RedirectResponse::no_save()
+                // pre_request_script: None,
+                // response_handler: None,
+                // @TODO maybe rename redirect in http_rest_file library to output_redirect
+                redirect_response: RedirectResponse::no_save(),
             }
         }
     }

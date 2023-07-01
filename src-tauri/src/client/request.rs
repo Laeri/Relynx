@@ -97,9 +97,7 @@ impl Request {
 
     /// Returns optional Content-type header value.
     pub fn content_type(&self) -> Option<String> {
-        get_values(&self.headers, "Content-Type")
-            .get(0)
-            .cloned()
+        get_values(&self.headers, "Content-Type").get(0).cloned()
     }
 
     /// Returns the base url http(s)://host(:port)

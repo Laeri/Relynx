@@ -45,7 +45,7 @@ pub enum HttpError {
     InvalidUrl(String),
     CouldNotReadFile(PathBuf),
     // @TODO: modified
-    FormError
+    FormError,
 }
 
 impl From<curl::Error> for HttpError {

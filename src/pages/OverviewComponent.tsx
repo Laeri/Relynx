@@ -4,7 +4,7 @@ import { useContext } from "react";
 import { openCreateCollectionModal, openAddExistingCollectionsModal, openImportCollectionModal } from "../common/modal";
 import { ToastContext } from "../App";
 import { useRequestModelStore } from "../stores/requestStore";
-import { AddCollectionsResult, Collection } from "../bindings";
+import { AddCollectionsResult } from "../bindings";
 
 
 

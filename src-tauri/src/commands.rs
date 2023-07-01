@@ -11,6 +11,7 @@ use crate::model::{
     AddCollectionsResult, Collection, CollectionConfig, Environment, ImportCollectionResult,
     RequestModel, RequestResult, RunRequestCommand, SaveRequestCommand, Workspace,
 };
+use crate::pathdiff::diff_paths;
 use crate::sanitize::sanitize_filename_with_options;
 use crate::tree::{GroupOptions, RequestTreeNode, DEFAULT_OPTIONS};
 pub use drag_and_drop::{
@@ -66,20 +67,20 @@ pub fn remove_collection(collection: Collection) -> Result<Workspace, rspc::Erro
 
 // @TODO validate paths, createCollection -> should be empty...
 #[tauri::command]
-pub fn select_directory() -> Result<String, rspc::Error> {
+pub fn select_directory() -> Result<PathBuf, rspc::Error> {
     let result = tauri::api::dialog::blocking::FileDialogBuilder::default().pick_folder();
     match result {
-        Some(folder_path) => Ok(folder_path.to_str().unwrap_or("").to_owned()),
+        Some(folder_path) => Ok(folder_path),
         _ => Err(FrontendError::new(DisplayErrorKind::NoPathChosen).into()),
     }
 }
 
 // @TODO
 #[tauri::command]
-pub fn select_file() -> Result<String, rspc::Error> {
+pub fn select_file() -> Result<PathBuf, rspc::Error> {
     let result = tauri::api::dialog::blocking::FileDialogBuilder::default().pick_file();
     match result {
-        Some(folder_path) => Ok(folder_path.to_str().unwrap_or("").to_owned()),
+        Some(folder_path) => Ok(folder_path),
         _ => Err(FrontendError::new(DisplayErrorKind::NoPathChosen).into()),
     }
 }
@@ -198,7 +199,7 @@ pub fn add_existing_collections(
 pub fn load_requests_for_collection(
     collection: Collection,
 ) -> Result<LoadRequestsResult, rspc::Error> {
-    crate::import::load_requests_for_collection(&collection).map_err(|err| err.into())
+    dbg!(crate::import::load_requests_for_collection(&collection).map_err(|err| err.into()))
 }
 
 #[derive(Serialize, Deserialize, rspc::Type, Debug)]
@@ -878,4 +879,29 @@ pub fn hide_group(path: PathBuf) -> Result<(), rspc::Error> {
     })?;
 
     Ok(())
+}
+
+#[derive(Serialize, Deserialize, rspc::Type, Debug)]
+pub struct ChooseFileRelativeToParams {
+    base_path: PathBuf,
+}
+
+#[tauri::command]
+pub fn choose_file_relative_to(params: ChooseFileRelativeToParams) -> Result<PathBuf, rspc::Error> {
+    let chosen_file = select_file()?;
+    if let Some(relative_path) = diff_paths(&chosen_file, &params.base_path) {
+        println!("ok: {:?}", relative_path);
+        Ok(relative_path)
+    } else {
+        println!(
+            "err {:?}  ----- {:?}",
+            params.base_path.to_string_lossy(),
+            chosen_file.to_string_lossy()
+        );
+        return Err(FrontendError::new_with_message(
+            DisplayErrorKind::Generic,
+            "The chosen file path cannot be relative to the given request.".to_string(),
+        )
+        .into());
+    }
 }

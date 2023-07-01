@@ -278,18 +278,16 @@ impl From<&HttpRestFileBody> for RequestBody {
 
 #[derive(Serialize, Deserialize, Type, Debug, Clone, PartialEq, Eq)]
 pub struct Multipart {
-    pub name: String,
     pub data: DataSource<String>,
-    pub fields: Vec<DispositionField>,
+    pub disposition: DispositionField,
     pub headers: Vec<Header>,
 }
 
 impl From<&HttpRestfileMultipart> for Multipart {
     fn from(value: &HttpRestfileMultipart) -> Self {
         Multipart {
-            name: value.name.clone(),
             data: value.data.clone(),
-            fields: value.fields.clone(),
+            disposition: value.disposition.clone(),
             headers: value.headers.iter().map(Into::into).collect(),
         }
     }
@@ -659,8 +657,7 @@ impl From<&Multipart> for http_rest_file::model::Multipart {
         http_rest_file::model::Multipart {
             data: value.data.clone(),
             headers: value.headers.iter().map(Into::into).collect(),
-            name: value.name.clone(),
-            fields: value.fields.clone(),
+            disposition: value.disposition.clone(),
         }
     }
 }

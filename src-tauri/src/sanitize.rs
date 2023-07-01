@@ -1,16 +1,16 @@
-use regex::{Regex, RegexBuilder};
 use lazy_static::lazy_static;
+use regex::{Regex, RegexBuilder};
 
 lazy_static! {
-static ref ILLEGAL_RE: Regex = Regex::new(r#"[/\?<>\\:\*\|":]"#).unwrap();
-static ref CONTROL_RE: Regex = Regex::new(r#"[\x00-\x1f\x80-\x9f]"#).unwrap();
-static ref RESERVED_RE: Regex = Regex::new(r#"^\.+$"#).unwrap();
-static ref WINDOWS_RESERVED_RE: Regex =
-     RegexBuilder::new(r#"(?i)^(con|prn|aux|nul|com[0-9]|lpt[0-9])(\..*)?$"#)
-        .case_insensitive(true)
-        .build()
-        .unwrap();
-static ref WINDOWS_TRAILING_RE: Regex = Regex::new(r#"^\.+$"#).unwrap();
+    static ref ILLEGAL_RE: Regex = Regex::new(r#"[/\?<>\\:\*\|":]"#).unwrap();
+    static ref CONTROL_RE: Regex = Regex::new(r#"[\x00-\x1f\x80-\x9f]"#).unwrap();
+    static ref RESERVED_RE: Regex = Regex::new(r#"^\.+$"#).unwrap();
+    static ref WINDOWS_RESERVED_RE: Regex =
+        RegexBuilder::new(r#"(?i)^(con|prn|aux|nul|com[0-9]|lpt[0-9])(\..*)?$"#)
+            .case_insensitive(true)
+            .build()
+            .unwrap();
+    static ref WINDOWS_TRAILING_RE: Regex = Regex::new(r#"^\.+$"#).unwrap();
 }
 
 #[derive(Clone)]
@@ -239,7 +239,10 @@ mod tests {
 
         let long = ::std::iter::repeat('a').take(300).collect::<String>();
         let shorter = ::std::iter::repeat('a').take(255).collect::<String>();
-        assert_eq!(super::sanitize_filename_with_options(long, options.clone()), shorter);
+        assert_eq!(
+            super::sanitize_filename_with_options(long, options.clone()),
+            shorter
+        );
 
         // is_sanitized
         let options = super::OptionsForCheck {

@@ -32,9 +32,7 @@ use http_rest_file::model::{DataSource, HttpMethod, HttpVersion, UrlEncodedParam
 use std::io::Read;
 use std::str::FromStr;
 
-use crate::model::{
-    Environment, GetHeadersOption, Header, Multipart, RequestBody, RequestModel,
-};
+use crate::model::{Environment, GetHeadersOption, Header, Multipart, RequestBody, RequestModel};
 
 use self::certificate::Certificate;
 use self::client_model::{parse_cookies, Call, Cookie, RequestCookie, Response};
@@ -159,7 +157,7 @@ impl Client {
         self.set_ssl_options(options.ssl_no_revoke);
 
         let url = dbg!(request_model.get_url_with_env(environment)); //self.generate_url(&request_spec.url, &""); // @TODO: what do we do with our
-                                                        // query string?
+                                                                     // query string?
         self.handle.url(url.as_str()).unwrap();
         let method = &request_model.method;
         self.set_method(method);
@@ -559,7 +557,7 @@ impl Client {
                 }
             };
             // @TODO error log
-            let mut curl_part = form.part(&part.name);
+            let mut curl_part = form.part(&part.disposition.name);
             // @TODO: filename
             curl_part.contents(&contents);
             // @TODO: set multipart boundary yourself!

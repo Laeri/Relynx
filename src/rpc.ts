@@ -156,6 +156,10 @@ class Backend {
     return api.query(['hide_group', path]);
   }
 
+  chooseFileRelativeTo(base_path: string): Promise<string> {
+    return api.query(['choose_file_relative_to', {base_path: base_path}]);
+  }
+
   logFrontendError(error: FError): Promise<void> {
     // @TODO: IMPLEMENT
     return Promise.resolve();

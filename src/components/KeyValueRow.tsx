@@ -13,7 +13,7 @@ interface ComponentProps {
   active: boolean,
   updateKey: (key: string) => void,
   updateValue: (value: string) => void
-  updateActive: (active: boolean) => void
+  updateActive?: (active: boolean) => void
   remove: () => void
   style: any,
   currentEnvironment?: Environment,
@@ -36,7 +36,9 @@ export function KeyValueRow(props: ComponentProps) {
   }
 
   const updateActive = (e: any) => {
-    props.updateActive(e.target.checked);
+    if (props.updateActive) {
+      props.updateActive(e.target.checked);
+    }
   }
 
   const handleItemSelected = (suggestion: EnvironmentVariable | EnvironmentSecret) => {
@@ -87,7 +89,10 @@ export function KeyValueRow(props: ComponentProps) {
         <div style={{ flexGrow: 1, display: 'flex', width: '100%', minWidth: '0', justifyContent: 'space-between' }}>
           <div style={{ width: '30%', textAlign: 'left' }}>Name</div>
           <div style={{ width: '40%', textAlign: 'left' }}>Value </div>
-          <div style={{ width: '10%', display: 'flex', justifyContent: 'center', textAlign: 'center' }}>Active</div>
+          {
+            props.updateActive !== undefined &&
+            <div style={{ width: '10%', display: 'flex', justifyContent: 'center', textAlign: 'center' }}>Active</div>
+          }
           <div style={{ width: '10%' }}>Actions</div>
         </div>
       }
@@ -113,8 +118,12 @@ export function KeyValueRow(props: ComponentProps) {
           inputRef={inputRef}
           itemTemplate={itemTemplate} />
 
-        <Checkbox onChange={updateActive} checked={props.active} style={{ height: '100%', width: '10%' }}
-          title={"Active"}></Checkbox>
+        {
+          props.updateActive !== undefined &&
+          <Checkbox onChange={updateActive} checked={props.active} style={{ height: '100%', width: '10%' }}
+            title={"Active"}></Checkbox>
+
+        }
         <Button onClick={props.remove} icon="pi pi-times"
           className="p-button-rounded p-button-danger p-button-text" aria-label="Cancel"
           style={{ width: '10%' }} />
