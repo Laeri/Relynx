@@ -6257,3 +6257,8 @@ li + li > .p-tabview-nav-link {
 /*   border: none !important; */
 /* } */
 
+
+/*Fix Link Color*/
+a {
+  color: #ffb347;
+}

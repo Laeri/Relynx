@@ -16,6 +16,11 @@
       "shell": {
         "all": false,
         "open": ""
+      },
+      "fs": {
+        "scope": [
+          "$RESOURCE/*"
+        ]
       }
     },
     "bundle": {
@@ -28,7 +33,10 @@
         "icons/icon.ico"
       ],
       "identifier": "com.tauri.dev",
-      "targets": "all"
+      "targets": "all",
+      "resources": [
+        "./resources/*"
+      ]
     },
     "security": {
       "csp": null

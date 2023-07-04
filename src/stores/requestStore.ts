@@ -31,7 +31,10 @@ export interface RelynxState {
 
   updateRequestTree: (requestTree: RequestTree) => void,
 
-  storeUpdateRequestAndTree: (requestModel: Partial<RequestModel>) => void
+  storeUpdateRequestAndTree: (requestModel: Partial<RequestModel>) => void,
+
+  trialShown: boolean,
+  setTrialShown: () => void,
 
 }
 
@@ -131,6 +134,14 @@ export const useRequestModelStore = create<RelynxState>((set) => {
       }
     }),
 
+    trialShown: false,
+
+    setTrialShown: () => set((state: RelynxState) => {
+      return {
+        ...state,
+        trialShown: true
+      }
+    })
   }
 });
 

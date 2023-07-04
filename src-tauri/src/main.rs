@@ -7,29 +7,47 @@ mod config;
 mod environment;
 mod error;
 mod import;
+mod license;
 mod model;
+mod pathdiff;
 mod sanitize;
 mod serialize;
 mod tree;
-mod pathdiff;
 
 use commands::{
     add_existing_collections, add_group_node, add_request_node, choose_file_relative_to,
-    copy_to_clipboard, delete_node, drag_and_drop, get_response_filepath, hide_group,
-    import_jetbrains_folder_command, import_postman_collection, is_directory_empty,
-    load_environments, load_requests_for_collection, load_workspace, open_folder_native,
-    remove_collection, rename_group, reorder_nodes_within_parent, run_request, save_environments,
+    copy_to_clipboard, delete_node, drag_and_drop, get_app_environment, get_response_filepath,
+    hide_group, import_jetbrains_folder_command, import_postman_collection, is_directory_empty,
+    is_signature_valid, load_environments, load_license_data_command, load_requests_for_collection,
+    load_workspace, open_folder_native, remove_collection, rename_group,
+    reorder_nodes_within_parent, run_request, save_environments, save_license_data_command,
     save_request, select_directory, select_file, update_workspace, validate_group_name,
     validate_response_filepath, AddExistingCollectionsParams, AddGroupNodeParams,
     AddRequestNodeParams, ChooseFileRelativeToParams, DeleteNodeParams, DragAndDropParams,
     ImportJetbrainsHttpFolderParams, ImportPostmanCommandParams, RenameGroupParams,
     ReorderNodesParams, SaveEnvironmentsParams, ValidateGroupNameParams, RELYNX_CONTEXT,
 };
+use license::LicenseData;
 use model::{Collection, RunRequestCommand, SaveRequestCommand, Workspace};
 use rspc::Router;
 use std::{path::PathBuf, sync::Arc};
 use tauri::Manager;
 use tauri_plugin_log::LogTarget;
+
+static mut LICENSE_PUB_KEY: String = String::new();
+static mut LICENSE_PRIV_KEY: String = String::new();
+
+pub fn get_license_pub_key() -> Result<String, ()> {
+    let key = unsafe { LICENSE_PUB_KEY.clone() };
+    if key.is_empty() {
+        return Err(());
+    }
+    return Ok(key);
+}
+
+pub fn get_license_priv_key() -> String {
+    unsafe { LICENSE_PRIV_KEY.clone() }
+}
 
 fn router() -> Arc<Router> {
     let router =
@@ -124,6 +142,16 @@ fn router() -> Arc<Router> {
             .query("choose_file_relative_to", |t| {
                 t(|_, params: ChooseFileRelativeToParams| choose_file_relative_to(params))
             })
+            .query("load_license_data", |t| {
+                t(|_, ()| load_license_data_command())
+            })
+            .mutation("save_license_data", |t| {
+                t(|_, params: LicenseData| save_license_data_command(&params))
+            })
+            .query("is_signature_valid", |t| {
+                t(|_, params: LicenseData| is_signature_valid(&params))
+            })
+            .query("get_app_environment", |t| t(|_, ()| get_app_environment()))
             .build();
     Arc::new(router)
 }
@@ -132,8 +160,8 @@ fn main() {
     let rt = tokio::runtime::Runtime::new().unwrap();
     let _guard = rt.enter();
     let context = tauri::generate_context!();
-    let app = tauri::Builder::default();
-    let app = app
+    let app_builder = tauri::Builder::default();
+    let app = app_builder
         .plugin(rspc::integrations::tauri::plugin(router(), || {}))
         .plugin(
             tauri_plugin_log::Builder::default()
@@ -148,5 +176,32 @@ fn main() {
     let mut data = RELYNX_CONTEXT.lock().unwrap();
     data.app_handle = Some(app.app_handle());
     std::mem::drop(data);
+
+    std::env::vars().for_each(|var| {
+        println!("{} -> {}", var.0, var.1);
+    });
+
+    std::env::vars_os().for_each(|var| {
+        println!("{} -> {}", var.0.to_string_lossy(), var.1.to_string_lossy());
+    });
+
+    let pub_key_path = if cfg!(debug_assertions) {
+        "resources/pub_key.development.pem"
+    } else {
+        "resources/pub_key.production.pem"
+    };
+    if cfg!(debug_assertions) {
+        let settings_resource_path = app
+            .path_resolver()
+            .resolve_resource(pub_key_path)
+            .expect("failed to resolve resource for public key");
+        let content = std::fs::read_to_string(&settings_resource_path).unwrap_or(String::new());
+        unsafe {
+            LICENSE_PUB_KEY = content;
+        }
+    } else {
+        // @TODO:
+    }
+    //
     app.run(|_, _| {});
 }

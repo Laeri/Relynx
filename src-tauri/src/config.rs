@@ -4,12 +4,21 @@ use std::path::PathBuf;
 use crate::error::{DisplayErrorKind, FrontendError};
 use crate::model::{CollectionConfig, Workspace};
 use directories::ProjectDirs;
+use serde::{Deserialize, Serialize};
 
 pub const WORKSPACE_FILENAME: &str = "workspace.json";
 pub const COLLECTION_CONFIGFILE: &str = "relynx.collection.json";
 
+
+fn get_dirs() -> Option<ProjectDirs> {
+    ProjectDirs::from("app", "relynx", "relynx")
+}
+
+pub fn get_data_dir() -> Option<std::path::PathBuf> {
+    get_dirs().map(|dirs| dirs.data_local_dir().to_path_buf())
+}
 pub fn get_config_dir() -> Option<std::path::PathBuf> {
-    ProjectDirs::from("app", "relynx", "relynx").map(|dirs| dirs.config_dir().to_path_buf())
+    get_dirs().map(|dirs| dirs.config_dir().to_path_buf())
 }
 
 pub fn load_workspace() -> Result<Workspace, FrontendError> {

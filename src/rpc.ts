@@ -1,6 +1,6 @@
 import { createClient } from '@rspc/client'
 import { TauriTransport } from '@rspc/tauri'
-import { Procedures, Workspace, Collection, AddCollectionsResult, ImportCollectionResult, LoadRequestsResult, RunRequestCommand, RequestResult, RequestModel, SaveRequestCommand, RequestTreeNode, DragAndDropResult, Environment, ValidateGroupNameResult } from './bindings';
+import { Procedures, Workspace, Collection, AddCollectionsResult, ImportCollectionResult, LoadRequestsResult, RunRequestCommand, RequestResult, RequestModel, SaveRequestCommand, RequestTreeNode, DragAndDropResult, Environment, ValidateGroupNameResult, LicenseData } from './bindings';
 import { FError } from './common/errorhandling';
 import { CancellationToken } from './model/error';
 
@@ -157,7 +157,23 @@ class Backend {
   }
 
   chooseFileRelativeTo(base_path: string): Promise<string> {
-    return api.query(['choose_file_relative_to', {base_path: base_path}]);
+    return api.query(['choose_file_relative_to', { base_path: base_path }]);
+  }
+
+  loadLicenseData(): Promise<LicenseData> {
+    return api.query(['load_license_data']);
+  }
+
+  saveLicenseData(licenseData: LicenseData): Promise<null> {
+    return api.mutation(['save_license_data', licenseData]);
+  }
+
+  isSignatureValid(licenseData: LicenseData): Promise<boolean> {
+    return api.query(['is_signature_valid', licenseData]);
+  }
+
+  getAppEnvironment(): Promise<AppEnvironment> {
+    return api.query(['get_app_environment'])
   }
 
   logFrontendError(error: FError): Promise<void> {

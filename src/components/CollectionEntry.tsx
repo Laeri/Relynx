@@ -115,7 +115,7 @@ export function CollectionEntry(props: ComponentProps) {
         </OverlayPanel>
       </div>
 
-      <Dialog header="Remove Collection" visible={dialogVisible} style={{ width: '50vw', padding: 0 }} footer={
+      <Dialog header="Remove Collection" visible={dialogVisible} style={{ padding: 0 }} footer={
         <div>
           <Button label="No" icon="pi pi-times" onClick={() => onHide()} className="p-button-text" />
           <Button label="Remove" icon="pi pi-check" onClick={() => doRemove()} autoFocus />

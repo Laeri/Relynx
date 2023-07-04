@@ -1,5 +1,5 @@
 import './App.css';
-import { createContext, Ref, useContext, useEffect, useRef } from 'react';
+import React, { createContext, Ref, useContext, useEffect, useRef } from 'react';
 import 'primereact/resources/primereact.min.css';
 import '../node_modules/primeicons/primeicons.css';
 import './theme.css';
@@ -42,12 +42,29 @@ function App() {
 
   // Load workspace initially from backend
   useEffect(() => {
+
+    // @TODO: REMOVE
+    backend.isSignatureValid({ license_key: "", license_signature: "" });;
     backend.loadWorkspace()
       .then((workspace: Workspace) => {
         console.log('HERE: ', workspace)
         updateWorkspace(workspace);
+
+        // checkLicenseAndContinue = () => {
+        //   // @TODO:M3K-84 continue and check if license is valid, by decrypting it
+        //   let valid = licenseValid(this.props.app.config.license_key)
+        //   if (valid) {
+        //     this.continueToOverview()
+        //   } else {
+        //     this.setState({
+        //       errorText: t('login.error.license_unspecified')
+        //     })
+        //   }
+        // }
       }).catch((err: any) => { console.log('CATCH ERR err', err) });
   }, []);
+
+
 
 
   const toastContext = {

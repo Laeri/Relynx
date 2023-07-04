@@ -110,3 +110,7 @@ main {
 .headers-block {
   margin-top: 20px;
 }
+
+.text-danger {
+  color: rgb(233, 121, 132);
+}

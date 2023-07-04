@@ -7,9 +7,11 @@ use crate::import::{
     create_jetbrains_collection, import_jetbrains_folder, postman, LoadRequestsResult,
     RELYNX_IGNORE_FILE,
 };
+use crate::license::{self, verify_signature};
 use crate::model::{
-    AddCollectionsResult, Collection, CollectionConfig, Environment, ImportCollectionResult,
-    RequestModel, RequestResult, RunRequestCommand, SaveRequestCommand, Workspace,
+    AddCollectionsResult, AppEnvironment, Collection, CollectionConfig, Environment,
+    ImportCollectionResult, RequestModel, RequestResult, RunRequestCommand, SaveRequestCommand,
+    Workspace,
 };
 use crate::pathdiff::diff_paths;
 use crate::sanitize::sanitize_filename_with_options;
@@ -22,6 +24,7 @@ use http_rest_file::{
     model::{HttpRestFile, HttpRestFileExtension, Request},
     Serializer,
 };
+use license::LicenseData;
 use serde::{Deserialize, Serialize};
 
 use std::path::PathBuf;
@@ -903,5 +906,29 @@ pub fn choose_file_relative_to(params: ChooseFileRelativeToParams) -> Result<Pat
             "The chosen file path cannot be relative to the given request.".to_string(),
         )
         .into());
+    }
+}
+
+#[tauri::command]
+pub fn load_license_data_command() -> Result<LicenseData, rspc::Error> {
+    license::get_license_data().map_err(Into::into)
+}
+
+#[tauri::command]
+pub fn save_license_data_command(params: &LicenseData) -> Result<(), rspc::Error> {
+    license::save_license_data(params).map_err(Into::into)
+}
+
+#[tauri::command]
+pub fn is_signature_valid(license_data: &LicenseData) -> Result<bool, rspc::Error> {
+    verify_signature(license_data).map_err(Into::into)
+}
+
+#[tauri::command]
+pub fn get_app_environment() -> Result<AppEnvironment, rspc::Error> {
+    if cfg!(debug_assertions) {
+        Ok(AppEnvironment::DEVELOPMENT)
+    } else {
+        Ok(AppEnvironment::PRODUCTION)
     }
 }

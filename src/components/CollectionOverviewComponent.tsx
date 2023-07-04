@@ -11,10 +11,9 @@ import { InputTextarea } from "primereact/inputtextarea";
 import { catchError } from "../common/errorhandling";
 import { Accordion, AccordionTab } from "primereact/accordion";
 import { WarningCollapsible } from "./WarningCollapsible";
-import { getAllRequestsFromTree, PrimeNode } from "../common/treeUtils";
+import { getAllRequestsFromTree } from "../common/treeUtils";
 
 export interface ComponentProps {
-
 }
 
 export function CollectionOverviewComponent(_props: ComponentProps) {

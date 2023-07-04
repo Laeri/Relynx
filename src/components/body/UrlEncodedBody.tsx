@@ -1,4 +1,4 @@
-import { RequestBodyUrlEncoded } from "../model/request"
+import { RequestBodyUrlEncoded } from "../../model/request"
 
 interface ComponentProps {
   body: RequestBodyUrlEncoded

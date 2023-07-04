@@ -20,7 +20,7 @@ export function CreateGroupModal(props: ComponentProps) {
 
   return (
     <Dialog header="Create Group" visible={props.isOpen} dismissableMask={false}
-      style={{ width: '50vw' }}
+      style={{ minWidth: '50vw' }}
       onHide={props.onResolve}
       footer={
         <div>

@@ -1,5 +1,7 @@
+use chrono::serde::ts_seconds_option;
 use std::{collections::HashMap, path::PathBuf};
 
+use chrono::{DateTime, Utc};
 use http_rest_file::model::{
     DataSource, DispositionField, Header as HttpRestFileHeader, HttpMethod, HttpRestFile,
     HttpRestFileExtension, HttpVersion, Multipart as HttpRestfileMultipart, Request,
@@ -13,6 +15,25 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Type, Default, Debug)]
 pub struct Workspace {
     pub collections: Vec<Collection>,
+}
+
+#[derive(Serialize, Deserialize, Type, Debug)]
+pub enum AppEnvironment {
+    DEVELOPMENT,
+    PRODUCTION,
+}
+
+type ISO8601 = String;
+
+#[derive(Serialize, Deserialize, Type, Default, Debug)]
+pub struct LicenseData {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub license_key: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub license_signature: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub license_start: Option<ISO8601>,
 }
 
 #[derive(Serialize, Deserialize, Type, Debug, Clone)]

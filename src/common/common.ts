@@ -1,5 +1,8 @@
 import { Collection, RequestTreeNode } from "../bindings";
 
+
+export const RELYNX_WEBSITE = "https://relynx.app";
+
 type SyntaxHighlightLanguage =
   "html" | "json" | "xml" | "text"
 
