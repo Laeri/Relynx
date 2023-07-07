@@ -186,9 +186,9 @@ fn main() {
     });
 
     let pub_key_path = if cfg!(debug_assertions) {
-        "resources/pub_key.development.pem"
+        "resources/dev.pub_key.pem"
     } else {
-        "resources/pub_key.production.pem"
+        "resources/prod.pub_key.pem"
     };
     if cfg!(debug_assertions) {
         let settings_resource_path = app

@@ -172,10 +172,6 @@ class Backend {
     return api.query(['is_signature_valid', licenseData]);
   }
 
-  getAppEnvironment(): Promise<AppEnvironment> {
-    return api.query(['get_app_environment'])
-  }
-
   logFrontendError(error: FError): Promise<void> {
     // @TODO: IMPLEMENT
     return Promise.resolve();
