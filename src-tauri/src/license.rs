@@ -1,3 +1,5 @@
+use std::io::Read;
+
 use crate::{
     config::get_data_dir,
     error::{DisplayErrorKind, FrontendError},
@@ -92,37 +94,39 @@ pub fn verify_signature(license_data: &LicenseData) -> Result<bool, FrontendErro
 
     let license_value = license_data.license_key.as_ref().unwrap();
     const CUSTOM_ENGINE: engine::GeneralPurpose =
-        engine::GeneralPurpose::new(&base64::alphabet::URL_SAFE, general_purpose::NO_PAD);
+        engine::GeneralPurpose::new(&base64::alphabet::STANDARD, general_purpose::PAD);
 
-    let base64_decoded_payload = Engine::decode(&CUSTOM_ENGINE, license_value).map_err(|err| {
+    let base64_decoded_payload = Engine::decode(&CUSTOM_ENGINE, license_value).map_err(|_err| {
         FrontendError::new_with_message(
             DisplayErrorKind::Generic,
-            "Could not calculate license signature",
+            "Could not calculate license signature. License value is not valid base64.",
         )
     })?;
 
-    let license_signature = hex::decode(license_data.license_signature.as_ref().unwrap()).unwrap();
-
-    let pub_key = get_license_pub_key().map_err(|err| {
+    let license_signature = Engine::decode(
+        &CUSTOM_ENGINE,
+        license_data.license_signature.as_ref().unwrap(),
+    )
+    .map_err(|_err| {
         FrontendError::new_with_message(
             DisplayErrorKind::Generic,
-            "Could not calculate license signature",
+            "Could not calculate license signature. License Signature is not valid base64.",
+        )
+    })?;
+
+    let pub_key = get_license_pub_key().map_err(|_err| {
+        FrontendError::new_with_message(
+            DisplayErrorKind::Generic,
+            "Could not calculate license signature. Public key is not present.",
         )
     })?;
 
     let pub_key = RsaPublicKey::from_pkcs1_pem(&pub_key).unwrap();
 
-    let signature_bytes = hex::decode(license_signature).map_err(|err| {
+    let signature = Signature::try_from(license_signature.as_slice()).map_err(|_err| {
         FrontendError::new_with_message(
             DisplayErrorKind::Generic,
-            "Could not calculate license signature",
-        )
-    })?;
-
-    let signature = Signature::try_from(signature_bytes.as_slice()).map_err(|err| {
-        FrontendError::new_with_message(
-            DisplayErrorKind::Generic,
-            "Could not calculate license signature",
+            "Could not calculate license signature. Signature is not in valid format.",
         )
     })?;
 
@@ -133,17 +137,17 @@ pub fn verify_signature(license_data: &LicenseData) -> Result<bool, FrontendErro
     }
 
     let decoded_payload_str =
-        std::str::from_utf8(base64_decoded_payload.as_slice()).map_err(|err| {
+        std::str::from_utf8(base64_decoded_payload.as_slice()).map_err(|_err| {
             FrontendError::new_with_message(
                 DisplayErrorKind::Generic,
-                "License signature can not be decoded",
+                "License signature can not be decoded. Payload cannot be converted into a string.",
             )
         })?;
 
-    let _ = serde_json::from_str::<License>(decoded_payload_str).map_err(|err| {
+    let _ = serde_json::from_str::<License>(decoded_payload_str).map_err(|_err| {
         FrontendError::new_with_message(
             DisplayErrorKind::Generic,
-            "License signature can not be decoded",
+            "License signature can not be decoded. Cannot convert payload to json.",
         )
     })?;
 

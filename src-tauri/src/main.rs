@@ -11,7 +11,6 @@ mod license;
 mod model;
 mod pathdiff;
 mod sanitize;
-mod serialize;
 mod tree;
 
 use commands::{

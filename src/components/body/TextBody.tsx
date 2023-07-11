@@ -1,23 +1,21 @@
-import { Button } from "primereact/button";
 import { Dropdown } from "primereact/dropdown";
-import { InputText } from "primereact/inputtext";
 import { InputTextarea } from "primereact/inputtextarea";
 import { useEffect, useState } from "react";
+import SyntaxHighlighter from "react-syntax-highlighter/dist/esm/default-highlight";
 import { RequestModel } from "../../bindings";
-import { catchError } from "../../common/errorhandling";
 import { DataSourceFromFilepath, DataSourceRaw, RequestBodyRaw } from "../../model/request"
-import { backend } from "../../rpc";
 import { RelynxState, useRequestModelStore } from "../../stores/requestStore";
-import { CopyToClipboard } from "../CopyToClipboard";
 import { Filepicker } from "../Filepicker";
 import { RawType } from "./RequestBodyComp";
+import { dracula } from "react-syntax-highlighter/dist/cjs/styles/hljs";
 
 interface ComponentProps {
   bodyText: RequestBodyRaw,
   bodyFile: RequestBodyRaw,
   rawType: RawType
   updateBody: (newBody: RequestBodyRaw) => void,
-  updateRawType: (newRawType: RawType) => void
+  updateRawType: (newRawType: RawType) => void,
+  contentType?: string
 }
 
 export const RawTypes: { text: "text", file: "file" } = {
@@ -43,6 +41,7 @@ export function TextBody(props: ComponentProps) {
   }, [props.bodyText, props.bodyFile]);
 
   const updateText = (newText: string) => {
+    setText(newText);
     let newBody = structuredClone(props.bodyText);
     newBody.Raw.data = { Raw: newText };
     props.updateBody(newBody);
@@ -61,9 +60,8 @@ export function TextBody(props: ComponentProps) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '30px', marginTop: '20px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '30px', marginTop: '10px' }}>
         <label>Source:</label>
-        <div>{props.rawType}</div>
         <Dropdown onChange={updateRawType} style={{ marginLeft: '10px' }} optionLabel={"name"} options={[optionText, optionFromFile]} value={
           (props.rawType === "text") ? optionText : optionFromFile}
         />
@@ -72,9 +70,11 @@ export function TextBody(props: ComponentProps) {
         (props.rawType == "text") &&
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
           <h4 style={{ marginBottom: '20px' }}>Text</h4>
-          <InputTextarea value={text} onChange={(e: any) => updateText(e.target.value)}
+          <InputTextarea  value={text} onChange={(e: any) => updateText(e.target.value)}
+            style={{ width: '100%' }}
             rows={80}
-            cols={100} autoResize={false} className={'json-body'} />
+            cols={70}
+            autoResize={true} className={'json-body'} />
         </div>
       }
       {

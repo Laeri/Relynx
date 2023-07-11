@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use crate::error::{DisplayErrorKind, FrontendError};
 use crate::model::{CollectionConfig, Workspace};
 use directories::ProjectDirs;
-use serde::{Deserialize, Serialize};
+
 
 pub const WORKSPACE_FILENAME: &str = "workspace.json";
 pub const COLLECTION_CONFIGFILE: &str = "relynx.collection.json";

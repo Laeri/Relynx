@@ -164,8 +164,8 @@ impl Client {
         self.set_cookies(&request_model.cookies());
         if let RequestBody::UrlEncoded { .. } = request_model.body {
             self.set_form_url_encoded(
-                &request_model
-                    .get_url_encoded_params_with_env(environment)
+                &dbg!(request_model
+                    .get_url_encoded_params_with_env(environment))
                     .unwrap(),
             );
         }
@@ -346,11 +346,11 @@ impl Client {
             Some(status_line) => self.parse_response_version(status_line)?,
         };
         let headers = self.parse_response_headers(&response_headers);
-        let length = response_body.len();
+        let _length = response_body.len();
         let certificate = if let Some(cert_info) = easy_ext::get_certinfo(&self.handle)? {
             match Certificate::try_from(cert_info) {
                 Ok(value) => Some(value),
-                Err(message) => {
+                Err(_message) => {
                     // @TODO:logger.error(format!("can not parse certificate - {message}").as_str());
                     None
                 }
@@ -538,7 +538,7 @@ impl Client {
     }
 
     /// Sets multipart form data.
-    fn set_multipart(&mut self, boundary: &str, parts: &[Multipart]) -> Result<(), HttpError> {
+    fn set_multipart(&mut self, _boundary: &str, parts: &[Multipart]) -> Result<(), HttpError> {
         let mut form = easy::Form::new();
         for part in parts {
             let contents = match part.data {
@@ -546,8 +546,8 @@ impl Client {
                     raw_data.as_bytes().to_vec()
                 }
                 http_rest_file::model::DataSource::FromFilepath(ref path) => {
-                    let result = std::fs::read(&std::path::PathBuf::from(path)).map_err(|err| {
-                        let msg = format!(
+                    let result = std::fs::read(&std::path::PathBuf::from(path)).map_err(|_err| {
+                        let _msg = format!(
                             "Could not read data of file: '{}'. Check if the file exists.",
                             path
                         );
@@ -574,7 +574,7 @@ impl Client {
             //@TODO what about this... .buffer(filename, data.clone())
             //                    .content_type(content_type)
 
-            curl_part.add().map_err(|err| HttpError::FormError)?;
+            curl_part.add().map_err(|_err| HttpError::FormError)?;
         }
 
         self.handle.httppost(form).unwrap();

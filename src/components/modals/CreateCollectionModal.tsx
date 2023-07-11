@@ -85,22 +85,23 @@ export function CreateCollectionModal(props: ComponentProps) {
         marginTop: '40px'
       }}>
 
-        <div style={{ display: 'flex', width: '100%', marginBottom: '20px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', width: '100%', flexDirection: "column", alignItems: 'flex-start', minHeight: '100px' }}>
+          <div style={{ display: 'flex', width: '100%', alignItems: 'center' }}>
+            <h3 style={{}}>Name</h3>
 
-          <h3 style={{}}>Name</h3>
+            <div style={{ display: "flex", flexDirection: "column", marginLeft: '20px', flexBasis: '60%' }}>
+              <InputText autoFocus={true} value={collectionName}
+                onChange={(e) => updateCollectionName(e.target.value)}
+              />
 
-          <div style={{ display: "flex", flexDirection: "column", marginLeft: '20px', flexBasis: '60%' }}>
-            <InputText autoFocus={true} value={collectionName}
-              onChange={(e) => updateCollectionName(e.target.value)}
-            />
-            {nameError !== '' &&
-              <span className={"invalid mt-2"} style={{ textAlign: 'left' }}>{nameError}</span>
-
-            }
+            </div>
           </div>
+          {nameError !== '' &&
+            <span className={"invalid mt-2"} style={{ textAlign: 'left' }}>{nameError}</span>
 
+          }
         </div>
-        <p style={{ marginTop: '20px' }}>Choose an empty folder for your new collection.</p>
+        <p style={{ textAlign: 'left' }}>Choose an folder for your new collection. Requests will be stored as files and each group will have its own subfolder.</p>
         <h3 style={{ marginTop: '30px', marginBottom: '20px' }}>Folder</h3>
         <div style={{ display: 'flex', width: '100%' }}>
           <Button label={"Choose Folder"}

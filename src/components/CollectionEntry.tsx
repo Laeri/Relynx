@@ -98,7 +98,7 @@ export function CollectionEntry(props: ComponentProps) {
               data-pr-position="right"
               data-pr-at="right+5 top"
               data-pr-my="left center-2"
-              style={{ fontSize: '1.5rem', marginRight: '30px', cursor: 'pointer' }}>
+              style={{ fontSize: '1.2rem', marginRight: '30px', cursor: 'pointer' }}>
             </i>
           </>
 

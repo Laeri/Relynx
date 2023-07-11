@@ -1,0 +1,2 @@
+# @name=Delete Product
+DELETE https://relynx.app/test/products?id=1

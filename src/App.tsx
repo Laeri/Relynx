@@ -118,7 +118,7 @@ function App() {
             <Routes>
               <Route element={<OverviewComponent />} path={"/"} />
 
-              <Route element={<RequestComponent />} path={"/collection/request"} />
+              <Route element={<RequestComponent key={1} />} path={"/collection/request"} />
               <Route element={<CollectionOverviewComponent />} path={"/collection"} />
               <Route element={<EnvironmentComponent />} path={"/collection/environment"} />
             </Routes>

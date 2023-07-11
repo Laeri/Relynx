@@ -217,19 +217,19 @@ pub fn save_environments(
 
     // @TODO: log error, env_file_structure?
     let env_file_content =
-        serde_json::to_string::<EnvFileStructure>(&env_file_structure).map_err(|err| {
+        serde_json::to_string::<EnvFileStructure>(&env_file_structure).map_err(|_err| {
             let msg = "Could not save environments to file";
             FrontendError::new_with_message(DisplayErrorKind::SaveEnvironmentsError, msg)
         })?;
 
     let private_env_file_content =
-        serde_json::to_string::<EnvFileStructure>(&private_env_file_structure).map_err(|err| {
+        serde_json::to_string::<EnvFileStructure>(&private_env_file_structure).map_err(|_err| {
             let msg = "Could not save environments to file";
             FrontendError::new_with_message(DisplayErrorKind::SaveEnvironmentsError, msg)
         })?;
 
     // @TODO: log error
-    std::fs::write(&env_path, env_file_content).map_err(|err| {
+    std::fs::write(&env_path, env_file_content).map_err(|_err| {
         let msg = format!(
             "Could not save environment to file: '{}'",
             env_path.to_string_lossy()
@@ -237,7 +237,7 @@ pub fn save_environments(
         FrontendError::new_with_message(DisplayErrorKind::SaveEnvironmentsError, msg)
     })?;
 
-    std::fs::write(&private_env_path, private_env_file_content).map_err(|err| {
+    std::fs::write(&private_env_path, private_env_file_content).map_err(|_err| {
         let msg = format!(
             "Could not save environment to file: '{}'",
             env_path.to_string_lossy()

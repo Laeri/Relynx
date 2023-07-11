@@ -1,7 +1,7 @@
 import { InputText } from "primereact/inputtext";
 import { Checkbox } from 'primereact/checkbox';
 import { Button } from "primereact/button";
-import { Ref, useRef, useState } from "react";
+import { Ref, useEffect, useRef, useState } from "react";
 import { Mention } from "primereact/mention";
 import { Environment, EnvironmentVariable, EnvironmentSecret } from '../bindings';
 

@@ -4,20 +4,18 @@ import { backend } from "../rpc";
 export const checkLicenseStringValid = (license: string): Promise<boolean> => {
   return new Promise<boolean>((resolve: any, reject: any) => {
     let licenseData = splitLicense(license);
+    console.log('license data: ', licenseData);
     if (licenseData === undefined || licenseData === null) {
       resolve(false);
       return
     }
-    checkLicenseDataValid(licenseData).then((result: boolean) => {
-      resolve(result)
-    }).catch(() => {
-      reject();
-    });
+    checkLicenseDataValid(licenseData).then((result: boolean) => resolve(result)).catch((err) => reject(err));
   });
 };
 
 export const checkLicenseDataValid = (licenseData: LicenseData): Promise<boolean> => {
   return new Promise<boolean>((resolve: any, reject: any) => {
+    console.log('licensedata valid fn: ', licenseData)
     if (licenseData === undefined) {
       resolve(false);
       return;
@@ -30,10 +28,9 @@ export const checkLicenseDataValid = (licenseData: LicenseData): Promise<boolean
       resolve(false);
       return;
     }
-    return backend.isSignatureValid(licenseData);
+    backend.isSignatureValid(licenseData).then((result: boolean) => resolve(result)).catch((err) => reject(err));
   });
 };
-
 
 
 export const splitLicense = (license: string): LicenseData | undefined => {

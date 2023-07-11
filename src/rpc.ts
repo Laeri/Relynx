@@ -40,14 +40,11 @@ class Backend {
   }
 
   addExistingCollections(path: string, workspace: Workspace): Promise<AddCollectionsResult> {
-    let result = api.query(['add_existing_collections', { path, workspace }]);
-    console.log("RESULT: ", result);
-    return result;
+    return api.query(['add_existing_collections', { path, workspace }]);
   }
 
   loadRequestsForCollection(collection: Collection): Promise<LoadRequestsResult> {
-    let result = api.query(['load_requests_for_collection', collection])
-    return result;
+    return api.query(['load_requests_for_collection', collection])
   }
 
   loadEnvironments(collectionPath: string): Promise<Environment[]> {
@@ -71,23 +68,17 @@ class Backend {
   runRequest(runRequestCommand: RunRequestCommand, cancellationToken: CancellationToken): Promise<RequestResult> {
     return new Promise((resolve, reject) => {
       if (cancellationToken.cancelled) {
-        console.log('cancelled');
         return
       }
       api.query(['run_request', runRequestCommand]).then((result: RequestResult) => {
-        console.log('RESULT: ', result)
         if (cancellationToken.cancelled) {
-          console.log('cancelled');
           return
         }
-        console.log('resolved');
         resolve(result);
       }).catch((cancel_val: any) => {
         if (cancellationToken.cancelled) {
-          console.log('cancelled');
           return
         }
-        console.log('resolved')
         reject(cancel_val)
       });
     });

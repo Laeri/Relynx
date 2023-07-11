@@ -78,7 +78,7 @@ export function RequestBodyComp(props: ComponentProps) {
 
   useEffect(() => {
     updateBodyType();
-  }, [props.request]);
+  }, [props.request.id]);
 
   const updateContentType = (newType: BodyType, newRequest: RequestModel) => {
     let newMimeType = toMimeType(newType);
@@ -112,17 +112,24 @@ export function RequestBodyComp(props: ComponentProps) {
       return
     }
     if (newType === BodyTypes.form_urlencoded) {
+      console.log('new type');
       // @TODO
+      setHeader(newRequest, { key: "Content-Type", value: "application/x-www-form-urlencoded", active: true });
+      newRequest.body = binaryFileBody;
+      props.updateRequest(newRequest);
+      return
     }
 
     if (newType === BodyTypes.binary_file) {
       newRequest.body = binaryFileBody;
-      props.updateRequest;
+      props.updateRequest(newRequest);
       return
     }
 
     if (newType === BodyTypes.no_body) {
       newRequest.body = "None";
+      // if we change to no body we remove the content type header
+      newRequest.headers = newRequest.headers.filter((header: Header) => header.key.toLowerCase() == "Content-Type");
       props.updateRequest(newRequest);
     }
 
@@ -189,12 +196,13 @@ export function RequestBodyComp(props: ComponentProps) {
       {
         < div className="headers-block" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }
         }>
-          <h2>Body</h2>
-          <BodySelectMenu style={{ marginTop: '40px', marginBottom: '20px' }} currentType={currentBodyType} setNewType={(newType: BodyType, isText: boolean) => updateType(newType, isText)} />
+          <h2 style={{display: 'flex', alignItems: 'center'}}>Body <BodySelectMenu style={{ marginLeft: '20px' }} currentType={currentBodyType} setNewType={(newType: BodyType, isText: boolean) => updateType(newType, isText)} />
+          </h2>
+
           <Divider type="solid" />
           {
             (TextBodyTypes.includes(currentBodyType)) &&
-            <TextBody updateRawType={updateRawType} bodyFile={rawTextFileBody} bodyText={rawTextBody} rawType={rawType} updateBody={updateRawBody} />
+            <TextBody contentType={get_content_type(props.request)} updateRawType={updateRawType} bodyFile={rawTextFileBody} bodyText={rawTextBody} rawType={rawType} updateBody={updateRawBody} />
           }
           {
             (currentBodyType === BodyTypes.form_urlencoded) &&

@@ -96,6 +96,10 @@ main {
     width: 33%;
 }
 
+.main-card .p-card-title {
+  min-height: 50px;
+}
+
 
 /* Scroll inner part of request tree without the search bar !*/
 .request-tree.p-tree {

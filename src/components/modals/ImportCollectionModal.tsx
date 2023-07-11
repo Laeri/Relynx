@@ -52,7 +52,7 @@ export function ImportCollectionModal(props: ComponentProps) {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'flex-start',
-        marginBottom: '10px',
+        marginBottom: '0px',
         marginTop: '0px'
       }}>
         <h3 style={{ marginTop: '30px', marginBottom: '20px' }}>Import type</h3>
@@ -66,9 +66,9 @@ export function ImportCollectionModal(props: ComponentProps) {
             <label htmlFor="jetbrains-http-rest" style={{ marginLeft: '20px' }} >Jetbrains Folder (containing .http or .rest files)</label>
           </div>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', marginTop: '30px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', marginTop: '40px' }}>
           <h3>Collection Name</h3>
-          <p style={{ marginTop: '20px' }}>Choose a name for your import collection</p>
+          <p style={{ marginTop: '10px' }}>Choose a name for your import collection</p>
           <InputText style={{ marginTop: '10px' }} value={collectionName} onChange={(e: any) => { updateCollectionName(e.target.value) }} />
         </div>
         <div style={{marginTop: '10px', minHeight: '30px'}}>

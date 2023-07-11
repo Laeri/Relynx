@@ -39,11 +39,11 @@ export type Procedures = {
 
 export type RequestModel = { id: string; name: string; description: string; method: HttpMethod; url: string; query_params: QueryParam[]; headers: Header[]; body: RequestBody; rest_file_path: string; http_version: Replaced<HttpVersion>; settings: RequestSettings; redirect_response: RedirectResponse }
 
-export type LicenseData = { license_key?: string | null; license_signature?: string | null; license_start?: string | null }
-
 export type ValidateGroupNameParams = { old_path: string; new_name: string }
 
 export type ReorderNodesParams = { collection: Collection; drag_node: RequestTreeNode; drop_node: RequestTreeNode; drop_index: number }
+
+export type LicenseData = { license_key?: string | null; license_signature?: string | null; license_start?: string | null }
 
 export type SaveEnvironmentsParams = { collection_path: string; environments: Environment[] }
 

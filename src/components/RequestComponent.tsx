@@ -54,7 +54,6 @@ export function RequestComponent(_props: ComponentProps) {
 
   const [nameError, setNameError] = useState<string | undefined>(undefined);
 
-
   const [tmpRequestName, setTmpRequestName] = useState<string>('');
 
   const [importWarnings, setImportWarnings] = useState<ImportWarning[]>([]);
@@ -67,8 +66,14 @@ export function RequestComponent(_props: ComponentProps) {
 
   const [resultHistory, setResultHistory] = useState<RequestResult[]>([]);
 
+  const [url, setUrl] = useState<string>();
 
   useEffect(() => {
+    console.log("DEBUG REQUESTCOMPONENT");
+  }, [])
+
+  useEffect(() => {
+    console.log("REGULAR USE EFFECt REQUESTCOMPONENT");
     setIsSendingRequest(false);
     setCancelToken({ cancelled: true });
     setResultHistory([]);
@@ -86,7 +91,8 @@ export function RequestComponent(_props: ComponentProps) {
     });
     setImportWarnings(importWarnings);
     // @TODO: setOverwriteResponseFile(currentRequest.)
-  }, [currentRequest]);
+    setUrl(currentRequest.url);
+  }, [currentRequest.id]);
 
   // send request data to backend and perform libcurl request
   function doRequest() {
@@ -137,7 +143,6 @@ export function RequestComponent(_props: ComponentProps) {
     setCancelToken(newCancelToken);
     backend.runRequest(backendRequest, newCancelToken).then((result: RequestResult) => {
       if (newCancelToken.cancelled) {
-        console.log('cancelled late')
         return
       }
       setRequestResult(result);
@@ -210,6 +215,7 @@ export function RequestComponent(_props: ComponentProps) {
   function updateUrl(url: string) {
     let newRequest = updatedRequestModel(currentRequest, { url: url });
     updateRequest(newRequest);
+    setUrl(url);
   }
 
   function updateDescription(description: string) {
@@ -395,14 +401,10 @@ export function RequestComponent(_props: ComponentProps) {
             onChange={(e) => updateRequestType(e.value)} />
         </div>
 
-        <InputText value={currentRequest.url} onChange={(e) => updateUrl(e.target.value)} placeholder={"Url"}
+        <InputText value={url} onChange={(e) => updateUrl(e.target.value)} placeholder={"Url"}
           style={{ maxWidth: '300px', marginLeft: '20px', flexGrow: 1 }} disabled={isSendingRequest} />
         <SendRequestButton style={{ marginLeft: '20px' }} isSendingRequest={isSendingRequest} cancelRequest={cancelCurrentRequest} doRequest={doRequest} disabled={isSendingRequest || currentRequest.url == ""} />
       </div>
-      <Button label="Show Result" style={{ marginTop: '20px', display: 'flex', alignItems: 'center' }} icon={isSendingRequest ? "pi pi-spin pi-spinner" : "pi pi-chevron-down"} onClick={showResult} text />
-      <Dialog header="Result" closeOnEscape={true} maximizable={true} dismissableMask={true} visible={resultVisible} style={{ width: '70vw' }} onHide={() => setResultVisible(false)}>
-        <ResultDisplay sendRequest={doRequest} cancelRequest={cancelCurrentRequest} requestSendDisabled={isSendingRequest || currentRequest.url == ""} isSendingRequest={isSendingRequest} clearResult={clearResult} requestResult={requestResult} resultHistory={resultHistory} />
-      </Dialog>
 
       {
         isCustomMethod(currentRequest.method) &&
@@ -412,6 +414,11 @@ export function RequestComponent(_props: ComponentProps) {
 
         </div>
       }
+
+      <Button label="Show Result" style={{ marginTop: '20px', display: 'flex', alignItems: 'center' }} icon={isSendingRequest ? "pi pi-spin pi-spinner" : "pi pi-chevron-down"} onClick={showResult} text />
+      <Dialog header="Result" closeOnEscape={true} maximizable={true} dismissableMask={true} visible={resultVisible} style={{ width: '70vw' }} onHide={() => setResultVisible(false)}>
+        <ResultDisplay sendRequest={doRequest} cancelRequest={cancelCurrentRequest} requestSendDisabled={isSendingRequest || currentRequest.url == ""} isSendingRequest={isSendingRequest} clearResult={clearResult} requestResult={requestResult} resultHistory={resultHistory} />
+      </Dialog>
 
       {
         importWarnings.length > 0 &&
@@ -489,10 +496,9 @@ export function RequestComponent(_props: ComponentProps) {
             </div>
           </TabPanel>
 
-          <TabPanel header="Body">
+          <TabPanel header={"Body"}>
             <RequestBodyComp updateRequest={updateRequest} request={currentRequest} />
           </TabPanel>
-
 
           <TabPanel header="Description">
             <div className="headers-block" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>

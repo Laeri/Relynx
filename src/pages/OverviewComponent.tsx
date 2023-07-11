@@ -8,8 +8,8 @@ import { AddCollectionsResult, LicenseData } from "../bindings";
 import { TrialModal } from "../components/modals/TrialModal";
 import { backend } from "../rpc";
 import { catchError } from "../common/errorhandling";
-import { create } from "react-modal-promise";
-import { checkLicenseDataValid, checkLicenseStringValid } from "../common/license";
+import { checkLicenseDataValid } from "../common/license";
+import { Message } from "primereact/message";
 
 
 export interface ComponentProps {
@@ -25,16 +25,26 @@ export function OverviewComponent(props: ComponentProps) {
 
   const workspace = useRequestModelStore((state: RelynxState) => state.workspace);
 
+  // if the trial modal has been shown already this session
+  // within the trial period a user can click away the modal and it should not be shown every time they open the
+  // overview again
   const trialShown = useRequestModelStore((state: RelynxState) => state.trialShown);
   const setTrialShown = useRequestModelStore((state: RelynxState) => state.setTrialShown);
+  // after a few days the trial is not valid anymore, in this case entering license key is forced 
   const [isTrialValid, setIsTrialValid] = useState<boolean>(true);
+
+  // license data which is saved in data directory and is checked every time the application is opened
   const [licenseData, setLicenseData] = useState<LicenseData | undefined>(undefined);
+
+  // if true then the trial modal is opened
   const [showTrial, setShowTrial] = useState<boolean>(false);
+
+  // if just activated we show a thank you message
+  const [justActivated, setJustActivated] = useState<boolean>(true);
 
   const updateLicenseData = (newLicenseData: LicenseData) => {
     return backend.saveLicenseData(newLicenseData)
   }
-
 
   // Check license
   useEffect(() => {
@@ -69,8 +79,6 @@ export function OverviewComponent(props: ComponentProps) {
           console.log(diffTime + " milliseconds");
           console.log(diffDays + " days");
         }
-
-        console.log('is trial valid: ', isTrialValid);
 
         setTrialShown();
         setShowTrial(true);
@@ -111,7 +119,11 @@ export function OverviewComponent(props: ComponentProps) {
         </p>
       }
 
-      <TrialModal updateLicenseData={updateLicenseData} licenseData={licenseData} isTrialValid={isTrialValid} isOpen={showTrial} onResolve={() => setShowTrial(false)} onReject={() => { }} />
+      <TrialModal setActivated={() => setJustActivated(true)} updateLicenseData={updateLicenseData} licenseData={licenseData} isTrialValid={isTrialValid} isOpen={showTrial} onResolve={() => setShowTrial(false)} onReject={() => { }} />
+
+      {
+        justActivated && <Message style={{marginTop: '40px'}} severity="success" text="Your license has been activated successfully! Thank you for using Relynx! If you have any suggestions or feedback in general please write an email to info@relynx.app." />
+      }
 
       <div style={{ marginTop: '50px', display: 'flex', justifyContent: 'space-between', width: '100%' }}>
         <Card title={<><i className={"pi pi-pencil mr-2"} />New Collection</>}
