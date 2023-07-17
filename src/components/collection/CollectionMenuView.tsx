@@ -1,16 +1,16 @@
-import { useRequestModelStore } from "../stores/requestStore";
+import { useRequestModelStore } from "../../stores/requestStore";
 import { useContext, useEffect, useState } from "react";
 import { Button } from "primereact/button";
-import { PrimeNode, } from "../common/treeUtils";
-import { ToastContext } from "../App";
-import { createNewRequestNode } from "../common/requestUtils";
-import { createNewGroupNode, RequestTreeComponent } from "./RequestTreeComponent";
+import { PrimeNode, } from "../../common/treeUtils";
+import { ToastContext } from "../../App";
+import { createNewRequestNode } from "../../common/requestUtils";
+import { createNewGroupNode, RequestTreeComponent } from "../RequestTreeComponent";
 import { CollectionInfo } from "./CollectionInfo";
-import { Collection, RequestTree, RequestTreeNode } from "../bindings";
+import { Collection, RequestTree, RequestTreeNode } from "../../bindings";
 //
-import { backend } from '../rpc';
-import { LoadRequestsResult } from "../bindings";
-import { catchError, formatParseErrorsMsg } from "../common/errorhandling";
+import { backend } from '../../rpc';
+import { LoadRequestsResult } from "../../bindings";
+import { catchError, formatParseErrorsMsg } from "../../common/errorhandling";
 import { ProgressSpinner } from "primereact/progressspinner";
 
 interface ComponentProps {

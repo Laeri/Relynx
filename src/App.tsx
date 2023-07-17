@@ -1,5 +1,5 @@
 import './App.css';
-import React, { createContext, Ref, useContext, useEffect, useRef } from 'react';
+import { createContext, Ref, useContext, useEffect, useRef } from 'react';
 import 'primereact/resources/primereact.min.css';
 import '../node_modules/primeicons/primeicons.css';
 import './theme.css';
@@ -12,9 +12,9 @@ import { Navbar } from './components/Navbar';
 import { ConfirmPopup } from 'primereact/confirmpopup';
 import { Container as ModalContainer } from 'react-modal-promise';
 import { RequestComponent } from './components/RequestComponent';
-import { CollectionOverviewComponent } from './components/CollectionOverviewComponent';
 import { backend } from './rpc';
 import { EnvironmentComponent } from './components/EnvironmentComponent';
+import { CollectionOverviewComponent } from './components/collection/CollectionOverviewComponent';
 
 export interface ToastContext {
   toast: Ref<any>,

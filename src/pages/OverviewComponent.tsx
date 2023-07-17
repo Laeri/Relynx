@@ -40,7 +40,7 @@ export function OverviewComponent(props: ComponentProps) {
   const [showTrial, setShowTrial] = useState<boolean>(false);
 
   // if just activated we show a thank you message
-  const [justActivated, setJustActivated] = useState<boolean>(true);
+  const [justActivated, setJustActivated] = useState<boolean>(false);
 
   const updateLicenseData = (newLicenseData: LicenseData) => {
     return backend.saveLicenseData(newLicenseData)

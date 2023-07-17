@@ -102,8 +102,10 @@ export function RequestComponent(_props: ComponentProps) {
       environment: null  //@TODO: check
     }
 
+      console.log('current env: ', currentEnvironment);
     // filter out variables with duplicated key names (keep the first one)
     if (currentEnvironment) {
+      console.log('current env if: ', currentEnvironment);
       let backendEnvironment = structuredClone(currentEnvironment);
 
       // @TODO: check

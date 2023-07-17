@@ -1,17 +1,17 @@
 import { useContext, useEffect, useState } from "react";
-import { useRequestModelStore } from "../stores/requestStore";
-import { ToastContext } from "../App";
-import { RequestModel, Collection, RequestTree, Environment } from '../bindings';
+import { useRequestModelStore } from "../../stores/requestStore";
+import { ToastContext } from "../../App";
+import { RequestModel, Collection, RequestTree, Environment } from '../../bindings';
 import { Button } from "primereact/button";
-import { createNewRequestNode } from "../common/requestUtils";
-import { createNewGroupNode } from "./RequestTreeComponent";
-import { backend } from '../rpc';
+import { createNewRequestNode } from "../../common/requestUtils";
+import { createNewGroupNode } from "../RequestTreeComponent";
+import { backend } from '../../rpc';
 import { CollectionInfo } from "./CollectionInfo";
 import { InputTextarea } from "primereact/inputtextarea";
-import { catchError } from "../common/errorhandling";
+import { catchError } from "../../common/errorhandling";
 import { Accordion, AccordionTab } from "primereact/accordion";
-import { WarningCollapsible } from "./WarningCollapsible";
-import { getAllRequestsFromTree } from "../common/treeUtils";
+import { WarningCollapsible } from "../WarningCollapsible";
+import { getAllRequestsFromTree } from "../../common/treeUtils";
 
 export interface ComponentProps {
 }

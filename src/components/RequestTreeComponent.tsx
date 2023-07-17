@@ -8,7 +8,7 @@ import {
   reorderReplace,
   requestTreeToPrimeNodes
 } from "../common/treeUtils";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useState } from "react";
 import { catchError, displayAndLogErr } from "../common/errorhandling";
 import { NewFError } from "../model/error";
 import { ToastContext } from "../App";

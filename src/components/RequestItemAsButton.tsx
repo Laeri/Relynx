@@ -22,12 +22,14 @@ export function RequestItemAsButton(props: ComponentProps) {
   const importWarnMessage = useRef<OverlayPanel>(null);
   return (
     <Button onClick={props.onClick}
-      className={"p-button-raised p-button-text" + (props.highlighted ? 'p-button-secondary' : '')}
+      raised={true}
+      text={true}
+      className={(props.highlighted ? 'p-button-secondary' : '')}
       style={{ display: 'flex', flexGrow: 1, paddingLeft: '3px', paddingRight: '3px' }}
       key={props.requestId}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
         <Tag value={requestMethodToString(props.requestModel.method)} />
-        <span style={{ flexGrow: 1 }}>{props.label}</span>
+        <span style={{ flexGrow: 1, textAlign: 'start', marginLeft: '10px' }}>{props.label}</span>
         {props.importWarnings.length > 0 &&
           <>
             <div

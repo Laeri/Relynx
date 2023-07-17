@@ -1,8 +1,8 @@
 import { Button } from "primereact/button";
 import { useRequestModelStore } from "../stores/requestStore";
 import { SlideMenu } from "./SlideMenu";
-import { CollectionMenuView } from "./CollectionMenuView";
-import { CollectionEntry } from "./CollectionEntry";
+import { CollectionMenuView } from "./collection/CollectionMenuView";
+import { CollectionEntry } from "./collection/CollectionEntry";
 import { Collection } from "../bindings";
 import { Route, Routes, useLocation, useNavigate } from "react-router";
 import { useState } from "react";

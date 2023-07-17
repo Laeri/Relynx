@@ -1,7 +1,0 @@
-# @name=New Product
-POST https://relynx.app/test/product
-Content-Type: application/json
-
-{
-  "name": "A name"
-}

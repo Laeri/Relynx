@@ -156,7 +156,7 @@ impl Client {
 
         self.set_ssl_options(options.ssl_no_revoke);
 
-        let url = dbg!(request_model.get_url_with_env(environment)); //self.generate_url(&request_spec.url, &""); // @TODO: what do we do with our
+        let url = dbg!(request_model.get_url_with_env(dbg!(environment))); //self.generate_url(&request_spec.url, &""); // @TODO: what do we do with our
                                                                      // query string?
         self.handle.url(url.as_str()).unwrap();
         let method = &request_model.method;

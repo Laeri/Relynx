@@ -1,15 +1,15 @@
 import { InputText } from "primereact/inputtext";
 import { Button } from "primereact/button";
-import { backend } from '../rpc';
+import { backend } from '../../rpc';
 import { Dropdown } from "primereact/dropdown";
 import { useContext } from "react";
-import { useRequestModelStore } from "../stores/requestStore";
-import { catchError } from "../common/errorhandling";
-import { ToastContext } from "../App";
+import { useRequestModelStore } from "../../stores/requestStore";
+import { catchError } from "../../common/errorhandling";
+import { ToastContext } from "../../App";
 import { useLocation, useNavigate } from "react-router";
-import { Collection, Environment } from '../bindings';
-import { environmentsToOptions, envDropdownStyle } from "../model/environment";
-import { newWorkspace } from '../model/model';
+import { Collection, Environment } from '../../bindings';
+import { environmentsToOptions, envDropdownStyle } from "../../model/environment";
+import { newWorkspace } from '../../model/model';
 
 export interface ComponentProps {
   collection: Collection
@@ -83,7 +83,7 @@ export function CollectionInfo(props: ComponentProps) {
             alignItems: 'center',
             marginTop: '10px',
           }}>
-            <InputText  disabled={false} value={props.collection.path}
+            <InputText disabled={false} value={props.collection.path}
               style={{ height: '30px', flexShrink: 1, minWidth: 0, direction: 'rtl' }} />
             <Button icon="pi pi-folder-open" className={"p-button-text"}
               tooltip={`Open folder: ${props.collection.path}`}
