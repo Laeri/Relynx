@@ -29,8 +29,6 @@ export function ImportCollectionModal(props: ComponentProps) {
   const updateCollectionName = (newName: string) => {
     setCollectionName(newName);
     let nameExists = workspace.collections.some((col: Collection) => col.name === newName);
-    console.log('name exists', workspace.collections);
-    console.log('new name: ', newName);
     setNameExists(nameExists);
   }
 

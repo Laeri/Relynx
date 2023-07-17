@@ -124,9 +124,13 @@ export function KeyValueRow(props: ComponentProps) {
             title={"Active"}></Checkbox>
 
         }
-        <Button onClick={props.remove} icon="pi pi-times"
-          className="p-button-rounded p-button-danger p-button-text" aria-label="Cancel"
-          style={{ width: '10%' }} />
+        <div style={{ width: '10%' }}>
+          <Button onClick={props.remove} icon="pi pi-times"
+            title="Remove"
+            text={true}
+            className="p-button-danger" aria-label="Remove"
+          />
+        </div>
       </div>
     </div>
   )

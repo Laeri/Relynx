@@ -15,6 +15,7 @@ import { RequestComponent } from './components/RequestComponent';
 import { backend } from './rpc';
 import { EnvironmentComponent } from './components/EnvironmentComponent';
 import { CollectionOverviewComponent } from './components/collection/CollectionOverviewComponent';
+import { catchError } from './common/errorhandling';
 
 export interface ToastContext {
   toast: Ref<any>,
@@ -47,7 +48,6 @@ function App() {
     backend.isSignatureValid({ license_key: "", license_signature: "" });;
     backend.loadWorkspace()
       .then((workspace: Workspace) => {
-        console.log('HERE: ', workspace)
         updateWorkspace(workspace);
 
         // checkLicenseAndContinue = () => {
@@ -61,7 +61,7 @@ function App() {
         //     })
         //   }
         // }
-      }).catch((err: any) => { console.log('CATCH ERR err', err) });
+      }).catch(catchError)
   }, []);
 
 

@@ -112,7 +112,6 @@ export function RequestBodyComp(props: ComponentProps) {
       return
     }
     if (newType === BodyTypes.form_urlencoded) {
-      console.log('new type');
       // @TODO
       setHeader(newRequest, { key: "Content-Type", value: "application/x-www-form-urlencoded", active: true });
       newRequest.body = binaryFileBody;

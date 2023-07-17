@@ -41,17 +41,13 @@ export function EditCollectionNameModal(props: ComponentProps) {
     collection.name = collectionName;
     backend.updateWorkspace(newWorkspace)
       .then(() => {
-        console.log('we are in then');
         updateWorkspaceStore(newWorkspace);
         props.onResolve(collectionName);
       }).catch(catchError);
   }
 
   const updateAndValidateGroupName = (name: string) => {
-    console.log("NAMES", workspace.collections.map((col: Collection) => col.name));
-    console.log("current Name", name);
     let existsAlready = workspace.collections.some((collection: Collection) => { return collection.name == name });
-    console.log('exists already', existsAlready);
     setNameExists(existsAlready);
     setCollectionName(name);
   }

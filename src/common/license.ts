@@ -4,7 +4,6 @@ import { backend } from "../rpc";
 export const checkLicenseStringValid = (license: string): Promise<boolean> => {
   return new Promise<boolean>((resolve: any, reject: any) => {
     let licenseData = splitLicense(license);
-    console.log('license data: ', licenseData);
     if (licenseData === undefined || licenseData === null) {
       resolve(false);
       return
@@ -15,7 +14,6 @@ export const checkLicenseStringValid = (license: string): Promise<boolean> => {
 
 export const checkLicenseDataValid = (licenseData: LicenseData): Promise<boolean> => {
   return new Promise<boolean>((resolve: any, reject: any) => {
-    console.log('licensedata valid fn: ', licenseData)
     if (licenseData === undefined) {
       resolve(false);
       return;

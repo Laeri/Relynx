@@ -53,7 +53,6 @@ export const openAddExistingCollectionsModal = (workspace: Workspace, toast: Toa
     }
 
     return backend.addExistingCollections(result.collectionPath, workspace).then((result: AddCollectionsResult) => {
-      console.log("RESULT 2 ", JSON.parse(JSON.stringify(result.workspace)));
       if (result.num_imported == 0) {
         toast.showWarn("No results found", "No collections found that can be imported. Try another location.");
         return { workspace: result.workspace, any_collections_found: false, num_imported: 0, errored_collections: result.errored_collections } as AddCollectionsResult
@@ -113,16 +112,12 @@ const doJetbrainsHttpImport = (toast: ToastContext, workspace: Workspace, collec
     return <ImportJetbrainsHttpFolder isOpen={isOpen} onResolve={onResolve} onReject={onReject} />
   });
 
-  console.log('the jetbrains modal');
   jetbrainsImportModal().then((result?: { collectionPath: string}) => {
-    console.log('jetbrains then: ', result);
     if (!result) {
       return
     }
-    console.log('do backend start');
     // TODO: what about the name?
     backend.importJetbrainsFolder(workspace, result.collectionPath, collectionName).then((newWorkspace: Workspace) => {
-      console.log('imported: ', newWorkspace)
       const updateWorkspaceInStore = useRequestModelStore.getState().updateWorkspace;
       updateWorkspaceInStore(newWorkspace);
       toast.showSuccess(`Collection: '${collectionName}' has been imported`, "")
@@ -142,16 +137,13 @@ export const openImportCollectionModal = (workspace: Workspace) => {
   });
 
   importCollectionModal().then((result?: { importType: ImportType, collectionName: string}) => {
-    console.log('RESULT importCollectionModal selection: ', result);
     if (!result) {
       return
     }
 
     if (result.importType === ImportType.Postman) {
-      console.log('do postman');
       doPostmanImport(toast, workspace, result.collectionName);
     } else if (result.importType === ImportType.JetbrainsHttpRest) {
-      console.log('jetbrains import')
       doJetbrainsHttpImport(toast, workspace, result.collectionName);
     }
   }).catch(catchError(toast))

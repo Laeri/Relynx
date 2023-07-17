@@ -79,7 +79,6 @@ export function SingleMultipart(props: ComponentProps) {
 
   const chooseMultipartFile = () => {
     backend.chooseFileRelativeTo(currentRequest?.rest_file_path).then((file: string) => {
-      console.log('file selected: ', file);
       updateFromFilepath(file);
     }).catch(catchError);
   }

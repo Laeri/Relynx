@@ -36,7 +36,7 @@ export function ImportJetbrainsHttpFolder(props: ComponentProps) {
           <Button label="Cancel" icon="pi pi-times" className={'p-button-secondary p-button-text'}
             onClick={() => props.onResolve()} />
           <Button label="Import" icon="pi pi-check" onClick={() => {
-            console.log('onne resolve'); props.onResolve({
+            props.onResolve({
               collectionPath: jetbrainsFolder,
               collectionName: collectionName
             })

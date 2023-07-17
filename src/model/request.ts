@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 
-import { RequestModel, RequestBody, HttpMethod, Environment, Header, DataSource, Multipart, UrlEncodedParam } from '../bindings';
+import { RequestModel, RequestBody, HttpMethod, Environment, Header, DataSource, Multipart, UrlEncodedParam, QueryParam } from '../bindings';
+import { QueryParams } from '../components/QueryParams';
 import { DEFAULT_HTTP_VERSION, newQueryParam, newRequestHeader, newRequestSettings, newEnvironment } from './model';
 
 
@@ -209,4 +210,76 @@ export function setHeader(request: RequestModel, header: Header) {
   }
 }
 
+function searchParamsToQueryParams(urlParams: URLSearchParams): QueryParam[] {
+  return Array.from(urlParams.entries()).map(([key, value]: [string, string]) => {
+    let param: QueryParam = {
+      key: key,
+      value: value,
+      active: true
+    }
+    return param;
+  });
+}
+
+function queryParamsToString(queryParams: QueryParam[]): string {
+  return queryParams.map((queryParam: QueryParam) => {
+    return queryParam.key + "=" + queryParam.value;
+  }).join("&")
+}
+
+export function changeUrlParams(url: string, oldParam: QueryParam | undefined, newParam: QueryParam | undefined): string {
+  let urlSplit = url.split("?");
+  if (urlSplit.length == 1) {
+    urlSplit = [url, ""];
+  }
+
+  let searchQuery = new URLSearchParams(urlSplit[1]);
+  let queryParams = searchParamsToQueryParams(searchQuery);
+  // change url param
+  if (oldParam && newParam) {
+    let index = queryParams.findIndex((param: QueryParam) => param.key === oldParam.key);
+    if (index !== -1) {
+      queryParams[index] = newParam;
+    }
+
+    // remove param
+  } else if (oldParam && !newParam) {
+    let index = queryParams.findIndex((param: QueryParam) => param.key === oldParam.key);
+    if (index !== -1) {
+      queryParams.splice(index, 1);
+    }
+    // remove url param
+  } else if (!oldParam && newParam) {
+    queryParams.push(newParam);
+  }
+
+  if (queryParams.length > 0) {
+    let queryString = queryParamsToString(queryParams);
+    return urlSplit[0] + "?" + queryString;
+  } else {
+    return urlSplit[0];
+  }
+}
+
+export function changeRequestUrlParams(request: RequestModel, oldParam: QueryParam | undefined, newParam: QueryParam | undefined) {
+  let url = changeUrlParams(request.url, oldParam, newParam);
+  request.url = url;
+  let queryParams = extractQueryParamsFromUrl(request);
+  request.query_params = queryParams;
+}
+
+export function extractQueryParamsFromUrl(request: RequestModel): QueryParam[] {
+  try {
+    let url = new URL(request.url);
+    return searchParamsToQueryParams(url.searchParams);
+  } catch (err) {
+    let split = request.url.split("?");
+    if (split.length > 1) {
+      let searchQuery = new URLSearchParams(split[1]);
+      return searchParamsToQueryParams(searchQuery);
+    } else {
+      return []
+    }
+  }
+}
 

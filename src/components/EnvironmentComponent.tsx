@@ -130,7 +130,6 @@ export function EnvironmentComponent(_props: ComponentProps) {
 
     deleteConfirmDialog().then((currentEnvironment?: Environment) => {
       deleteDialogVisible = false;
-      console.log('here')
       if (!currentEnvironment) {
         return
       }

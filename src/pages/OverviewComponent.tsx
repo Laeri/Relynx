@@ -48,7 +48,6 @@ export function OverviewComponent(props: ComponentProps) {
 
   // Check license
   useEffect(() => {
-    console.log('use effect');
     backend.loadLicenseData().then((licenseData: LicenseData) => {
       checkLicenseDataValid(licenseData).then((isValid: boolean) => {
         if (isValid) {
@@ -69,15 +68,12 @@ export function OverviewComponent(props: ComponentProps) {
 
         } else {
           let trialStartDate = Date.parse(licenseData.license_start);
-          console.log('TRIAL START DATE: ', trialStartDate);
           let now = Date.now();
           const diffTime = Math.abs(now - trialStartDate);
           const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
           let trialDays = 3;
           let isTrialValid = diffDays < trialDays;
           setIsTrialValid(isTrialValid);
-          console.log(diffTime + " milliseconds");
-          console.log(diffDays + " days");
         }
 
         setTrialShown();

@@ -14,7 +14,7 @@ import { Message } from "primereact/message";
 import { hasInvalidFileBody } from "../common/requestUtils";
 import { updatedRequestModel, newQueryParam, newRequestHeader } from '../model/model';
 import { getAllRequestsFromTree } from "../common/treeUtils";
-import { HTTP_METHODS, isCustomMethod } from "../model/request";
+import { changeRequestUrlParams, changeUrlParams, extractQueryParamsFromUrl, HTTP_METHODS, isCustomMethod } from "../model/request";
 import { RequestImportMessages } from "./RequestImportMessages";
 import { Accordion, AccordionTab } from "primereact/accordion";
 import { RequestSettingsComponent } from "./RequestSettingsComponent";
@@ -23,6 +23,7 @@ import { Dialog } from "primereact/dialog";
 import { ResultDisplay } from "./ResultDisplay";
 import { SendRequestButton } from "./SendRequestButton";
 import { RequestBodyComp } from "./body/RequestBodyComp";
+import { QueryParams } from "./QueryParams";
 
 interface ComponentProps {
 }
@@ -69,11 +70,9 @@ export function RequestComponent(_props: ComponentProps) {
   const [url, setUrl] = useState<string>();
 
   useEffect(() => {
-    console.log("DEBUG REQUESTCOMPONENT");
   }, [])
 
   useEffect(() => {
-    console.log("REGULAR USE EFFECt REQUESTCOMPONENT");
     setIsSendingRequest(false);
     setCancelToken({ cancelled: true });
     setResultHistory([]);
@@ -82,17 +81,19 @@ export function RequestComponent(_props: ComponentProps) {
     if (!currentRequest) {
       return
     }
-    console.log('CURRENT REQUEST:  ', currentRequest);
     setTmpRequestName(currentRequest.name);
 
     let importWarnings: ImportWarning[] = (currentCollection as Collection).import_warnings.filter((import_warning: ImportWarning) => {
-      console.log('import warning path: ', import_warning.rest_file_path, " request path: ", currentRequest.rest_file_path);
       return import_warning.rest_file_path === currentRequest.rest_file_path;
     });
     setImportWarnings(importWarnings);
     // @TODO: setOverwriteResponseFile(currentRequest.)
     setUrl(currentRequest.url);
-  }, [currentRequest.id]);
+    let queryParams = extractQueryParamsFromUrl(currentRequest);
+    let newRequest = updatedRequestModel(currentRequest, { query_params: queryParams });
+    updateRequest(newRequest);
+
+  }, [currentRequest?.id]);
 
   // send request data to backend and perform libcurl request
   function doRequest() {
@@ -102,10 +103,8 @@ export function RequestComponent(_props: ComponentProps) {
       environment: null  //@TODO: check
     }
 
-      console.log('current env: ', currentEnvironment);
     // filter out variables with duplicated key names (keep the first one)
     if (currentEnvironment) {
-      console.log('current env if: ', currentEnvironment);
       let backendEnvironment = structuredClone(currentEnvironment);
 
       // @TODO: check
@@ -181,6 +180,7 @@ export function RequestComponent(_props: ComponentProps) {
       }
     });
 
+    setUrl(newRequest.url);
     backend.saveRequest(requestsInSameFile, currentCollection, currentRequest.name).then(() => {
       storeUpdateRequestAndTree(newRequest)
     }).catch(catchError(toast));
@@ -245,24 +245,14 @@ export function RequestComponent(_props: ComponentProps) {
     let newQueryParams = [...currentRequest.query_params];
     let index = newQueryParams.indexOf(oldParam);
     newQueryParams[index] = newParam;
-    let newRequest = updatedRequestModel(currentRequest, { query_params: newQueryParams });
+
+    let newRequest = updatedRequestModel(currentRequest, {});
+
+    changeRequestUrlParams(newRequest, oldParam, newParam);
+    //let newRequest = updatedRequestModel(currentRequest, { url: newUrl, query_params: newQueryParams });
     updateRequest(newRequest);
   }
 
-  function updateQueryParamKey(queryParam: QueryParam, key: string) {
-    let param: QueryParam = newQueryParam({ ...queryParam, key: key });
-    updateQueryParam(queryParam, param);
-  }
-
-  function updateQueryParamValue(queryParam: QueryParam, value: string) {
-    let param: QueryParam = newQueryParam({ ...queryParam, value: value });
-    updateQueryParam(queryParam, param);
-  }
-
-  function updateQueryParamActive(queryParam: QueryParam, active: boolean) {
-    let param = newQueryParam({ ...queryParam, active: active });
-    updateQueryParam(queryParam, param);
-  }
 
   function updateRequestHeader(oldHeader: Header, newHeader: Header) {
     let newRequestHeaders = [...currentRequest.headers];
@@ -274,15 +264,22 @@ export function RequestComponent(_props: ComponentProps) {
   }
 
   function addQueryParam() {
-    let newRequestModel: RequestModel = updatedRequestModel(currentRequest, {
-      query_params: [...currentRequest.query_params, newQueryParam(undefined)]
-    });
+    // let newRequestModel: RequestModel = updatedRequestModel(currentRequest, {
+    //   query_params: [...currentRequest.query_params, newQueryParam(undefined)]
+    // });
+    let newUrl = changeUrlParams(currentRequest.url, undefined, { key: "", value: "", active: true })
+    let newRequestModel: RequestModel = updatedRequestModel(currentRequest, { url: newUrl }
+    );
+
     updateRequest(newRequestModel);
   }
 
   function removeQueryParam(queryParam: QueryParam) {
-    let newQueryParams = currentRequest.query_params.filter((current: QueryParam) => current !== queryParam);
-    let newRequestModel: RequestModel = updatedRequestModel(currentRequest, { query_params: newQueryParams });
+
+    let newUrl = changeUrlParams(currentRequest.url, queryParam, undefined);
+    let newParams = currentRequest.query_params.filter((param: QueryParam) => param.key !== queryParam.key);
+    let newRequestModel: RequestModel = updatedRequestModel(currentRequest, { url: newUrl, query_params: newParams }
+    );
     updateRequest(newRequestModel);
   }
 
@@ -450,25 +447,13 @@ export function RequestComponent(_props: ComponentProps) {
             <div className="headers-block"
               style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
               <h2 style={{ marginBottom: '20px' }}>Query Params</h2>
-              {
-                currentRequest.query_params?.map((queryParam: QueryParam, index: number) => {
-                  return <KeyValueRow key={index} keyProperty={queryParam.key}
-                    valueProperty={queryParam.value}
-                    active={queryParam.active}
-                    keyLabel={"Param Name"} valueLabel={"Param Value"}
-                    updateKey={(key: string) => updateQueryParamKey(queryParam, key)}
-                    updateValue={(value: string) => updateQueryParamValue(queryParam, value)}
-                    updateActive={(active: boolean) => updateQueryParamActive(queryParam, active)}
-                    remove={() => removeQueryParam(queryParam)}
-                    style={{ marginTop: '20px' }}
-                    currentEnvironment={currentEnvironment}
-                    withHeader={index == 0 ? { keyHeader: "Name", valueHeader: "Value" } : undefined}
-                  />
-                })
-              }
-              <Button icon={'pi pi-plus'} label={"Query"} onClick={addQueryParam}
-                className={"p-button-sm"}
-                style={{ marginTop: '40px' }} />
+              <QueryParams
+                queryParams={currentRequest.query_params}
+                addQueryParam={addQueryParam}
+                removeQueryParam={removeQueryParam}
+                updateQueryParam={updateQueryParam}
+                currentEnvironment={currentEnvironment}
+              />
             </div>
           </TabPanel>
 

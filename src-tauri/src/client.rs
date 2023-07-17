@@ -156,17 +156,14 @@ impl Client {
 
         self.set_ssl_options(options.ssl_no_revoke);
 
-        let url = dbg!(request_model.get_url_with_env(dbg!(environment))); //self.generate_url(&request_spec.url, &""); // @TODO: what do we do with our
-                                                                     // query string?
+        let url = dbg!(request_model.get_url_with_env(true, dbg!(environment)));
         self.handle.url(url.as_str()).unwrap();
         let method = &request_model.method;
         self.set_method(method);
         self.set_cookies(&request_model.cookies());
         if let RequestBody::UrlEncoded { .. } = request_model.body {
             self.set_form_url_encoded(
-                &dbg!(request_model
-                    .get_url_encoded_params_with_env(environment))
-                    .unwrap(),
+                &dbg!(request_model.get_url_encoded_params_with_env(environment)).unwrap(),
             );
         }
         if let RequestBody::Multipart {
@@ -546,13 +543,14 @@ impl Client {
                     raw_data.as_bytes().to_vec()
                 }
                 http_rest_file::model::DataSource::FromFilepath(ref path) => {
-                    let result = std::fs::read(&std::path::PathBuf::from(path)).map_err(|_err| {
-                        let _msg = format!(
-                            "Could not read data of file: '{}'. Check if the file exists.",
-                            path
-                        );
-                        HttpError::CouldNotReadFile(PathBuf::from(path))
-                    })?;
+                    let result =
+                        std::fs::read(&std::path::PathBuf::from(path)).map_err(|_err| {
+                            let _msg = format!(
+                                "Could not read data of file: '{}'. Check if the file exists.",
+                                path
+                            );
+                            HttpError::CouldNotReadFile(PathBuf::from(path))
+                        })?;
                     result
                 }
             };

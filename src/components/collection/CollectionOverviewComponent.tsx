@@ -151,7 +151,7 @@ export function CollectionOverviewComponent(_props: ComponentProps) {
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <div style={{ marginTop: '20px', display: 'flex' }}>
                   <Button icon={'pi pi-plus'} label={"Create Request"}
-                    onClick={() => { console.log('requestTree', requestTree); createNewRequestNode(requestTree.root, toast, () => { }) }}
+                    onClick={() => { createNewRequestNode(requestTree.root, toast, () => { }) }}
                     className={"p-button-sm p-button-text p-button-raised"}
                     style={{}} />
                   <Button icon={'pi pi-plus'} label={"Create Group"}

@@ -1,6 +1,4 @@
-
 use std::{collections::HashMap, path::PathBuf};
-
 
 use http_rest_file::model::{
     DataSource, DispositionField, Header as HttpRestFileHeader, HttpMethod, HttpRestFile,
@@ -402,12 +400,54 @@ pub enum GetHeadersOption {
 }
 
 impl RequestModel {
-    pub fn get_url_with_env(&self, env: Option<&Environment>) -> String {
+    pub fn get_url_with_env(
+        &self,
+        remove_inactive_params: bool,
+        env: Option<&Environment>,
+    ) -> String {
         if env.is_none() {
             return self.url.clone();
         }
         let env = env.unwrap();
-        env.replace_values_in_str(&self.url)
+        let url = env.replace_values_in_str(&self.url);
+
+        let host_header = self.get_header_values("Host", GetHeadersOption::JustValues);
+        let mut url_with_host: Option<String> = None;
+        if !host_header.is_empty() {
+            url_with_host = Some(host_header[0].to_string() + &url);
+        }
+
+        let url: Result<Url, ()> = match Url::parse(&self.url) {
+            Ok(url) => Ok(url),
+            Err(_err) => {
+                if let Some(ref url_with_host) = url_with_host {
+                    Url::parse(url_with_host).map_err(|_err| ())
+                } else {
+                    Err(())
+                }
+            }
+        };
+        if url.is_err() {
+            return url_with_host.unwrap_or(self.url.clone());
+        }
+
+        let mut url = url.unwrap();
+
+        if remove_inactive_params {
+            if self.query_params.is_empty() {
+                url.set_query(None);
+            } else {
+                let query: String = self
+                    .query_params
+                    .iter()
+                    .map(|query_param: &QueryParam| query_param.key.clone() + "=" + &query_param.value)
+                    .collect::<Vec<String>>()
+                    .join("&");
+                url.set_query(Some(&query));
+            }
+        }
+
+        url.to_string()
     }
 
     pub fn get_query_params_with_env(&self, env: Option<&Environment>) -> Vec<QueryParam> {
@@ -683,6 +723,7 @@ impl From<&Multipart> for http_rest_file::model::Multipart {
     }
 }
 use http_rest_file::model::RequestBody as RestFileBody;
+use url::Url;
 
 use crate::{
     config::COLLECTION_CONFIGFILE, sanitize::sanitize_filename_with_options, tree::DEFAULT_OPTIONS,

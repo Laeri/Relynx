@@ -25,7 +25,6 @@ export function RequestSettingsComponent(props: ComponentProps) {
   }
 
   const updateSaveResponse = (shouldSaveToFile: boolean) => {
-    console.log('should save: ', shouldSaveToFile);
     let newRequest = updatedRequestModel(props.request, {});
     newRequest.redirect_response.save_response = shouldSaveToFile;
     props.updateRequest(newRequest);

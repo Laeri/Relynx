@@ -9,9 +9,6 @@ interface ComponentProps {
 }
 
 export function RequestImportMessages(props: ComponentProps) {
-  console.log('props: ', props);
-
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
       {
@@ -23,5 +20,4 @@ export function RequestImportMessages(props: ComponentProps) {
       }
     </div>
   )
-
 }

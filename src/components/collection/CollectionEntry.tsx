@@ -73,7 +73,6 @@ export function CollectionEntry(props: ComponentProps) {
       if (newName) {
         toast.showSuccess(`Renamed collection to: '${newName}`, "");
       }
-      console.log('modal promisiert');
       // ignore
     }).catch(catchError);
   }
