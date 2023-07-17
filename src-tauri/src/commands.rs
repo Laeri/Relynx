@@ -932,4 +932,3 @@ pub fn get_app_environment() -> Result<AppEnvironment, rspc::Error> {
         Ok(AppEnvironment::PRODUCTION)
     }
 }
-

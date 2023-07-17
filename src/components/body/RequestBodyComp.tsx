@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { RequestModel, Header } from '../../bindings';
+import { RequestModel, Header, Environment } from '../../bindings';
 import BodySelectMenu, { BodyType, BodyTypes, TextBodyTypes, toMimeType } from "./BodySelectMenu";
 import { DataSourceFromFilepath, get_content_type, hasContentType, newMultipartPart, RequestBodyMultipart, RequestBodyRaw, RequestBodyUrlEncoded, setHeader } from "../../model/request";
 import { MultipartBody } from "./MultipartBody";
@@ -10,7 +10,8 @@ import { BinaryFileComp } from "./BinaryFileComp";
 
 interface ComponentProps {
   updateRequest: (newRequest: RequestModel) => void,
-  request: RequestModel
+  request: RequestModel,
+  environment: Environment | undefined
 }
 
 export type RawType = "text" | "file";
@@ -160,6 +161,13 @@ export function RequestBodyComp(props: ComponentProps) {
     props.updateRequest(newRequest);
   }
 
+  const updateBodyUrlEncoded = (newBody: RequestBodyUrlEncoded) => {
+    let newRequest = structuredClone(props.request);
+    newRequest.body = newBody;
+    setUrlEncodedBody(newBody);
+    props.updateRequest(newRequest);
+  }
+
   const updateRawBody = (newBody: RequestBodyRaw, newRequest?: RequestModel) => {
     if (!newRequest) {
       newRequest = structuredClone(props.request);
@@ -195,7 +203,7 @@ export function RequestBodyComp(props: ComponentProps) {
       {
         < div className="headers-block" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }
         }>
-          <h2 style={{display: 'flex', alignItems: 'center'}}>Body <BodySelectMenu style={{ marginLeft: '20px' }} currentType={currentBodyType} setNewType={(newType: BodyType, isText: boolean) => updateType(newType, isText)} />
+          <h2 style={{ display: 'flex', alignItems: 'center' }}>Body <BodySelectMenu style={{ marginLeft: '20px' }} currentType={currentBodyType} setNewType={(newType: BodyType, isText: boolean) => updateType(newType, isText)} />
           </h2>
 
           <Divider type="solid" />
@@ -205,17 +213,12 @@ export function RequestBodyComp(props: ComponentProps) {
           }
           {
             (currentBodyType === BodyTypes.form_urlencoded) &&
-            <UrlEncodedBody body={urlEncodedBody} />
+            <UrlEncodedBody body={urlEncodedBody} environment={props.environment} updateBody={updateBodyUrlEncoded} />
           }
 
           {
             (currentBodyType === BodyTypes.multipart_form) &&
             <MultipartBody body={multipartBody} addPart={addMultipartPart} updateBodyMultipart={updateBodyMultipart} />
-          }
-
-          {
-            (currentBodyType === BodyTypes.form_urlencoded) &&
-            <UrlEncodedBody body={urlEncodedBody} />
           }
 
           {

@@ -6262,3 +6262,8 @@ li + li > .p-tabview-nav-link {
 a {
   color: #ffb347;
 }
+
+/* Fix Mention component text area not filling width when width styling on 'Mention' is set */
+.p-mention .p-inputtextarea {
+  width: 100%;
+}

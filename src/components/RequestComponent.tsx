@@ -12,7 +12,7 @@ import { ToastContext } from "../App";
 import { catchError } from "../common/errorhandling";
 import { Message } from "primereact/message";
 import { hasInvalidFileBody } from "../common/requestUtils";
-import { updatedRequestModel, newQueryParam, newRequestHeader } from '../model/model';
+import { updatedRequestModel, newRequestHeader } from '../model/model';
 import { getAllRequestsFromTree } from "../common/treeUtils";
 import { changeRequestUrlParams, changeUrlParams, extractQueryParamsFromUrl, HTTP_METHODS, isCustomMethod } from "../model/request";
 import { RequestImportMessages } from "./RequestImportMessages";
@@ -484,7 +484,7 @@ export function RequestComponent(_props: ComponentProps) {
           </TabPanel>
 
           <TabPanel header={"Body"}>
-            <RequestBodyComp updateRequest={updateRequest} request={currentRequest} />
+            <RequestBodyComp updateRequest={updateRequest} request={currentRequest} environment={currentEnvironment} />
           </TabPanel>
 
           <TabPanel header="Description">
