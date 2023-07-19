@@ -15,103 +15,120 @@ pub const PRIVATE_HTTP_ENV_FILENAME: &str = "http-client.private.env.json";
 pub type EnvKeyValues = HashMap<String, String>;
 pub type EnvFileStructure = HashMap<String, EnvKeyValues>;
 
-pub fn load_environments(collection_path: PathBuf) -> Result<Vec<Environment>, FrontendError> {
-    let env_path = collection_path.join(HTTP_ENV_FILENAME);
-    let private_env_path = collection_path.join(PRIVATE_HTTP_ENV_FILENAME);
-
+pub fn load_environments_from_files(
+    env_file_path: Option<&std::path::PathBuf>,
+    private_env_file_path: Option<&std::path::PathBuf>,
+    collection_path: Option<&std::path::PathBuf>,
+) -> Result<Vec<Environment>, FrontendError> {
     let mut environments: HashMap<String, Environment> = HashMap::new();
 
-    let env_structure = load_env_structure(env_path, &collection_path)?;
+    if let Some(env_file_path) = env_file_path {
+        let env_structure = load_env_structure(env_file_path)?;
 
-    for (env_name, key_val_map) in env_structure.iter() {
-        let variables: Vec<EnvironmentVariable> = key_val_map
-            .into_iter()
-            .map(|(var_name, value)| EnvironmentVariable {
-                name: var_name.to_string(),
-                initial_value: value.to_string(),
-                current_value: None,
-                description: None, // @TODO: get description from collectionconfig :(
-            })
-            .collect();
-        let environment = Environment {
-            name: env_name.clone(),
-            variables,
-            secrets: vec![],
-        };
-        environments.insert(env_name.to_string(), environment);
+        for (env_name, key_val_map) in env_structure.iter() {
+            let variables: Vec<EnvironmentVariable> = key_val_map
+                .into_iter()
+                .map(|(var_name, value)| EnvironmentVariable {
+                    name: var_name.to_string(),
+                    initial_value: value.to_string(),
+                    current_value: None,
+                    description: None, // @TODO: get description from collectionconfig :(
+                })
+                .collect();
+            let environment = Environment {
+                name: env_name.clone(),
+                variables,
+                secrets: vec![],
+            };
+            environments.insert(env_name.to_string(), environment);
+        }
+    }
+    if let Some(private_env_file_path) = private_env_file_path {
+        let private_env_structure = load_env_structure(private_env_file_path)?;
+
+        for (env_name, key_val_map) in private_env_structure.into_iter() {
+            let environment = environments
+                .entry(env_name.clone())
+                .or_insert(Environment::new(env_name.clone()));
+
+            let secrets: Vec<EnvironmentSecret> = key_val_map
+                .into_iter()
+                .map(|(var_name, value)| EnvironmentSecret {
+                    name: var_name.to_string(),
+                    initial_value: value.to_string(),
+                    current_value: None,
+                    description: None, // @TODO: get description from collectionconfig :(
+                    persist_to_file: true,
+                })
+                .collect();
+            environment.secrets = secrets;
+        }
     }
 
-    let private_env_structure = load_env_structure(private_env_path, &collection_path)?;
-
-    for (env_name, key_val_map) in private_env_structure.into_iter() {
-        let environment = environments
-            .entry(env_name.clone())
-            .or_insert(Environment::new(env_name.clone()));
-
-        let secrets: Vec<EnvironmentSecret> = key_val_map
-            .into_iter()
-            .map(|(var_name, value)| EnvironmentSecret {
-                name: var_name.to_string(),
-                initial_value: value.to_string(),
-                current_value: None,
-                description: None, // @TODO: get description from collectionconfig :(
-                persist_to_file: true,
-            })
-            .collect();
-        environment.secrets = secrets;
-    }
-    let collection_config = load_collection_config(&collection_path);
-    if collection_config.is_ok() {
-        let mut collection_config = collection_config.unwrap();
-        let mut to_remove_env: Vec<String> = Vec::new();
-        for (env_name, descriptions) in collection_config.env_var_descriptions.iter_mut() {
-            let environment = environments.get_mut(env_name);
-            if environment.is_none() {
-                to_remove_env.push(env_name.clone());
-                continue;
-            }
-            let environment = environment.unwrap();
-            let mut to_remove_descr: Vec<usize> = Vec::new();
-            for (index, description) in descriptions.iter().enumerate() {
-                if description.is_secret {
-                    match environment
-                        .variables
-                        .iter_mut()
-                        .find(|var| var.name == description.env_var_name)
-                    {
-                        Some(variable) => {
-                            variable.description = Some(description.description.clone());
-                        }
-                        None => to_remove_descr.push(index),
-                    };
-                } else {
-                    match environment
-                        .secrets
-                        .iter_mut()
-                        .find(|var| var.name == description.env_var_name)
-                    {
-                        Some(secret) => {
-                            secret.description = Some(description.description.clone());
-                        }
-                        None => to_remove_descr.push(index),
-                    };
+    if let Some(collection_path) = collection_path {
+        let collection_config = load_collection_config(&collection_path);
+        if collection_config.is_ok() {
+            let mut collection_config = collection_config.unwrap();
+            let mut to_remove_env: Vec<String> = Vec::new();
+            for (env_name, descriptions) in collection_config.env_var_descriptions.iter_mut() {
+                let environment = environments.get_mut(env_name);
+                if environment.is_none() {
+                    to_remove_env.push(env_name.clone());
+                    continue;
+                }
+                let environment = environment.unwrap();
+                let mut to_remove_descr: Vec<usize> = Vec::new();
+                for (index, description) in descriptions.iter().enumerate() {
+                    if description.is_secret {
+                        match environment
+                            .variables
+                            .iter_mut()
+                            .find(|var| var.name == description.env_var_name)
+                        {
+                            Some(variable) => {
+                                variable.description = Some(description.description.clone());
+                            }
+                            None => to_remove_descr.push(index),
+                        };
+                    } else {
+                        match environment
+                            .secrets
+                            .iter_mut()
+                            .find(|var| var.name == description.env_var_name)
+                        {
+                            Some(secret) => {
+                                secret.description = Some(description.description.clone());
+                            }
+                            None => to_remove_descr.push(index),
+                        };
+                    }
+                }
+                for description_index in to_remove_descr {
+                    descriptions.remove(description_index);
                 }
             }
-            for description_index in to_remove_descr {
-                descriptions.remove(description_index);
-            }
-        }
 
-        for env_name in to_remove_env {
-            environments.remove(&env_name);
+            for env_name in to_remove_env {
+                environments.remove(&env_name);
+            }
+            // @TODO: error handling
+            let _ = save_collection_config(&collection_config, &collection_path);
+        } else {
+            // @TODO: log warning
         }
-        // @TODO: error handling
-        let _ = save_collection_config(&collection_config, &collection_path);
-    } else {
-        // @TODO: log warning
     }
 
     Ok(environments.into_values().into_iter().collect())
+}
+
+pub fn load_environments(collection_path: PathBuf) -> Result<Vec<Environment>, FrontendError> {
+    let env_path = collection_path.join(HTTP_ENV_FILENAME);
+    let private_env_path = collection_path.join(PRIVATE_HTTP_ENV_FILENAME);
+    load_environments_from_files(
+        Some(&env_path),
+        Some(&private_env_path),
+        Some(&collection_path),
+    )
 }
 
 impl TryFrom<&EnvironmentVariable> for SingleEnvVarDescription {
@@ -251,20 +268,16 @@ pub fn save_environments(
     Ok(())
 }
 
-fn load_env_structure(
-    env_path: PathBuf,
-    collection_path: &PathBuf,
-) -> Result<EnvFileStructure, FrontendError> {
+fn load_env_structure(env_path: &PathBuf) -> Result<EnvFileStructure, FrontendError> {
     // the file does not need to exist, this is not an error
     if !env_path.exists() {
         return Ok(EnvFileStructure::new());
     }
-    let env_file_content = std::fs::read_to_string(&env_path);
+    let env_file_content = std::fs::read_to_string(env_path);
     if env_file_content.is_err() {
         let msg = format!(
-            "Could not read environment file: '{}' of collection: '{}'",
+            "Could not read environment file: '{}'",
             env_path.to_string_lossy(),
-            collection_path.to_string_lossy()
         );
         return Err(FrontendError::new_with_message(
             DisplayErrorKind::LoadEnvironmentsError,
@@ -272,10 +285,11 @@ fn load_env_structure(
         ));
     }
     let env_file_content = env_file_content.unwrap();
-    let env_structure = serde_json::from_str::<EnvFileStructure>(&env_file_content).map_err(|_err| {
+    let env_structure =
+        serde_json::from_str::<EnvFileStructure>(&env_file_content).map_err(|_err| {
             let msg = format!(
-                "Could not load environment file: '{}' of collection: '{}', it seems to be malformed",
-                env_path.to_string_lossy(), collection_path.to_string_lossy()
+                "Could not load environment file: '{}', it seems to be malformed",
+                env_path.to_string_lossy(),
             );
             FrontendError::new_with_message(DisplayErrorKind::LoadEnvironmentsError, msg)
         })?;

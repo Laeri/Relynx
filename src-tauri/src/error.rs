@@ -4,7 +4,7 @@ use http_rest_file::model::ParseError;
 use rspc::Type;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Type, Clone, Debug)]
+#[derive(Serialize, Deserialize, Type, Clone, Debug, PartialEq, Eq)]
 pub struct FrontendError {
     pub kind: DisplayErrorKind,
     pub message: Option<String>,
@@ -38,7 +38,7 @@ impl Default for FrontendError {
     }
 }
 
-#[derive(Serialize, Deserialize, Type, Debug, Clone, Copy)]
+#[derive(Serialize, Deserialize, Type, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DisplayErrorKind {
     Generic,
     LoadWorkspaceError,

@@ -17,7 +17,7 @@
  */
 
 mod certificate;
-mod client_model;
+pub mod client_model;
 mod cookie;
 mod easy_ext;
 mod error;
@@ -211,7 +211,7 @@ impl Client {
 
         self.set_ssl_options(options.ssl_no_revoke);
 
-        let url = request_model.get_url_with_env(true, dbg!(environment));
+        let url = dbg!(request_model.get_url_with_env(true, environment));
         self.handle.url(url.as_str()).unwrap();
         let method = &request_model.method;
         self.set_method(method);
@@ -504,6 +504,7 @@ impl Client {
     ) {
         let mut list = easy::List::new();
 
+        println!("LIST: {:?}", list);
         for header in &request.get_headers_with_env(env) {
             list.append(format!("{}: {}", header.key, header.value).as_str())
                 .unwrap();

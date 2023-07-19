@@ -1,0 +1,6 @@
+# @name=Get Request With Headers
+GET {{base_url}}/devices?firstName=firstValue&secondName=secondValue&fromEnv={{fromEnv}}
+User-Agent: relynx
+Accept: */*
+CustomHeader: CustomHeaderValue
+small-header: small-header-value

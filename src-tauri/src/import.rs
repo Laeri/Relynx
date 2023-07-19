@@ -52,14 +52,14 @@ fn hidden_relynx_folder(entry: &DirEntry) -> bool {
         .any(|item| item.file_name() == RELYNX_IGNORE_FILE)
 }
 
-pub fn load_file_model(
-    request_file_path: &std::path::PathBuf,
+pub fn load_requests_from_file(
+    request_file_path: &std::path::Path,
 ) -> Result<Vec<RequestModel>, ParseError> {
-    let mut http_rest_file: HttpRestFile = RestFileParser::parse_file(&request_file_path)?;
+    let http_rest_file: HttpRestFile = RestFileParser::parse_file(&request_file_path)?;
     Ok(http_rest_file
         .requests
         .into_iter()
-        .map(|request| request_to_request_model(request, &request_file_path))
+        .map(|request| request_to_request_model(request, &request_file_path.to_owned()))
         .collect::<Vec<RequestModel>>())
 }
 
@@ -82,19 +82,18 @@ pub fn load_requests_for_collection(
         if entry.file_type().is_file() {
             if RestFileParser::has_valid_extension(&entry.file_name().to_string_lossy().to_string())
             {
-                match RestFileParser::parse_file(entry.path()) {
-                    Ok(mut model) => {
+                match load_requests_from_file(entry.path()) {
+                    Ok(mut request_models) => {
                         let path = entry.path().to_owned();
 
-                        let node = if model.requests.len() == 1 {
+                        let node = if request_models.len() == 1 {
                             RequestTreeNode::new_request_node(
-                                request_to_request_model(model.requests.remove(0), &path),
+                                request_models.remove(0),
                                 path.clone(),
                             )
                         } else {
                             let mut file_group_node = RequestTreeNode::new_file_group(path.clone());
-                            let request_nodes = model.requests.into_iter().map(|request| {
-                                let request_model = request_to_request_model(request, &path);
+                            let request_nodes = request_models.into_iter().map(|request_model| {
                                 RequestTreeNode::new_request_node(request_model, path.clone())
                             });
                             file_group_node.children.extend(request_nodes);

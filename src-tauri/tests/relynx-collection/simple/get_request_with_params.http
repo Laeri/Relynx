@@ -1,0 +1,2 @@
+# @name=Simple GET with Params
+GET {{base_url}}/devices?firstName=firstValue&secondName=secondValue&fromEnv={{fromEnv}}

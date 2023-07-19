@@ -136,9 +136,7 @@ impl From<HttpRestFile> for RequestFileModel {
             requests: value
                 .requests
                 .into_iter()
-                .map(|request| {
-                    request_to_request_model(request, value.path.as_ref())
-                })
+                .map(|request| request_to_request_model(request, value.path.as_ref()))
                 .collect::<Vec<RequestModel>>(),
         }
     }
@@ -165,6 +163,34 @@ impl From<&RequestFileModel> for HttpRestFile {
     }
 }
 
+pub fn query_params_from_url(url: &str) -> Vec<QueryParam> {
+    if !url.contains('?') {
+        return vec![];
+    }
+
+    let mut split = url.split("?");
+    let (_, query) = (split.next(), split.next());
+    if query.is_none() {
+        return vec![];
+    }
+    let parts = query.unwrap().split("&");
+    return parts
+        .into_iter()
+        .map(|part| {
+            let mut part_split = part.split("=");
+            let (key, value) = (
+                part_split.next().map(ToString::to_string),
+                part_split.next().map(ToString::to_string),
+            );
+            return QueryParam {
+                key: key.unwrap_or_default(),
+                value: value.unwrap_or_default(),
+                active: true,
+            };
+        })
+        .collect::<Vec<QueryParam>>();
+}
+
 pub fn request_to_request_model(
     value: http_rest_file::model::Request,
     path: &std::path::PathBuf,
@@ -186,6 +212,7 @@ pub fn request_to_request_model(
             overwrite: true,
         },
     };
+
     RequestModel {
         id: uuid::Uuid::new_v4().to_string(),
         name: value.name.clone().unwrap_or(String::new()),
@@ -195,7 +222,7 @@ pub fn request_to_request_model(
         url: value.request_line.target.to_string(),
         rest_file_path: path.to_owned(),
         body: (&value.body).into(),
-        query_params: Vec::new(), // @TODO parse qurey from url and remove
+        query_params: query_params_from_url(&value.request_line.target.to_string()),
         headers: value.headers.iter().map(Into::into).collect(),
         settings: value.settings,
         redirect_response,
@@ -410,6 +437,7 @@ impl RequestModel {
         }
         let env = env.unwrap();
         let url = env.replace_values_in_str(&self.url);
+        println!("url: {:?}, replaced: {:?}", self.url, url);
 
         let host_header = self.get_header_values("Host", GetHeadersOption::JustValues);
         let mut url_with_host: Option<String> = None;
@@ -418,7 +446,7 @@ impl RequestModel {
         }
 
         let url: Result<Url, ()> = match Url::parse(&url) {
-            Ok(url) => Ok(url),
+            Ok(parsed_url) => Ok(parsed_url),
             Err(_err) => {
                 if let Some(ref url_with_host) = url_with_host {
                     Url::parse(url_with_host).map_err(|_err| ())
@@ -437,12 +465,7 @@ impl RequestModel {
             if self.query_params.is_empty() {
                 url.set_query(None);
             } else {
-                let query: String = self
-                    .query_params
-                    .iter()
-                    .map(|query_param: &QueryParam| query_param.key.clone() + "=" + &query_param.value)
-                    .collect::<Vec<String>>()
-                    .join("&");
+                let query = self.get_query_string_with_env(Some(env));
                 url.set_query(Some(&query));
             }
         }
@@ -463,6 +486,15 @@ impl RequestModel {
                 new_param
             })
             .collect()
+    }
+
+    pub fn get_query_string_with_env(&self, env: Option<&Environment>) -> String {
+        let params = self.get_query_params_with_env(env);
+        params
+            .iter()
+            .map(|param| format!("{}={}", param.key, param.value))
+            .collect::<Vec<String>>()
+            .join("&")
     }
 
     pub fn get_headers_with_env(&self, env: Option<&Environment>) -> Vec<Header> {
@@ -555,10 +587,7 @@ impl RequestModel {
         request_name: &str,
         parent_path: std::path::PathBuf,
     ) -> std::path::PathBuf {
-        let file_name = sanitize_filename_with_options(
-            request_name,
-            DEFAULT_OPTIONS
-        );
+        let file_name = sanitize_filename_with_options(request_name, DEFAULT_OPTIONS);
         let mut result = parent_path.join(file_name);
         result.set_extension(DEFAULT_HTTP_EXTENSION);
         result
@@ -615,6 +644,21 @@ pub struct EnvironmentVariable {
     pub initial_value: String,
     pub current_value: Option<String>,
     pub description: Option<String>,
+}
+
+impl EnvironmentVariable {
+    pub fn new<S, T>(name: S, initial_value: T) -> Self
+    where
+        S: Into<String>,
+        T: Into<String>,
+    {
+        EnvironmentVariable {
+            name: name.into(),
+            initial_value: initial_value.into(),
+            current_value: None,
+            description: None,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Type, Debug)]
