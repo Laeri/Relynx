@@ -170,7 +170,7 @@ export function EnvironmentComponent(_props: ComponentProps) {
         index: index,
         name: environmentVariable.name,
         initialValue: environmentVariable.initial_value,
-        currentValue: environmentVariable.current_value ?? "",
+        currentValue: environmentVariable.current_value,
         description: environmentVariable.description ?? "",
         invalid: false
       } as RowData
@@ -187,7 +187,7 @@ export function EnvironmentComponent(_props: ComponentProps) {
         index: index,
         name: secret.name,
         initialValue: secret.initial_value,
-        currentValue: secret.current_value ?? "",
+        currentValue: secret.current_value,
         description: secret.description ?? "",
         persistToFile: secret.persist_to_file,
         invalid: false

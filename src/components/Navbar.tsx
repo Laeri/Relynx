@@ -6,6 +6,7 @@ import { CollectionEntry } from "./collection/CollectionEntry";
 import { Collection } from "../bindings";
 import { Route, Routes, useLocation, useNavigate } from "react-router";
 import { useState } from "react";
+import { routes } from "../App";
 
 export enum NavbarSizes {
   Normal,
@@ -24,14 +25,18 @@ export function Navbar() {
 
   const onSubtitleClicked = () => {
     // if we are already on the location do nothing
-    if (location.pathname == '/collection') {
+    if (location.pathname == routes.collection) {
       return
     }
     navigate(-1);
   }
 
   const onBackClicked = () => {
-    navigate(-1);
+    if (location.pathname == routes.environment) {
+      navigate(-1);
+    } else {
+      navigate(-2);
+    }
   }
 
   const enlargeNavbar = () => {

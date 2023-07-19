@@ -22,7 +22,7 @@ export interface RowData {
   index: number,
   name: string,
   initialValue: string,
-  currentValue: string,
+  currentValue: string | undefined | null,
   description: string,
   persistToFile?: boolean,
   invalid?: boolean
@@ -77,9 +77,6 @@ export function EnvTable(props: ComponentProps) {
     )
   }
 
-  const cellEditor = (options: ColumnEditorOptions) => {
-    return textEditor(options);
-  }
 
   const onCellEditComplete = (e: { rowData: RowData; newValue: any; field: any; originalEvent: any; }) => {
     let { rowData, newValue, field, originalEvent: event } = e;
@@ -126,7 +123,7 @@ export function EnvTable(props: ComponentProps) {
           } else {
             newVar.current_value = null;
           }
-          newVar.current_value = rowData.currentValue;
+          newVar.current_value = rowData.currentValue ?? null;
           if (rowData.description && rowData.description !== "") {
             newVar.description = rowData.description;
 
@@ -143,11 +140,14 @@ export function EnvTable(props: ComponentProps) {
     props.updateEnvironmentInState(newCurrentEnvironment.name, newCurrentEnvironment)
   }
 
-  const textEditor = (options: ColumnEditorOptions) => {
+  const textEditor = (options: ColumnEditorOptions, isName: boolean) => {
     if (!options.editorCallback) {
       return
     }
-    let isValid = validateKeyName(options.value)
+    let isValid = true;
+    if (isName) {
+      isValid = validateKeyName(options.value);
+    }
     // no border otherwise row grows in size
     return <InputText type="text" style={isValid ? { border: 'none' } : {}} className={isValid ? '' : 'p-invalid'}
       value={options.value}
@@ -205,18 +205,18 @@ export function EnvTable(props: ComponentProps) {
         /*
                             cellEditValidator={validateKeyName}
         */
-        editor={(options) => cellEditor(options)}
+        editor={(options) => textEditor(options, true)}
         style={columnStyle}
         onCellEditComplete={onCellEditComplete} body={nameTemplate} />
       <Column field="initialValue" filterPlaceholder={"Initial Value"} header="Initial Value"
-        editor={(options) => cellEditor(options)} onCellEditComplete={onCellEditComplete}
+        editor={(options) => textEditor(options, false)} onCellEditComplete={onCellEditComplete}
         body={initialValueTemplate} style={columnStyle} />
       <Column field="currentValue" filterPlaceholder={"currentValue"} header={"Current Value"}
-        editor={(options) => cellEditor(options)}
+        editor={(options) => textEditor(options, false)}
         style={columnStyle}
         onCellEditComplete={onCellEditComplete} body={currentValueTemplate} />
       <Column field="description" filterPlaceholder={"description"} header={"Description"}
-        editor={(options) => cellEditor(options)}
+        editor={(options) => textEditor(options, false)}
         style={columnStyle}
         onCellEditComplete={onCellEditComplete} body={descriptionTemplate} />
 

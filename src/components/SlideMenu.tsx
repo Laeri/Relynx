@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { Button } from "primereact/button";
 import { useLocation } from "react-router";
+import { routes } from "../App";
 
 interface ComponentProps {
   subtitle: string | undefined
@@ -15,11 +16,11 @@ export function SlideMenu(props: ComponentProps) {
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
-      {location?.pathname != '/' &&
+      {location?.pathname != routes.root &&
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', width: '100%', justifyContent: 'flex-start' }}>
             <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-              <Button outlined size="small" icon={location?.pathname == "/collection" ? "pi pi-home" : "pi pi-arrow-left"}
+              <Button outlined size="small" icon={(location?.pathname == routes.collection || location?.pathname == routes.request) ? "pi pi-home" : "pi pi-arrow-left"}
                 onClick={() => {
                   props.onBackClicked()
                 }}

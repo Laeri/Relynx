@@ -11,7 +11,7 @@ import {
 import { useContext, useState } from "react";
 import { catchError, displayAndLogErr } from "../common/errorhandling";
 import { NewFError } from "../model/error";
-import { ToastContext } from "../App";
+import { routes, ToastContext } from "../App";
 import { RelynxState, useRequestModelStore } from "../stores/requestStore";
 import { ActionDropdown, ActionDropdownContext } from "./ActionDropdown";
 import { Button } from "primereact/button";
@@ -217,10 +217,10 @@ export function RequestTreeComponent(props: ComponentProps) {
     if (primeNode.requestNode?.request) {
       setCurrentRequest(primeNode.requestNode.request);
       let options = { replace: true };
-      if (location.pathname == '/collection') {
+      if (location.pathname == routes.collection) {
         options.replace = false;
       }
-      navigate('/collection/request', options);
+      navigate(routes.request, options);
     }
     // TODO: update server side
   }

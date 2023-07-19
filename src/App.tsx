@@ -32,6 +32,13 @@ export const ToastContext = createContext<ToastContext>();
 
 export let ExternalToast: ToastContext
 
+export const routes = {
+  root: "/",
+  collection: "/collection",
+  request: "/collection/request",
+  environment: "/collection/environment"
+}
+
 function App() {
 
   const updateWorkspace = useRequestModelStore((state) => state.updateWorkspace);
@@ -98,29 +105,16 @@ function App() {
   return (
 
     <div id="App">
-      {/* <h1>Relynx</h1> */}
       <ToastContext.Provider value={toastContext}>
         <MemoryRouter>
           <Navbar />
 
           <main style={{ padding: '10px 5%', display: 'relative' }}>
-            {/*          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'flex-end',
-            marginTop: '10px'
-          }}>
-            {currentCollection !== undefined
-              && <div style={{}}><RequestSearch /></div>
-            }
-          </div> */}
-
             <Routes>
-              <Route element={<OverviewComponent />} path={"/"} />
-
-              <Route element={<RequestComponent key={1} />} path={"/collection/request"} />
-              <Route element={<CollectionOverviewComponent />} path={"/collection"} />
-              <Route element={<EnvironmentComponent />} path={"/collection/environment"} />
+              <Route element={<OverviewComponent />} path={routes.root} />
+              <Route element={<CollectionOverviewComponent />} path={routes.collection} />
+              <Route element={<RequestComponent key={1} />} path={routes.request} />
+              <Route element={<EnvironmentComponent />} path={routes.environment} />
             </Routes>
           </main>
 
@@ -131,7 +125,7 @@ function App() {
       <Toast ref={toastRef} />
       {/*Container element for confirm popups: https://primereact.org/confirmpopup/*/}
       <ConfirmPopup />
-
+      {/*Container element for modals using react-modal-promise */}
       <ModalContainer />
     </div>
 
