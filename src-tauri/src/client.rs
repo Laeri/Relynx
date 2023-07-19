@@ -103,9 +103,64 @@ impl Client {
         }
     }
 
+    pub fn execute(
+        &mut self,
+        request_model: &RequestModel,
+        options: &ClientOptions,
+        environment: Option<&Environment>,
+    ) -> Result<Vec<Call>, HttpError> {
+        if options.follow_location {
+            self.execute_with_redirect(request_model, options, environment)
+        } else {
+            self.execute_without_redirect(request_model, options, environment)
+                .map(|result_call| vec![result_call])
+        }
+    }
+
+    // Executes an HTTP request `request_spec`, optionally follows redirection and returns a
+    // list of pair of [`Request`], [`Response`].
+    fn execute_with_redirect(
+        &mut self,
+        request_model: &RequestModel,
+        options: &ClientOptions,
+        environment: Option<&Environment>,
+        //logger: &Logger,
+    ) -> Result<Vec<Call>, HttpError> {
+        let mut calls = vec![];
+
+        // Unfortunately, follow-location feature from libcurl can not be used
+        // libcurl returns a single list of headers for the 2 responses
+        // Hurl needs to keep everything.
+        let mut request_model = request_model.clone();
+        let mut redirect_count = 0;
+        loop {
+            let call = dbg!(self.execute_without_redirect(&request_model, options, environment))?;
+            let base_url = call.request.base_url()?;
+            let redirect_url = self.get_follow_location(&call.response, &base_url);
+            calls.push(call);
+            if !options.follow_location || redirect_url.is_none() {
+                break;
+            }
+            let redirect_url = redirect_url.unwrap();
+            println!("Redirect url: {:?}", redirect_url);
+            // logger.debug("");
+            // logger.debug(format!("=> Redirect to {redirect_url}").as_str());
+            // logger.debug("");
+            redirect_count += 1;
+            if let Some(max_redirect) = options.max_redirect {
+                if redirect_count > max_redirect {
+                    return Err(HttpError::TooManyRedirect);
+                }
+            }
+            request_model = request_model.clone();
+            request_model.url = redirect_url;
+        }
+        Ok(calls)
+    }
+
     /// Executes an HTTP request `request_spec`, without following redirection and returns a
     /// pair of [`Request`], [`Response`].
-    pub fn execute(
+    fn execute_without_redirect(
         &mut self,
         request_model: &RequestModel,
         options: &ClientOptions, //@TODO:logger: &Logger,
@@ -156,7 +211,7 @@ impl Client {
 
         self.set_ssl_options(options.ssl_no_revoke);
 
-        let url = dbg!(request_model.get_url_with_env(true, dbg!(environment)));
+        let url = request_model.get_url_with_env(true, dbg!(environment));
         self.handle.url(url.as_str()).unwrap();
         let method = &request_model.method;
         self.set_method(method);

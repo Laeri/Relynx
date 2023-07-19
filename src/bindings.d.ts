@@ -37,17 +37,15 @@ export type Procedures = {
     subscriptions: never
 };
 
-export type ValidateGroupNameParams = { old_path: string; new_name: string }
-
 export type ReorderNodesParams = { collection: Collection; drag_node: RequestTreeNode; drop_node: RequestTreeNode; drop_index: number }
 
 export type LicenseData = { license_key?: string | null; license_signature?: string | null; license_start?: string | null }
 
-export type SaveEnvironmentsParams = { collection_path: string; environments: Environment[] }
-
-export type ValidateGroupNameResult = { sanitized_name: string; new_path: string; path_exists_already: boolean }
-
 export type SaveRequestCommand = { requests: RequestModel[]; collection: Collection; request_name: string }
+
+export type DeleteNodeParams = { collection: Collection; node: RequestTreeNode; file_node: RequestTreeNode | null }
+
+export type ChooseFileRelativeToParams = { base_path: string }
 
 export type AppEnvironment = "DEVELOPMENT" | "PRODUCTION"
 
@@ -61,15 +59,11 @@ export type RequestSettings = { no_redirect: boolean | null; no_log: boolean | n
 
 export type Environment = { name: string; variables: EnvironmentVariable[]; secrets: EnvironmentSecret[] }
 
-export type RenameGroupParams = { collection_path: string; old_path: string; new_name: string }
-
 export type FrontendError = { kind: DisplayErrorKind; message: string | null }
 
 export type QueryParam = { key: string; value: string; active: boolean }
 
 export type DataSource<T> = { Raw: T } | { FromFilepath: string }
-
-export type DeleteNodeParams = { collection: Collection; node: RequestTreeNode; file_node: RequestTreeNode | null }
 
 export type RequestTree = { root: RequestTreeNode }
 
@@ -83,11 +77,9 @@ export type Workspace = { collections: Collection[] }
 
 export type UrlEncodedParam = { key: string; value: string }
 
-export type AddGroupNodeParams = { collection: Collection; parent: RequestTreeNode; group_name: string }
-
 export type EnvironmentSecret = { name: string; initial_value: string; current_value: string | null; description: string | null; persist_to_file: boolean }
 
-export type AddRequestNodeParams = { collection: Collection; parent: RequestTreeNode; request_name: string; requests_in_same_file: RequestModel[] }
+export type RenameGroupParams = { collection_path: string; old_path: string; new_name: string }
 
 export type RequestResult = { id: string; result: string; status_code: string; total_time: number; total_result_size: number; content_type: string | null; warnings: string[]; result_file: string | null; result_file_folder: string | null }
 
@@ -101,9 +93,17 @@ export type DragAndDropResult = { new_drop_node: RequestTreeNode; remove_drag_no
 
 export type DispositionField = { name: string; filename: string | null; filename_star: string | null }
 
+export type LoadRequestsResult = { request_tree: RequestTree; errs: FrontendError[] }
+
 export type RequestModel = { id: string; name: string; description: string; method: HttpMethod; url: string; query_params: QueryParam[]; headers: Header[]; body: RequestBody; rest_file_path: string; http_version: Replaced<HttpVersion>; settings: RequestSettings; redirect_response: RedirectResponse }
 
 export type DisplayErrorKind = "Generic" | "LoadWorkspaceError" | "ReadWorkspaceFileError" | "DeserializeWorkspaceError" | "SerializeWorkspaceError" | "SaveWorkspaceError" | "NoPathChosen" | "ImportPostmanError" | "ParseError" | "InvalidOpenPath" | "CopyToClipboardError" | "RequestFileAlreadyExists" | "NodeDeleteError" | "SaveRequestError" | "RemoveOldRequestFile" | "AddGroupNodeError" | "DragAndDropError" | "InvalidCollectionConfig" | "ReorderError" | "UnsupportedImportFormat" | "ImportSerializeError" | "LoadEnvironmentsError" | "SaveEnvironmentsError" | "RequestFileMissing" | "CurlError" | "RequestSendError"
+
+export type SaveEnvironmentsParams = { collection_path: string; environments: Environment[] }
+
+export type ValidateGroupNameParams = { old_path: string; new_name: string }
+
+export type ValidateGroupNameResult = { sanitized_name: string; new_path: string; path_exists_already: boolean }
 
 export type ImportCollectionResult = { collection: Collection }
 
@@ -113,7 +113,9 @@ export type DragAndDropParams = { collection: Collection; drag_node_parent: Requ
 
 export type MessageSeverity = "warn" | "warn" | "success" | "error"
 
-export type LoadRequestsResult = { request_tree: RequestTree; errs: FrontendError[] }
+export type AddRequestNodeParams = { collection: Collection; parent: RequestTreeNode; request_name: string; requests_in_same_file: RequestModel[] }
+
+export type AddGroupNodeParams = { collection: Collection; parent: RequestTreeNode; group_name: string }
 
 export type Multipart = { data: DataSource<string>; disposition: DispositionField; headers: Header[] }
 
@@ -126,5 +128,3 @@ export type ImportWarning = { rest_file_path: string; is_group: boolean; message
 export type AddCollectionsResult = { workspace: Workspace; num_imported: number; errored_collections: string[] }
 
 export type ImportPostmanCommandParams = { workspace: Workspace; import_postman_path: string; import_result_path: string }
-
-export type ChooseFileRelativeToParams = { base_path: string }

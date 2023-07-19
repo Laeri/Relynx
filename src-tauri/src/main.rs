@@ -12,6 +12,7 @@ mod model;
 mod pathdiff;
 mod sanitize;
 mod tree;
+mod runner;
 
 use commands::{
     add_existing_collections, add_group_node, add_request_node, choose_file_relative_to,
@@ -175,14 +176,6 @@ fn main() {
     let mut data = RELYNX_CONTEXT.lock().unwrap();
     data.app_handle = Some(app.app_handle());
     std::mem::drop(data);
-
-    std::env::vars().for_each(|var| {
-        println!("{} -> {}", var.0, var.1);
-    });
-
-    std::env::vars_os().for_each(|var| {
-        println!("{} -> {}", var.0.to_string_lossy(), var.1.to_string_lossy());
-    });
 
     let pub_key_path = if cfg!(debug_assertions) {
         "resources/dev.pub_key.pem"

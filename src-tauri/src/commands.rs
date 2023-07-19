@@ -202,7 +202,7 @@ pub fn add_existing_collections(
 pub fn load_requests_for_collection(
     collection: Collection,
 ) -> Result<LoadRequestsResult, rspc::Error> {
-    dbg!(crate::import::load_requests_for_collection(&collection).map_err(|err| err.into()))
+    crate::import::load_requests_for_collection(&collection).map_err(|err| err.into())
 }
 
 #[derive(Serialize, Deserialize, rspc::Type, Debug)]
@@ -248,7 +248,6 @@ pub fn import_jetbrains_folder_command(
 
 #[tauri::command]
 pub fn run_request(request_command: RunRequestCommand) -> Result<RequestResult, rspc::Error> {
-    println!("Command: {:?}", request_command);
     // @TODO: cookie input file...
     // @TODO: handle intellij redirect options
     let mut client = Client::new(None);
@@ -260,7 +259,7 @@ pub fn run_request(request_command: RunRequestCommand) -> Result<RequestResult, 
         .unwrap_or(false);
 
     // @TODO: set options from request settings
-    let call = dbg!(client
+    let calls = client
         .execute(
             &request_command.request,
             &options,
@@ -273,7 +272,9 @@ pub fn run_request(request_command: RunRequestCommand) -> Result<RequestResult, 
                 DisplayErrorKind::RequestSendError,
                 "There was an error when sending the request.",
             )
-        }))?;
+        })?;
+
+    let call = calls.last().unwrap();
 
     // @TODO: what if it is not utf, what if the result is just binary, then displaying it would
     // not make sense, maybe add an option that you don't want to see the actual result together
@@ -310,7 +311,7 @@ pub fn run_request(request_command: RunRequestCommand) -> Result<RequestResult, 
                 .unwrap_or(PathBuf::from("request_result"));
 
             // @TODO: emit a warning if we could not save the file
-            let result = std::fs::write(&absolute_path, call.response.body);
+            let result = std::fs::write(&absolute_path, &call.response.body);
             request_result.result_file = Some(absolute_path.clone());
             let parent_path = absolute_path.parent();
             request_result.result_file_folder = parent_path.map(|p| p.to_path_buf());
@@ -330,7 +331,7 @@ pub fn run_request(request_command: RunRequestCommand) -> Result<RequestResult, 
 }
 
 #[tauri::command]
-pub fn save_request(command: SaveRequestCommand) -> Result<String, rspc::Error> {
+pub fn save_request(command: SaveRequestCommand) -> Result<PathBuf, rspc::Error> {
     let SaveRequestCommand {
         requests,
         collection: _,
@@ -490,7 +491,7 @@ pub fn add_request_node(params: AddRequestNodeParams) -> Result<RequestTreeNode,
         // @TODO: check if any node with same name exists and return
         let new_request_tree_node = Ok(RequestTreeNode::new_request_node(
             new_request.clone(),
-            request_path.to_string_lossy().to_string(),
+            request_path.clone(),
         ));
 
         if request_path.exists() {
@@ -555,7 +556,7 @@ pub fn add_group_node(params: AddGroupNodeParams) -> Result<RequestTreeNode, rsp
     {
         let msg = format!(
             "The path: '{}' is not within the collection: '{}'",
-            params.parent.filepath,
+            params.parent.filepath.to_string_lossy(),
             params.collection.path.to_string_lossy()
         );
         return Err(
@@ -599,7 +600,7 @@ pub fn add_group_node(params: AddGroupNodeParams) -> Result<RequestTreeNode, rsp
 
     match std::fs::create_dir(path.clone()) {
         Ok(()) => Ok(RequestTreeNode::new_group(GroupOptions::FullPath(
-            path.to_string_lossy().to_string(),
+            path.clone(),
         ))),
         Err(_err) => {
             // @TODO: log error
@@ -725,7 +726,7 @@ pub fn delete_node(params: DeleteNodeParams) -> Result<(), rspc::Error> {
     let collection = params.collection;
     let node = params.node;
 
-    if node.filepath.is_empty() {
+    if node.filepath.as_os_str().is_empty() {
         return Err(FrontendError::new_with_message(
             DisplayErrorKind::NodeDeleteError,
             "The node you want to delete has an invalid file path".to_string(),
@@ -740,7 +741,7 @@ pub fn delete_node(params: DeleteNodeParams) -> Result<(), rspc::Error> {
         let msg =
             format!(
             "The node: '{}' with path: '{}' is not within collection: '{}', collectionPath: '{}'",
-            node.name, node.filepath, collection.name, collection.path.to_string_lossy()
+            node.name, node.filepath.to_string_lossy(), collection.name, collection.path.to_string_lossy()
         );
         return Err(FrontendError::new_with_message(DisplayErrorKind::NodeDeleteError, msg).into());
     }
@@ -769,7 +770,7 @@ pub fn delete_node(params: DeleteNodeParams) -> Result<(), rspc::Error> {
             Err(_err) => {
                 let msg = format!(
                     "Could not remove request: '{}' from file: '{}'",
-                    node.name, file_node.filepath
+                    node.name, file_node.filepath.to_string_lossy()
                 );
                 return Err(Into::<rspc::Error>::into(FrontendError::new_with_message(
                     DisplayErrorKind::NodeDeleteError,
@@ -808,7 +809,7 @@ pub fn delete_node(params: DeleteNodeParams) -> Result<(), rspc::Error> {
 
 #[tauri::command]
 pub fn load_environments(collection_path: PathBuf) -> Result<Vec<Environment>, rspc::Error> {
-    dbg!(crate::environment::load_environments(collection_path).map_err(Into::into))
+    crate::environment::load_environments(collection_path).map_err(Into::into)
 }
 
 #[derive(Serialize, Deserialize, rspc::Type, Debug)]
@@ -893,14 +894,8 @@ pub struct ChooseFileRelativeToParams {
 pub fn choose_file_relative_to(params: ChooseFileRelativeToParams) -> Result<PathBuf, rspc::Error> {
     let chosen_file = select_file()?;
     if let Some(relative_path) = diff_paths(&chosen_file, &params.base_path) {
-        println!("ok: {:?}", relative_path);
         Ok(relative_path)
     } else {
-        println!(
-            "err {:?}  ----- {:?}",
-            params.base_path.to_string_lossy(),
-            chosen_file.to_string_lossy()
-        );
         return Err(FrontendError::new_with_message(
             DisplayErrorKind::Generic,
             "The chosen file path cannot be relative to the given request.".to_string(),

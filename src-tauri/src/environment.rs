@@ -21,7 +21,7 @@ pub fn load_environments(collection_path: PathBuf) -> Result<Vec<Environment>, F
 
     let mut environments: HashMap<String, Environment> = HashMap::new();
 
-    let env_structure = dbg!(load_env_structure(env_path, &collection_path))?;
+    let env_structure = load_env_structure(env_path, &collection_path)?;
 
     for (env_name, key_val_map) in env_structure.iter() {
         let variables: Vec<EnvironmentVariable> = key_val_map
@@ -111,7 +111,7 @@ pub fn load_environments(collection_path: PathBuf) -> Result<Vec<Environment>, F
         // @TODO: log warning
     }
 
-    Ok(dbg!(environments.into_values().into_iter().collect()))
+    Ok(environments.into_values().into_iter().collect())
 }
 
 impl TryFrom<&EnvironmentVariable> for SingleEnvVarDescription {

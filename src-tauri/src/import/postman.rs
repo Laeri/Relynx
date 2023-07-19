@@ -64,7 +64,7 @@ fn into_request_tree_node(
     if let Some(ref request) = item.request {
         let request_node = RequestTreeNode::new_request_node(
             transform_request(request, filename, &path, import_warnings),
-            path.to_string_lossy().to_string(),
+            path.clone(),
         );
 
         let file_model = (&request_node).try_into().map_err(|_err| {
@@ -92,8 +92,7 @@ fn into_request_tree_node(
         return Ok(request_node);
     }
 
-    let mut group =
-        RequestTreeNode::new_group(GroupOptions::FullPath(path.to_string_lossy().to_string()));
+    let mut group = RequestTreeNode::new_group(GroupOptions::FullPath(path.clone()));
 
     if !path.exists() {
         std::fs::create_dir(&path).map_err(|_err| {
@@ -215,7 +214,7 @@ fn transform_request(
         postman_collection::v2_1_0::RequestUnion::String(url) => RequestModel {
             id: uuid::Uuid::new_v4().to_string(),
             name: name.to_string(),
-            rest_file_path: request_path.to_string_lossy().to_string(),
+            rest_file_path: request_path.clone(),
             url: url.clone(),
             ..Default::default()
         },
@@ -423,7 +422,7 @@ fn transform_request(
                 name: name.to_string(),
                 description,
                 url: url.to_string(),
-                rest_file_path: request_path.to_string_lossy().to_string(),
+                rest_file_path: request_path.clone(),
                 body,
                 method: method.unwrap_or_default(),
                 headers,

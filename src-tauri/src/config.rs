@@ -5,10 +5,8 @@ use crate::error::{DisplayErrorKind, FrontendError};
 use crate::model::{CollectionConfig, Workspace};
 use directories::ProjectDirs;
 
-
 pub const WORKSPACE_FILENAME: &str = "workspace.json";
 pub const COLLECTION_CONFIGFILE: &str = "relynx.collection.json";
-
 
 fn get_dirs() -> Option<ProjectDirs> {
     ProjectDirs::from("app", "relynx", "relynx")
@@ -30,8 +28,8 @@ pub fn load_workspace() -> Result<Workspace, FrontendError> {
 
     if !config_dir.exists() {
         // @TODO @ERR could not create workspace folder
-        dbg!(fs::create_dir(config_dir)
-            .map_err(|_io_err| FrontendError::new(DisplayErrorKind::LoadWorkspaceError)))?;
+        fs::create_dir(config_dir)
+            .map_err(|_io_err| FrontendError::new(DisplayErrorKind::LoadWorkspaceError))?;
     }
 
     if !workspace_file_path.exists() {
@@ -40,8 +38,8 @@ pub fn load_workspace() -> Result<Workspace, FrontendError> {
 
     let content = std::fs::read_to_string(workspace_file_path)
         .map_err(|_io_err| FrontendError::new(DisplayErrorKind::ReadWorkspaceFileError))?;
-    let mut workspace: Workspace = dbg!(serde_json::from_str(&content)
-        .map_err(|_err| FrontendError::new(DisplayErrorKind::DeserializeWorkspaceError)))?;
+    let mut workspace: Workspace = serde_json::from_str(&content)
+        .map_err(|_err| FrontendError::new(DisplayErrorKind::DeserializeWorkspaceError))?;
 
     // for each collection check if the path of it's folder actually exists
     // use this in the frontend to mark them as not available until the path is fixed
@@ -55,7 +53,7 @@ pub fn load_workspace() -> Result<Workspace, FrontendError> {
 pub fn save_workspace(workspace: &Workspace) -> Result<(), FrontendError> {
     let config_dir =
         get_config_dir().ok_or(FrontendError::new(DisplayErrorKind::LoadWorkspaceError))?;
-    let workspace_file_path = dbg!(config_dir.join(WORKSPACE_FILENAME));
+    let workspace_file_path = config_dir.join(WORKSPACE_FILENAME);
     let default_str = serde_json::to_string_pretty::<Workspace>(workspace)
         .map_err(|_serde_err| FrontendError::new(DisplayErrorKind::SerializeWorkspaceError))?;
     fs::write(workspace_file_path, default_str)

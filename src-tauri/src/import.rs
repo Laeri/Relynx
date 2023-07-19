@@ -7,10 +7,16 @@ use walkdir::{DirEntry, WalkDir};
 use crate::{
     config::{load_collection_config, save_collection_config, save_workspace},
     error::{DisplayErrorKind, FrontendError},
-    model::{request_to_request_model, Collection, CollectionConfig, ImportWarning, Workspace},
+    model::{
+        request_to_request_model, Collection, CollectionConfig, ImportWarning, RequestModel,
+        Workspace,
+    },
     tree::{GroupOptions, RequestTree, RequestTreeNode},
 };
-use http_rest_file::parser::Parser as RestFileParser;
+use http_rest_file::{
+    model::{HttpRestFile, ParseError},
+    parser::Parser as RestFileParser,
+};
 
 pub mod postman;
 
@@ -46,14 +52,23 @@ fn hidden_relynx_folder(entry: &DirEntry) -> bool {
         .any(|item| item.file_name() == RELYNX_IGNORE_FILE)
 }
 
+pub fn load_file_model(
+    request_file_path: &std::path::PathBuf,
+) -> Result<Vec<RequestModel>, ParseError> {
+    let mut http_rest_file: HttpRestFile = RestFileParser::parse_file(&request_file_path)?;
+    Ok(http_rest_file
+        .requests
+        .into_iter()
+        .map(|request| request_to_request_model(request, &request_file_path))
+        .collect::<Vec<RequestModel>>())
+}
+
 pub fn load_requests_for_collection(
     collection: &Collection,
 ) -> Result<LoadRequestsResult, FrontendError> {
     let mut parse_errs: Vec<FrontendError> = Vec::new();
-    let mut nodes: HashMap<String, Vec<RefCell<RequestTreeNode>>> = HashMap::new();
-    let mut root = RequestTreeNode::new_group(GroupOptions::FullPath(
-        collection.path.to_string_lossy().to_string(),
-    ));
+    let mut nodes: HashMap<PathBuf, Vec<RefCell<RequestTreeNode>>> = HashMap::new();
+    let mut root = RequestTreeNode::new_group(GroupOptions::FullPath(collection.path.clone()));
 
     let walker = WalkDir::new(&collection.path).into_iter();
 
@@ -69,35 +84,37 @@ pub fn load_requests_for_collection(
             {
                 match RestFileParser::parse_file(entry.path()) {
                     Ok(mut model) => {
-                        println!("MODEL PARSED: {:?}", model);
-                        let path = entry.path().to_string_lossy().to_string();
+                        let path = entry.path().to_owned();
 
                         let node = if model.requests.len() == 1 {
                             RequestTreeNode::new_request_node(
-                                request_to_request_model(model.requests.remove(0), path.clone()),
+                                request_to_request_model(model.requests.remove(0), &path),
                                 path.clone(),
                             )
                         } else {
                             let mut file_group_node = RequestTreeNode::new_file_group(path.clone());
                             let request_nodes = model.requests.into_iter().map(|request| {
-                                let request_model = request_to_request_model(request, path.clone());
+                                let request_model = request_to_request_model(request, &path);
                                 RequestTreeNode::new_request_node(request_model, path.clone())
                             });
                             file_group_node.children.extend(request_nodes);
                             file_group_node
                         };
-                        let entry = nodes.entry(parent_path.to_string_lossy().to_string()); //insert_(parent_path, RefCell::new(node));
+                        let entry = nodes.entry(parent_path.to_owned()); //insert_(parent_path, RefCell::new(node));
                         let elements = entry.or_insert(Vec::new());
                         elements.push(RefCell::new(node));
                     }
-                    Err(err) => parse_errs.push(err.into()),
+                    Err(err) => {
+                        println!("Single parse err: {:?}", err);
+                        parse_errs.push(err.into())
+                    }
                 }
             }
         } else {
             // @TODO handle error
-            let path = entry.path().to_string_lossy().to_string();
-            let group_node = RequestTreeNode::new_group(GroupOptions::FullPath(path));
-            let entry = nodes.entry(parent_path.to_string_lossy().to_string()); //insert_(parent_path, RefCell::new(node));
+            let path = entry.path();
+            let group_node = RequestTreeNode::new_group(GroupOptions::FullPath(path.to_owned()));
+            let entry = nodes.entry(parent_path.to_owned());
             let elements = entry.or_insert(Vec::new());
             elements.push(RefCell::new(group_node));
         }
@@ -132,6 +149,7 @@ pub fn load_requests_for_collection(
         };
     }
 
+    println!("PARSE_ERROS {:?}", parse_errs);
     Ok(LoadRequestsResult {
         request_tree: RequestTree { root },
         errs: parse_errs,

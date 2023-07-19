@@ -17,7 +17,7 @@ pub struct RequestTreeNode {
     pub name: String,
     pub request: Option<RequestModel>,
     pub children: Vec<RequestTreeNode>,
-    pub filepath: String,
+    pub filepath: PathBuf,
     pub is_file_group: bool,
 }
 
@@ -28,11 +28,11 @@ pub const DEFAULT_OPTIONS: SanitizeOptions<'static> = SanitizeOptions {
 };
 
 pub enum GroupOptions {
-    FullPath(String),
+    FullPath(PathBuf),
 }
 
 impl RequestTreeNode {
-    pub fn new_request_node(request_model: RequestModel, path: String) -> Self {
+    pub fn new_request_node(request_model: RequestModel, path: PathBuf) -> Self {
         // @TODO check if name works for a file name
         RequestTreeNode {
             name: sanitize_filename_with_options(&request_model.name, DEFAULT_OPTIONS),
@@ -49,19 +49,24 @@ impl RequestTreeNode {
                 let group_path = std::path::PathBuf::from(path.clone());
                 node.name = match group_path.file_name() {
                     Some(file_name) => file_name.to_string_lossy().to_string(),
-                    None => sanitize_filename_with_options(path, DEFAULT_OPTIONS),
+                    None => sanitize_filename_with_options(
+                        "Group_".to_string() + &uuid::Uuid::new_v4().to_string(),
+                        DEFAULT_OPTIONS,
+                    ),
                 };
             }
         }
         node
     }
 
-    pub fn new_file_group(path: String) -> Self {
+    pub fn new_file_group(path: PathBuf) -> Self {
         let mut node = RequestTreeNode::default();
-        let file_path = std::path::PathBuf::from(path.clone());
-        node.name = match file_path.file_name() {
+        node.name = match path.file_name() {
             Some(file_name) => file_name.to_string_lossy().to_string(),
-            None => sanitize_filename_with_options(path.clone(), DEFAULT_OPTIONS),
+            None => sanitize_filename_with_options(
+                "Request_".to_string() + &uuid::Uuid::new_v4().to_string(),
+                DEFAULT_OPTIONS,
+            ),
         };
         node.is_file_group = true;
         node.filepath = path;
@@ -97,7 +102,7 @@ impl Default for RequestTreeNode {
             name: String::new(),
             request: None,
             children: Vec::new(),
-            filepath: String::new(),
+            filepath: PathBuf::new(),
             is_file_group: false,
         }
     }
@@ -157,7 +162,7 @@ pub fn correct_children_paths(node: &mut RequestTreeNode, path_orders: &mut Path
             .for_each(|(index, child)| {
                 let child_path = PathBuf::from(&child.filepath);
                 if let Some(file_name) = child_path.file_name() {
-                    let new_path = current_path.join(file_name).to_string_lossy().to_string();
+                    let new_path = current_path.join(file_name);
 
                     if path_orders.get(&child.filepath).is_some() {
                         path_orders.insert(new_path.clone(), index as u32);

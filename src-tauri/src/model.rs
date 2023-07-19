@@ -101,7 +101,7 @@ pub struct ImportCollectionResult {
 // system which does not have an order. It maps paths to the respective order *within* a parent
 // this is only for requests or groups within a group. For filegroups the order is dependent on the
 // order of the requests within a file
-pub type PathOrder = HashMap<String, u32>;
+pub type PathOrder = HashMap<PathBuf, u32>;
 pub type EnvName = String;
 pub type EnvVarDescriptions = HashMap<EnvName, Vec<SingleEnvVarDescription>>;
 
@@ -137,7 +137,7 @@ impl From<HttpRestFile> for RequestFileModel {
                 .requests
                 .into_iter()
                 .map(|request| {
-                    request_to_request_model(request, value.path.to_string_lossy().to_string())
+                    request_to_request_model(request, value.path.as_ref())
                 })
                 .collect::<Vec<RequestModel>>(),
         }
@@ -167,7 +167,7 @@ impl From<&RequestFileModel> for HttpRestFile {
 
 pub fn request_to_request_model(
     value: http_rest_file::model::Request,
-    path: String,
+    path: &std::path::PathBuf,
 ) -> RequestModel {
     let redirect_response = match value.save_response {
         Some(SaveResponse::NewFileIfExists(ref path)) => RedirectResponse {
@@ -193,7 +193,7 @@ pub fn request_to_request_model(
         method: value.request_line.method.unwrap_or_default(),
         http_version: value.request_line.http_version.into(),
         url: value.request_line.target.to_string(),
-        rest_file_path: path,
+        rest_file_path: path.to_owned(),
         body: (&value.body).into(),
         query_params: Vec::new(), // @TODO parse qurey from url and remove
         headers: value.headers.iter().map(Into::into).collect(),
@@ -359,7 +359,7 @@ pub struct RequestModel {
     pub query_params: Vec<QueryParam>,
     pub headers: Vec<Header>,
     pub body: RequestBody,
-    pub rest_file_path: String,
+    pub rest_file_path: PathBuf,
     pub http_version: Replaced<HttpVersion>,
     pub settings: RequestSettings,
     pub redirect_response: RedirectResponse,
@@ -378,7 +378,7 @@ impl Default for RequestModel {
             query_params: vec![],
             headers: vec![],
             body: RequestBody::None,
-            rest_file_path: String::new(),
+            rest_file_path: PathBuf::new(),
             http_version: Replaced {
                 value: HttpVersion::default(),
                 is_replaced: true,
@@ -417,7 +417,7 @@ impl RequestModel {
             url_with_host = Some(host_header[0].to_string() + &url);
         }
 
-        let url: Result<Url, ()> = match Url::parse(&self.url) {
+        let url: Result<Url, ()> = match Url::parse(&url) {
             Ok(url) => Ok(url),
             Err(_err) => {
                 if let Some(ref url_with_host) = url_with_host {
@@ -555,10 +555,10 @@ impl RequestModel {
         request_name: &str,
         parent_path: std::path::PathBuf,
     ) -> std::path::PathBuf {
-        let file_name = dbg!(sanitize_filename_with_options(
+        let file_name = sanitize_filename_with_options(
             request_name,
             DEFAULT_OPTIONS
-        ));
+        );
         let mut result = parent_path.join(file_name);
         result.set_extension(DEFAULT_HTTP_EXTENSION);
         result
@@ -573,7 +573,7 @@ impl RequestModel {
             query_params: vec![],
             headers: vec![],
             body: RequestBody::None,
-            rest_file_path: path.to_string_lossy().to_string(),
+            rest_file_path: path.to_owned(),
             http_version: Replaced {
                 value: HttpVersion::default(),
                 is_replaced: true,

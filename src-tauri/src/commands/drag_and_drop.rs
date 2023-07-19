@@ -61,8 +61,8 @@ pub fn drag_and_drop(params: DragAndDropParams) -> Result<DragAndDropResult, rsp
         std::fs::rename(&drag_node.filepath, &new_path).map_err(|_err| {
             let msg = format!(
                 "Could not move file or folder to target location. From: '{}', to: '{}'",
-                &drag_node.filepath,
-                &new_path.to_string_lossy().to_string()
+                drag_node.filepath.to_string_lossy(),
+                new_path.to_string_lossy()
             );
             Into::<rspc::Error>::into(FrontendError::new_with_message(
                 DisplayErrorKind::DragAndDropError,
@@ -99,7 +99,7 @@ pub fn drag_and_drop(params: DragAndDropParams) -> Result<DragAndDropResult, rsp
             .iter_mut()
             .for_each(|child| child.filepath = drop_node.filepath.clone());
     } else {
-        drag_node.filepath = new_path.to_string_lossy().to_string();
+        drag_node.filepath = new_path.clone();
         if let Some(request) = drag_node.request.as_mut() {
             request.rest_file_path = drag_node.filepath.clone();
         }
