@@ -746,7 +746,7 @@ pub struct RequestResult {
 pub struct SaveRequestCommand {
     pub requests: Vec<RequestModel>,
     pub collection: Collection,
-    pub request_name: String,
+    pub old_name: String,
 }
 
 impl From<&Header> for http_rest_file::model::Header {

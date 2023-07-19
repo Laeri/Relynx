@@ -334,8 +334,8 @@ pub fn run_request(request_command: RunRequestCommand) -> Result<RequestResult, 
 pub fn save_request(command: SaveRequestCommand) -> Result<PathBuf, rspc::Error> {
     let SaveRequestCommand {
         requests,
-        collection: _,
-        request_name: _,
+        collection,
+        old_name,
     } = command;
 
     if requests.is_empty() {
@@ -346,7 +346,45 @@ pub fn save_request(command: SaveRequestCommand) -> Result<PathBuf, rspc::Error>
         .into());
     }
 
-    let file_path = requests[0].rest_file_path.clone();
+    let old_path = requests[0].rest_file_path.clone();
+
+    // if there are more than ony request we change a request within a file group, so the path will
+    // be the same and does not change, if there is one request and its name changed we have to
+    // create a new file
+    let file_path = if requests.len() == 1 && requests[0].name != old_name {
+        let request = &requests[0];
+
+        // otherwise we will create a new file with the request and afterwards delete the old one
+        let new_filename = sanitize_filename_with_options(&request.name, DEFAULT_OPTIONS)
+            + &HttpRestFileExtension::get_default_extension();
+        let parent_path =
+            request
+                .rest_file_path
+                .parent()
+                .ok_or(FrontendError::new_with_message(
+                    DisplayErrorKind::Generic,
+                    "Could not create new filename for request",
+                ))?;
+        let new_path = parent_path.join(new_filename);
+
+        // if the new path exists already keep the old one
+        if new_path.exists() {
+            requests[0].rest_file_path.clone()
+        } else {
+            new_path
+        }
+    } else {
+        requests[0].rest_file_path.clone()
+    };
+
+    if !old_path.starts_with(&collection.path) || !file_path.starts_with(&collection.path) {
+        let msg = format!(
+            "Could not update request as it does not seem to belong to collection: {}",
+            collection.path.to_string_lossy()
+        );
+        return Err(FrontendError::new_with_message(DisplayErrorKind::Generic, msg).into());
+    }
+
     let requests: Vec<Request> = requests.into_iter().map(Into::into).collect();
 
     let file_model = http_rest_file::model::HttpRestFile {
@@ -364,25 +402,22 @@ pub fn save_request(command: SaveRequestCommand) -> Result<PathBuf, rspc::Error>
         ))
     })?;
 
-    // also check if name changed, because then the request will reside in a new file based on its
-    // new name and we have to remove the old file as a new file was created by the Serializer
-    // beforehand
-    /* @TODO: if the name of a request changes do we also want to update hte filename? It shouldn't
-       * be necessary but it might lead to weird cases if it doesn't... @IMPORTANT let model = requests[0].clone();
-       if model.name != command.request_name {
-           std::fs::remove_file(model.rest_file_path.clone()).map_err(|_err| {
-               // @TODO: handle error
-               let msg = format!(
-                   "When renaming the request could not remove old file at path: {}",
-                   model.rest_file_path
-               );
-               Into::<rspc::Error>::into(FrontendError::new_with_message(
-                   DisplayErrorKind::RemoveOldRequestFile,
-                   msg,
-               ))
-           })?;
-       }
-    */
+    if file_path != old_path {
+        //if the name of a request changes do we also want to update hte filename? It shouldn't
+        // be necessary but it might lead to weird cases if it doesn't... @IMPORTANT let model = requests[0].clone();
+        std::fs::remove_file(&old_path).map_err(|_err| {
+            // @TODO: handle error
+            let msg = format!(
+                "When renaming the request could not remove old file at path: {}",
+                old_path.to_string_lossy()
+            );
+            Into::<rspc::Error>::into(FrontendError::new_with_message(
+                DisplayErrorKind::RemoveOldRequestFile,
+                msg,
+            ))
+        })?;
+    }
+
     Ok(file_path)
 }
 
@@ -738,10 +773,12 @@ pub fn delete_node(params: DeleteNodeParams) -> Result<(), rspc::Error> {
         .filepath
         .starts_with(&collection.path.to_string_lossy().to_string())
     {
-        let msg =
-            format!(
+        let msg = format!(
             "The node: '{}' with path: '{}' is not within collection: '{}', collectionPath: '{}'",
-            node.name, node.filepath.to_string_lossy(), collection.name, collection.path.to_string_lossy()
+            node.name,
+            node.filepath.to_string_lossy(),
+            collection.name,
+            collection.path.to_string_lossy()
         );
         return Err(FrontendError::new_with_message(DisplayErrorKind::NodeDeleteError, msg).into());
     }
@@ -770,7 +807,8 @@ pub fn delete_node(params: DeleteNodeParams) -> Result<(), rspc::Error> {
             Err(_err) => {
                 let msg = format!(
                     "Could not remove request: '{}' from file: '{}'",
-                    node.name, file_node.filepath.to_string_lossy()
+                    node.name,
+                    file_node.filepath.to_string_lossy()
                 );
                 return Err(Into::<rspc::Error>::into(FrontendError::new_with_message(
                     DisplayErrorKind::NodeDeleteError,

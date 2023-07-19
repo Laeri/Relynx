@@ -210,7 +210,6 @@ export function RequestTreeComponent(props: ComponentProps) {
       }).catch(catchError(toast));
     }
 
-
   }
 
   const onPrimeTreeNodeClicked = (primeNode: PrimeNode) => {

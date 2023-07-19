@@ -95,8 +95,8 @@ class Backend {
 
   // @TODO: check if current request one parameter?
   // Promise result contains new path??? @TODO
-  saveRequest(requests: RequestModel[], collection: Collection, requestName: string): Promise<string> {
-    let command: SaveRequestCommand = { requests: requests, collection: collection, request_name: requestName };
+  saveRequest(requests: RequestModel[], collection: Collection, oldName: string): Promise<string> {
+    let command: SaveRequestCommand = { requests: requests, collection: collection, old_name: oldName };
     return api.query(['save_request', command]);
   }
 

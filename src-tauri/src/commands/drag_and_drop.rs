@@ -147,7 +147,7 @@ fn dd_check_preconditions(params: &DragAndDropParams) -> Result<(), FrontendErro
 
     if !drag_node
         .filepath
-        .starts_with(&collection.path.to_string_lossy().to_string())
+        .starts_with(&collection.path)
     {
         return Err(FrontendError::new_with_message(
             DisplayErrorKind::DragAndDropError,
@@ -157,7 +157,7 @@ fn dd_check_preconditions(params: &DragAndDropParams) -> Result<(), FrontendErro
 
     if !drop_node
         .filepath
-        .starts_with(&collection.path.to_string_lossy().to_string())
+        .starts_with(&collection.path)
     {
         return Err(FrontendError::new_with_message(
             DisplayErrorKind::DragAndDropError,
