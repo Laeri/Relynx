@@ -34,6 +34,7 @@ export function CollectionMenuView(props: ComponentProps) {
     backend.loadRequestsForCollection(collection).then((result: LoadRequestsResult) => {
       if (result.errs.length > 0) {
         let allParseErrors = formatParseErrorsMsg(result.errs);
+        console.log('parse errors: ', allParseErrors);
         toast.showError("Error loading requests", allParseErrors);
       }
       updateRequestTree(result.request_tree);

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::config::{load_collection_config, save_collection_config};
-use crate::error::{DisplayErrorKind, FrontendError};
+use crate::error::RelynxError;
 use crate::model::Collection;
 use crate::tree::{correct_children_paths, RequestTreeNode};
 use http_rest_file::model::*;
@@ -58,16 +58,14 @@ pub fn drag_and_drop(params: DragAndDropParams) -> Result<DragAndDropResult, rsp
         // just mv and be done
         let new_path = PathBuf::from(&drop_node.filepath).join(drag_node.get_file_name());
         // @TODO: err
-        std::fs::rename(&drag_node.filepath, &new_path).map_err(|_err| {
-            let msg = format!(
+        std::fs::rename(&drag_node.filepath, &new_path).map_err(|err| {
+            log::error!("Io Error: {:?}", err);
+            log::error!(
                 "Could not move file or folder to target location. From: '{}', to: '{}'",
                 drag_node.filepath.to_string_lossy(),
                 new_path.to_string_lossy()
             );
-            Into::<rspc::Error>::into(FrontendError::new_with_message(
-                DisplayErrorKind::DragAndDropError,
-                msg,
-            ))
+            Into::<rspc::Error>::into(RelynxError::DragAndDropGeneral)
         })?;
         new_path
     } else {
@@ -130,7 +128,7 @@ pub fn drag_and_drop(params: DragAndDropParams) -> Result<DragAndDropResult, rsp
     Ok(result)
 }
 
-fn dd_check_preconditions(params: &DragAndDropParams) -> Result<(), FrontendError> {
+fn dd_check_preconditions(params: &DragAndDropParams) -> Result<(), RelynxError> {
     let DragAndDropParams {
         collection,
         drag_node,
@@ -139,73 +137,52 @@ fn dd_check_preconditions(params: &DragAndDropParams) -> Result<(), FrontendErro
     } = params;
 
     if !collection.path.exists() {
-        return Err(FrontendError::new_with_message(
-            DisplayErrorKind::DragAndDropError,
-            "Invalid collection given, collection has no path",
-        ));
+        log::error!(
+            "Invalid collection given, collection has no path! Collection: {:?}",
+            collection
+        );
+        Err(RelynxError::DragAndDropGeneral)?;
     }
 
-    if !drag_node
-        .filepath
-        .starts_with(&collection.path)
-    {
-        return Err(FrontendError::new_with_message(
-            DisplayErrorKind::DragAndDropError,
-            "The drag node is not within the given collection",
-        ));
+    if !drag_node.filepath.starts_with(&collection.path) {
+        log::error!("The drag node is not within the given collection");
+        Err(RelynxError::DragAndDropGeneral)?;
     }
 
-    if !drop_node
-        .filepath
-        .starts_with(&collection.path)
-    {
-        return Err(FrontendError::new_with_message(
-            DisplayErrorKind::DragAndDropError,
-            "The drop node is not within the given collection",
-        ));
+    if !drop_node.filepath.starts_with(&collection.path) {
+        log::error!("The drop node is not within the given collection");
+        Err(RelynxError::DragAndDropGeneral)?;
     }
 
     if drag_node.filepath == drop_node.filepath {
-        return Err(FrontendError::new_with_message(
-            DisplayErrorKind::DragAndDropError,
-            "Cannot drag node unto itself",
-        ));
+        log::error!("Cannot drag node unto itself");
+        Err(RelynxError::DragAndDropGeneral)?;
     }
 
     if drop_node.request.is_some() {
-        return Err(FrontendError::new_with_message(
-            DisplayErrorKind::DragAndDropError,
-            "Can only drop node into a group and not into a request",
-        ));
+        log::error!("Can only drop node into a group and not into a request");
+        Err(RelynxError::DragAndDropGeneral)?;
     }
 
     // cannot drag a regular group into a file group, only requests can be put into file groups
     if drop_node.is_file_group && drag_node.request.is_none() {
-        return Err(FrontendError::new_with_message(
-            DisplayErrorKind::DragAndDropError,
-            "Cannot drop a group node into a file group.",
-        ));
+        log::error!("Cannot drop a group node into a file group.");
+        Err(RelynxError::DragAndDropGeneral)?;
     }
 
     if drop_node.any_child_with_name(&drag_node.name) {
-        return Err(FrontendError::new_with_message(
-            DisplayErrorKind::DragAndDropError,
-            "There exists already a node within the same name in the new parent. Rename the node first before dragging it."
-        ));
+        log::error!("There exists already a node within the same name in the new parent. Rename the node first before dragging it.");
+        Err(RelynxError::DragAndDropGeneral)?;
     }
 
     if !PathBuf::from(&drop_node.filepath).exists() {
-        return Err(FrontendError::new_with_message(
-            DisplayErrorKind::DragAndDropError,
-            "The drop target node does not exist or has been removed".to_string(),
-        ));
+        log::error!("The drop target node does not exist or has been removed");
+        Err(RelynxError::DragAndDropGeneral)?;
     }
 
     if !PathBuf::from(&drag_node.filepath).exists() {
-        return Err(FrontendError::new_with_message(
-            DisplayErrorKind::DragAndDropError,
-            "The drag node does not exist or has been removed".to_string(),
-        ));
+        log::error!("The drag node does not exist or has been removed");
+        Err(RelynxError::DragAndDropGeneral)?;
     }
 
     Ok(())
@@ -214,7 +191,7 @@ fn dd_check_preconditions(params: &DragAndDropParams) -> Result<(), FrontendErro
 fn dd_create_new_location(
     drag_node: &mut RequestTreeNode,
     drop_node: &mut RequestTreeNode,
-) -> Result<PathBuf, FrontendError> {
+) -> Result<PathBuf, RelynxError> {
     // Create new file
     // If we drop into a file group the parent (aka the file group node) has to be resaved with the
     // new requests
@@ -223,10 +200,11 @@ fn dd_create_new_location(
         // new request and remove old file
         let request_file: Result<HttpRestFile, ()> = drop_node.try_into();
         if request_file.is_err() {
-            return Err(FrontendError::new_with_message(
-                DisplayErrorKind::DragAndDropError,
-                "Cannot convert request into a request file",
-            ));
+            log::error!(
+                "Could not convert request into file! Drop Node: {:?}",
+                drop_node
+            );
+            return Err(RelynxError::DragAndDropGeneral);
         }
         request_file.unwrap()
     } else {
@@ -235,9 +213,8 @@ fn dd_create_new_location(
         let request_file: Result<HttpRestFile, ()> = drag_node.try_into();
 
         if request_file.is_err() {
-            return Err(FrontendError::new_with_message(
-                DisplayErrorKind::DragAndDropError,
-                "Cannot convert request into a request file",
+            return Err(RelynxError::DragAndDropError(
+                "Cannot convert request into a request file".to_string(),
             ));
         }
         let new_path = PathBuf::from(&drop_node.filepath)
@@ -248,13 +225,10 @@ fn dd_create_new_location(
 
         request_file
     };
-    // @TODO log error
-    Serializer::serialize_to_file(&request_file).map_err(|_err| {
-        // @TODO: log serialize error
-        FrontendError::new_with_message(
-            DisplayErrorKind::DragAndDropError,
-            "Could not write request to file. The request may be malformed.",
-        )
+    Serializer::serialize_to_file(&request_file).map_err(|err| {
+        log::error!("drag and drop could not create file at new location");
+        log::error!("Serialization error: {:?}", err);
+        RelynxError::DragAndDropRequestError
     })?;
     Ok(*request_file.path)
 }
@@ -262,7 +236,7 @@ fn dd_create_new_location(
 fn dd_remove_old_location(
     drag_node: &RequestTreeNode,
     drag_node_parent: &mut RequestTreeNode,
-) -> Result<(), FrontendError> {
+) -> Result<(), RelynxError> {
     let drag_node_pos = drag_node_parent
         .children
         .iter()
@@ -276,11 +250,10 @@ fn dd_remove_old_location(
     if drag_node_parent.is_file_group {
         // if we drag out of a file group and it is empty remove it
         if drag_node_parent.children.is_empty() {
-            std::fs::remove_file(&drag_node_parent.filepath).map_err(|_err| {
-                FrontendError::new_with_message(
-                    DisplayErrorKind::DragAndDropError,
-                    "Could not remove old request file for drag node",
-                )
+            std::fs::remove_file(&drag_node_parent.filepath).map_err(|err| {
+                log::error!("Io Error: {:?}", err);
+                log::error!("Could not remove old request file for drag node");
+                RelynxError::DragAndDropGeneral
             })?;
             return Ok(());
         }
@@ -288,26 +261,25 @@ fn dd_remove_old_location(
         // otherwise we have to resave the file group but with the request removed from it
 
         // @TODO this might only be a warning?
-        let new_drag_node_file: HttpRestFile = (drag_node_parent).try_into().map_err(|_err| {
-            FrontendError::new_with_message(
-                DisplayErrorKind::DragAndDropError,
-                "Could not remove drag node from old parent.",
-            )
+        let new_drag_node_file: HttpRestFile = (drag_node_parent).try_into().map_err(|_| {
+            log::error!("Conversion from drag_node_parent to http rest file did not work");
+            log::error!("Could not remove drag node from old parent");
+            RelynxError::DragAndDropGeneral
         })?;
-        // @TODO log error
-        Serializer::serialize_to_file(&new_drag_node_file).map_err(|_err| {
-            FrontendError::new_with_message(
-                DisplayErrorKind::DragAndDropError,
-                "Could not serialize to file",
-            )
+        Serializer::serialize_to_file(&new_drag_node_file).map_err(|err| {
+            log::error!("Could not serialize to file during dragging.");
+            log::error!("Error: {:?}", err);
+            RelynxError::DragAndDropIntoFilegroupError
         })?;
         Ok(())
     } else {
-        std::fs::remove_file(&drag_node.filepath).map_err(|_err| {
-            FrontendError::new_with_message(
-                DisplayErrorKind::DragAndDropError,
-                "Could not remove old request file for drag node",
-            )
+        std::fs::remove_file(&drag_node.filepath).map_err(|err| {
+            log::error!(
+                "Could not reomve old request for drag node, path: {}",
+                drag_node.filepath.display()
+            );
+            log::error!("Io Error: {:?}", err);
+            RelynxError::DragAndDropGeneral
         })?;
         Ok(())
         // we can just remove the old file
@@ -340,12 +312,10 @@ pub fn reorder_nodes_within_parent(
 
     let drop_node_path = PathBuf::from(&drop_node.filepath);
     if !drop_node_path.exists() {
-        return Err(FrontendError::new_with_message(
-            DisplayErrorKind::ReorderError,
+        log::error!(
             "Reorder parent does not exist anymore. The file/folder might have been removed."
-                .to_string(),
-        )
-        .into());
+        );
+        return Err(RelynxError::DragAndDropGeneral.into());
     }
 
     let position = drop_node
@@ -353,11 +323,8 @@ pub fn reorder_nodes_within_parent(
         .iter()
         .position(|child| child.id == drag_node.id);
     if position.is_none() {
-        return Err(FrontendError::new_with_message(
-            DisplayErrorKind::ReorderError,
-            "Could not reorder items".to_string(),
-        )
-        .into());
+        log::error!("Broken Invariant. Could not find drag node within drop nodes children during reorder within parent.");
+        return Err(RelynxError::ReorderDragAndDropError.into());
     }
     let position = position.unwrap();
     if drop_index > position {
@@ -370,11 +337,10 @@ pub fn reorder_nodes_within_parent(
     // resave the file
     if drop_node.is_file_group {
         let rest_file: HttpRestFile = (&drop_node).try_into().unwrap();
-        Serializer::serialize_to_file(&rest_file).map_err(|_err| {
-            FrontendError::new_with_message(
-                DisplayErrorKind::ReorderError,
-                "Could not persist updated requests".to_string(),
-            )
+        Serializer::serialize_to_file(&rest_file).map_err(|err| {
+            log::error!("Could not serialize drop_node to file");
+            log::error!("Err: {:?}", err);
+            RelynxError::ReorderDragAndDropError
         })?;
     } else {
         // we dragged a folder/file within a folder, we only have to store the updated pathordering

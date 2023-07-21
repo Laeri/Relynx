@@ -216,8 +216,10 @@ export function RequestComponent(_props: ComponentProps) {
 
   function updateUrl(url: string) {
     let newRequest = updatedRequestModel(currentRequest, { url: url });
-    updateRequest(newRequest);
+    let queryParams = extractQueryParamsFromUrl(newRequest);
+    newRequest.query_params = queryParams;
     setUrl(url);
+    updateRequest(newRequest);
   }
 
   function updateDescription(description: string) {
@@ -249,7 +251,7 @@ export function RequestComponent(_props: ComponentProps) {
     let newRequest = updatedRequestModel(currentRequest, {});
 
     changeRequestUrlParams(newRequest, oldParam, newParam);
-    //let newRequest = updatedRequestModel(currentRequest, { url: newUrl, query_params: newQueryParams });
+    console.log('new request', newRequest);
     updateRequest(newRequest);
   }
 
@@ -268,10 +270,9 @@ export function RequestComponent(_props: ComponentProps) {
     //   query_params: [...currentRequest.query_params, newQueryParam(undefined)]
     // });
     let newUrl = changeUrlParams(currentRequest.url, undefined, { key: "", value: "", active: true })
-    let newRequestModel: RequestModel = updatedRequestModel(currentRequest, { url: newUrl }
-    );
-
-    updateRequest(newRequestModel);
+    let newRequest = updatedRequestModel(currentRequest, { url: newUrl });
+    newRequest.query_params = extractQueryParamsFromUrl(newRequest);
+    updateRequest(newRequest);
   }
 
   function removeQueryParam(queryParam: QueryParam) {

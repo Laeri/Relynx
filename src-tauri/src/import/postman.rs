@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use crate::config::save_workspace;
-use crate::error::{DisplayErrorKind, FrontendError};
+use crate::error::RelynxError;
 use crate::model::{
     Collection, ImportCollectionResult, ImportWarning, MessageSeverity, Multipart,
     RedirectResponse, Replaced, RequestBody, RequestModel, Workspace,
@@ -21,15 +21,17 @@ pub fn import(
     mut workspace: Workspace,
     import_path: PathBuf,
     result_path: PathBuf,
-) -> Result<ImportCollectionResult, FrontendError> {
+) -> Result<ImportCollectionResult, RelynxError> {
     match postman_collection::from_path(import_path) {
         Ok(collection) => {
             match collection {
                 PostmanCollection::V1_0_0(_spec) => {
-                    return Err(FrontendError::new_with_message(DisplayErrorKind::UnsupportedImportFormat, "Import for postman collection version v1.0.0 is not supported. Try the import with a collection that uses the v2.1.0 json format."));
+                    log::error!("Cannot import v1_0_0 collection!");
+                    return Err(RelynxError::TriedPostmanImportV1_0_0);
                 }
                 PostmanCollection::V2_0_0(_spec) => {
-                    return Err(FrontendError::new_with_message(DisplayErrorKind::UnsupportedImportFormat, "Import for postman collection version v2.0.0 is not supported. Try the import with a collection that uses the v2.1.0 json format."));
+                    log::error!("Cannot import v1_0_0 collection!");
+                    return Err(RelynxError::TriedPostmanImportV2_0_0);
                 }
                 PostmanCollection::V2_1_0(spec) => {
                     let collection = postman_to_request_tree(result_path, spec);
@@ -43,12 +45,10 @@ pub fn import(
                 }
             }
         }
-        Err(_e) => {
-            // @TODO error handling
-            return Err(FrontendError::new_with_message(
-                crate::error::DisplayErrorKind::ImportPostmanError,
-                "The Postman collection has an invalid format!",
-            ));
+        Err(err) => {
+            log::error!("Could not import Postman collection, invalid format!");
+            log::error!("Err: {:?}", err);
+            return Err(RelynxError::InvalidPostmanCollection);
         }
     }
 }

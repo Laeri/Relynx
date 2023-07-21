@@ -630,10 +630,6 @@ impl<T> From<WithDefault<T>> for Replaced<T> {
                 value,
                 is_replaced: true,
             },
-            WithDefault::DefaultFn(default_fn) => Replaced {
-                value: default_fn(),
-                is_replaced: true,
-            },
         }
     }
 }

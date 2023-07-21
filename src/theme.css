@@ -6265,5 +6265,5 @@ a {
 
 /* Fix Mention component text area not filling width when width styling on 'Mention' is set */
 .p-mention .p-inputtextarea {
-  width: 100%;
+  width: 90%;
 }

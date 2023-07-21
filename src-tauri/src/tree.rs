@@ -143,7 +143,7 @@ impl TryFrom<&RequestTreeNode> for HttpRestFile {
         };
 
         Ok(HttpRestFile {
-            path: Box::new(std::path::PathBuf::from(value.filepath.clone())),
+            path: Box::new(value.filepath.clone()),
             requests,
             errs: vec![],
             extension: Some(HttpRestFileExtension::Http),
@@ -154,15 +154,13 @@ impl TryFrom<&RequestTreeNode> for HttpRestFile {
 pub fn correct_children_paths(node: &mut RequestTreeNode, path_orders: &mut PathOrder) {
     let mut nodes: Vec<&mut RequestTreeNode> = vec![node];
     while let Some(current) = nodes.pop() {
-        let current_path = PathBuf::from(&current.filepath);
         current
             .children
             .iter_mut()
             .enumerate()
             .for_each(|(index, child)| {
-                let child_path = PathBuf::from(&child.filepath);
-                if let Some(file_name) = child_path.file_name() {
-                    let new_path = current_path.join(file_name);
+                if let Some(file_name) = child.filepath.file_name() {
+                    let new_path = current.filepath.join(file_name);
 
                     if path_orders.get(&child.filepath).is_some() {
                         path_orders.insert(new_path.clone(), index as u32);

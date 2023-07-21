@@ -20,7 +20,7 @@ mod certificate;
 pub mod client_model;
 mod cookie;
 mod easy_ext;
-mod error;
+pub mod error;
 pub mod options;
 mod request;
 mod timings;
@@ -665,7 +665,8 @@ impl Client {
     /// Parses HTTP response version.
     fn parse_response_version(&mut self, line: &str) -> Result<HttpVersion, HttpError> {
         line.parse::<HttpVersion>().map_err(|err| {
-            eprintln!("{:?}", err);
+            log::error!("Could not parse http response version");
+            log::error!("{:?}", err);
             HttpError::CouldNotParseResponse
         })
     }
@@ -716,7 +717,7 @@ impl Client {
             if let Ok(cookie) = Cookie::from_str(line) {
                 cookies.push(cookie);
             } else {
-                eprintln!("warning: line <{line}> can not be parsed as cookie");
+                log::warn!("Warning: line:'{}' can not be parsed as cookie", line);
             }
         }
         cookies
@@ -725,7 +726,7 @@ impl Client {
     /// Adds a cookie to the cookie jar.
     pub fn add_cookie(&mut self, cookie: &Cookie, options: &ClientOptions) {
         if options.verbosity.is_some() {
-            eprintln!("* add to cookie store: {cookie}");
+            log::info!("* add to cookie store: {cookie}");
         }
         self.handle
             .cookie_list(cookie.to_string().as_str())
@@ -735,7 +736,7 @@ impl Client {
     /// Clears cookie storage.
     pub fn clear_cookie_storage(&mut self, options: &ClientOptions) {
         if options.verbosity.is_some() {
-            eprintln!("* clear cookie storage");
+            log::info!("* clear cookie storage");
         }
         self.handle.cookie_list("ALL").unwrap();
     }

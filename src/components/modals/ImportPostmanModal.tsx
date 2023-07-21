@@ -23,19 +23,15 @@ export function ImportPostmanModal(props: ComponentProps) {
   const toast = useContext(ToastContext);
 
   const importCollectionFilePicker = () => {
-    backend.selectFile()
-      .then((result: string) => {
-        setImportCollectionFilepath(result);
-      })
-      .catch(catchError(toast));
+    backend.selectFile((result: string) => {
+      setImportCollectionFilepath(result);
+    })
   }
 
   const openCollectionDirectoryPicker = () => {
-    backend.selectDirectory()
-      .then((result: string) => {
-        setCollectionPath(result);
-      })
-      .catch(catchError(toast));
+    backend.selectDirectory((result: string) => {
+      setCollectionPath(result);
+    });
   }
 
   return (

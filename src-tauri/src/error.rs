@@ -1,105 +1,117 @@
-
-
-use http_rest_file::model::ParseError;
-use rspc::Type;
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
+use rspc::Type;
 
-#[derive(Serialize, Deserialize, Type, Clone, Debug, PartialEq, Eq)]
-pub struct FrontendError {
-    pub kind: DisplayErrorKind,
-    pub message: Option<String>,
-}
-
-impl FrontendError {
-    pub fn new(kind: DisplayErrorKind) -> Self {
-        FrontendError {
-            kind,
-            message: None,
-        }
-    }
-
-    pub fn new_with_message<T>(kind: DisplayErrorKind, message: T) -> Self
-    where
-        T: Into<String>,
-    {
-        FrontendError {
-            kind,
-            message: Some(message.into()),
-        }
-    }
-}
-
-impl Default for FrontendError {
-    fn default() -> Self {
-        FrontendError {
-            kind: DisplayErrorKind::Generic,
-            message: Some("".to_string()),
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Type, Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DisplayErrorKind {
-    Generic,
-    LoadWorkspaceError,
-    ReadWorkspaceFileError,
-    DeserializeWorkspaceError,
-    SerializeWorkspaceError,
-    SaveWorkspaceError,
-    NoPathChosen,
-    ImportPostmanError,
-    ParseError,
-    InvalidOpenPath,
-    CopyToClipboardError,
-    RequestFileAlreadyExists,
-    NodeDeleteError,
-    SaveRequestError,
-    RemoveOldRequestFile,
-    AddGroupNodeError,
-    DragAndDropError,
-    InvalidCollectionConfig,
-    ReorderError,
-    UnsupportedImportFormat,
-    ImportSerializeError,
-    LoadEnvironmentsError,
-    SaveEnvironmentsError,
-    RequestFileMissing,
-    CurlError,
+#[derive(Error, Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Type)]
+/// All these errors will be displayed to the user in the frontend
+pub enum RelynxError {
+    #[error("Could not remove collection from workspace")]
+    RemoveCollectionError,
+    #[error("There was an error when sending the request")]
     RequestSendError,
+
+    #[error("Could not open directory: '{0}'")]
+    InvalidOpenPath(String),
+
+    #[error("Could not delete item")]
+    DeleteNodeError,
+
+    #[error("Could not hide group")]
+    HideGroupError,
+
+    #[error("Could not select path as '{0}' cannot be relative to '{1}'")]
+    RelativePathChoiceError(String, String),
+
+    #[error("Could not load collection at path: '{0}'")]
+    InvalidCollectionConfig(String),
+
+    #[error("Could not serialize collection configuration for collection: {0}")]
+    SerializeCollectionConfigError(String),
+
+    #[error("Could not save environments to file")]
+    SaveEnvironmentsError,
+
+    #[error("Could not drag and drop request to new location. The request may be malformed")]
+    DragAndDropRequestError,
+    #[error("{0}")]
+    DragAndDropError(String),
+    #[error("Could not drag request into file group")]
+    DragAndDropIntoFilegroupError,
+    #[error("Could not drag and drop node")]
+    DragAndDropGeneral,
+
+    #[error("Could not reorder nodes within group")]
+    ReorderDragAndDropError,
+
+    #[error("Could not verify license")]
+    LicenseInvalid,
+    #[error("Could not load license data")]
+    LoadLicenseDataError,
+    #[error("Could not save license data")]
+    SaveLicenseDataError,
+
+    #[error("Could not load workspace")]
+    LoadWorkspaceError,
+
+    #[error("Could not save workspace")]
+    SaveWorkspaceError,
+
+    #[error("Could not import collection")]
+    ImportCollectionError,
+
+    #[error("Could not save request")]
+    SaveRequestError,
+
+    #[error("Cannot copy content to clipboard")]
+    CopyToClipboardError,
+
+    #[error("Could not open folder: '{0}'")]
+    OpenFolderNativeError(String),
+
+    #[error("Cannot create new request as the file already exists. File: '{0}'")]
+    RequestFileAlreadyExists(String),
+
+    #[error("Could not create new request")]
+    RequestCreateError,
+
+    #[error("Could not create new group")]
+    CreateNewGroupGeneric,
+    #[error("Could not create new group: '{0}'")]
+    CreateNewGroupError(String),
+    #[error("The new group's folder already exists. Folder: '{0}'")]
+    GroupFolderAlreadyExists(String),
+    #[error("There exists already a group with the name: '{0}' within the same parent group")]
+    GroupNameAlreadyExistsInParent(String),
+
+    #[error("Invalid group name: '{0}'. Cannot create folder with sanitized name: '{1}'")]
+    InvalidGroupName(String, String),
+
+    #[error("Could not rename group to: '{0}'")]
+    RenameGroupError(String),
+
+    #[error("Could not resolve the path")]
+    RelativeResponsePathError,
+
+    #[error("Parse errors occurred for request files")]
+    ParseErrorGeneric,
+
+    #[error("Import for postman collection version v1.0.0 is not supported. Try the import with a collection that uses the v2.1.0 json format.")]
+    TriedPostmanImportV1_0_0,
+    #[error("Import for postman collection version v2.0.0 is not supported. Try the import with a collection that uses the v2.1.0 json format.")]
+    TriedPostmanImportV2_0_0,
+    #[error("The Postman collection has an invalid format. Could not import collection.")]
+    InvalidPostmanCollection,
+    
+    #[error("Load environment error")]
+    LoadEnvironmentError,
 }
 
-impl std::fmt::Display for FrontendError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("tmp")
-    }
-}
-
-// @TODO: error with a cause
-impl std::error::Error for FrontendError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        None
-    }
-}
-
-impl From<FrontendError> for rspc::Error {
-    fn from(frontend_error: FrontendError) -> Self {
-        rspc::Error::with_cause::<FrontendError>(
+impl From<RelynxError> for rspc::Error {
+    fn from(error: RelynxError) -> Self {
+        rspc::Error::with_cause::<RelynxError>(
             rspc::ErrorCode::InternalServerError,
-            frontend_error
-                .message
-                .as_ref()
-                .unwrap_or(&String::new())
-                .clone(),
-            frontend_error,
+            error.to_string(),
+            error,
         )
-    }
-}
-
-impl From<ParseError> for FrontendError {
-    fn from(value: ParseError) -> Self {
-        FrontendError {
-            kind: DisplayErrorKind::ParseError,
-            message: Some(value.message),
-        }
     }
 }

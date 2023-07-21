@@ -35,11 +35,9 @@ export function CreateCollectionModal(props: ComponentProps) {
   }, []);
 
   const openCollectionDirectoryPicker = () => {
-    backend.selectDirectory()
-      .then((result: string) => {
-        setCollectionPath(result);
-      })
-      .catch(catchError(toast));
+    backend.selectDirectory((result: string) => {
+      setCollectionPath(result);
+    });
   }
 
   const updateCollectionName = (newName: string) => {

@@ -16,13 +16,13 @@ export function Filepicker(props: ComponentProps) {
 
   const chooseFile = () => {
     if (props.relativeBase) {
-      backend.chooseFileRelativeTo(props.relativeBase).then((file: string) => {
+      backend.chooseFileRelativeTo(props.relativeBase, (file: string) => {
         props.updatePath(file);
-      }).catch(catchError);
+      });
     } else {
-      backend.selectFile().then((file: string) => {
+      backend.selectFile((file: string) => {
         props.updatePath(file);
-      }).catch(catchError);
+      });
     }
   }
 

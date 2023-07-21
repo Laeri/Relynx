@@ -20,11 +20,9 @@ export function ImportJetbrainsHttpFolder(props: ComponentProps) {
   const toast = useContext(ToastContext);
 
   const openCollectionDirectoryPicker = () => {
-    backend.selectDirectory()
-      .then((result: string) => {
+    backend.selectDirectory((result: string) => {
         setJetbrainsFolder(result);
-      })
-      .catch(catchError(toast));
+      });
   }
 
   return (

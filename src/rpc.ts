@@ -23,12 +23,21 @@ class Backend {
     return api.query(['remove_collection', collection]);
   }
 
-  selectDirectory(): Promise<string> {
-    return api.query(['select_directory']);
+  selectDirectory(onSelect: (directoryPath: string) => void) {
+    api.query(['select_directory']).then((result: string | null) => {
+      if (result) {
+        onSelect(result);
+      }
+    });
   }
 
-  selectFile(): Promise<string> {
-    return api.query(['select_file']);
+  selectFile(onSelect: (filepath: string) => void) {
+    api.query(['select_file']).then((result: string | null) => {
+      if (result) {
+        onSelect(result);
+      }
+    });
+
   }
 
   is_directory_empty(path: string): Promise<boolean> {
@@ -84,9 +93,12 @@ class Backend {
     });
   }
 
-  getResponseFilepath(request_path: string): Promise<string> {
-    let result = api.query(['get_response_filepath', request_path]);
-    return result;
+  getResponseFilepath(request_path: string, onSelected: (request_path: string) => void) {
+    api.query(['get_response_filepath', request_path]).then((result: string | null) => {
+      if (result) {
+        onSelected(result);
+      }
+    });
   }
 
   validateResponseFilepath(filepath: string): Promise<boolean> {
@@ -147,8 +159,12 @@ class Backend {
     return api.query(['hide_group', path]);
   }
 
-  chooseFileRelativeTo(base_path: string): Promise<string> {
-    return api.query(['choose_file_relative_to', { base_path: base_path }]);
+  chooseFileRelativeTo(base_path: string, onSelect: (path: string) => void) {
+    api.query(['choose_file_relative_to', { base_path: base_path }]).then((result: string | null) => {
+      if (result) {
+        onSelect(result);
+      }
+    });
   }
 
   loadLicenseData(): Promise<LicenseData> {
@@ -161,11 +177,6 @@ class Backend {
 
   isSignatureValid(licenseData: LicenseData): Promise<boolean> {
     return api.query(['is_signature_valid', licenseData]);
-  }
-
-  logFrontendError(error: FError): Promise<void> {
-    // @TODO: IMPLEMENT
-    return Promise.resolve();
   }
 }
 

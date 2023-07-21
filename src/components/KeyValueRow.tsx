@@ -110,7 +110,7 @@ export function KeyValueRow(props: ComponentProps) {
         <InputText value={props.keyProperty} onChange={updateKey} placeholder={props.keyLabel}
           style={{ minWidth: 0, width: '30%', height: '45px' }} />
          {/* If no active checkbox is there enlarge the value size a bit  */}
-        <Mention style={{ width: props.updateActive == undefined? '60%' : '40%', flexGrow: 1, marginLeft: '20px', minWidth: 0, height: '45px' }}
+        <Mention style={{ width: props.updateActive == undefined? '60%' : '30%', flexGrow: 1, marginLeft: '20px', minWidth: 0, height: '45px' }}
           suggestions={suggestions}
           onSearch={onSearch}
           field="Name" trigger={triggerKeySequence}

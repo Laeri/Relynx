@@ -1,5 +1,5 @@
 import { ToastContext } from "../App";
-import { FrontendError } from "../bindings";
+import { FrontendError } from "../model/error";
 
 // @TODO
 export function catchError(toast: ToastContext): (err: FrontendError) => void {

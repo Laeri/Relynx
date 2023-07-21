@@ -48,11 +48,11 @@ export function RequestSettingsComponent(props: ComponentProps) {
   }
 
   const selectResponseFilePath = () => {
-    backend.getResponseFilepath(props.request.rest_file_path).then((result: string) => {
+    backend.getResponseFilepath(props.request.rest_file_path, (result: string) => {
       let newRequest = updatedRequestModel(props.request, {});
       newRequest.redirect_response.save_path = result;
       props.updateRequest(newRequest);
-    }).catch(catchError);
+    });
   }
   return (
     <div className="headers-block" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
@@ -86,7 +86,7 @@ export function RequestSettingsComponent(props: ComponentProps) {
 
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'start', marginTop: '30px' }}>
         <h3>Save Response</h3>
-        <p style={{ marginTop: '20px', textAlign:'left' }}>Choose if you want to save the response of a request to a file</p>
+        <p style={{ marginTop: '20px', textAlign: 'left' }}>Choose if you want to save the response of a request to a file</p>
         <div style={{ display: 'flex', alignItems: 'center', marginTop: '20px' }}>
           <Checkbox inputId="save_response" name="save_response" value="save_response" onChange={(e) => updateSaveResponse(e.target.checked ?? false)} checked={props.request.redirect_response.save_response} />
           <label htmlFor="save_response" style={{ marginLeft: '20px' }}>Save response to file</label>

@@ -10,9 +10,9 @@ mod import;
 mod license;
 mod model;
 mod pathdiff;
+mod runner;
 mod sanitize;
 mod tree;
-mod runner;
 
 use commands::{
     add_existing_collections, add_group_node, add_request_node, choose_file_relative_to,
@@ -37,12 +37,13 @@ use tauri_plugin_log::LogTarget;
 static mut LICENSE_PUB_KEY: String = String::new();
 static mut LICENSE_PRIV_KEY: String = String::new();
 
+#[allow(clippy::result_unit_err)]
 pub fn get_license_pub_key() -> Result<String, ()> {
     let key = unsafe { LICENSE_PUB_KEY.clone() };
     if key.is_empty() {
         return Err(());
     }
-    return Ok(key);
+    Ok(key)
 }
 
 pub fn get_license_priv_key() -> String {
@@ -99,7 +100,7 @@ fn router() -> Arc<Router> {
                 t(|_, string: String| copy_to_clipboard(string))
             })
             .query("open_folder_native", |t| {
-                t(|_, path: String| {
+                t(|_, path: PathBuf| {
                     let mutex = RELYNX_CONTEXT.lock().unwrap();
                     let handle = mutex.app_handle.as_ref().unwrap();
                     open_folder_native(handle, &path)
@@ -187,7 +188,7 @@ fn main() {
             .path_resolver()
             .resolve_resource(pub_key_path)
             .expect("failed to resolve resource for public key");
-        let content = std::fs::read_to_string(&settings_resource_path).unwrap_or(String::new());
+        let content = std::fs::read_to_string(settings_resource_path).unwrap_or(String::new());
         unsafe {
             LICENSE_PUB_KEY = content;
         }

@@ -8,7 +8,7 @@ import {
   reorderReplace,
   requestTreeToPrimeNodes
 } from "../common/treeUtils";
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { catchError, displayAndLogErr } from "../common/errorhandling";
 import { NewFError } from "../model/error";
 import { routes, ToastContext } from "../App";
@@ -109,7 +109,7 @@ export const deleteNode = (toast: ToastContext, collection: Collection, requestT
       if (isGroup) {
         successMessage = `Group '${treeNode.name}' has been removed`;
       }
-      toast.showSuccess(successMessage, "");
+      toast.showInfo(successMessage, "", 2000);
     }
   }).catch(catchError(toast));
 }
@@ -132,6 +132,20 @@ export function RequestTreeComponent(props: ComponentProps) {
   const location = useLocation();
   const collection = useRequestModelStore((state: RelynxState) => state.currentCollection as Collection);
   const requestTree = useRequestModelStore((state: RelynxState) => state.requestTree as RequestTree);
+
+
+  useEffect(() => {
+    let newExpandedKeys: TreeExpandedKeysType = { ...expandedKeys };
+
+    // by default expand two levels
+    props.requestTree.root.children.forEach((node: RequestTreeNode) => {
+      newExpandedKeys[node.id] = true;
+      node.children.forEach((subNode: RequestTreeNode) => {
+        newExpandedKeys[subNode.id] = true;
+      })
+    });
+    setExpandedKeys(newExpandedKeys);
+  }, [])
 
   const expandNode = (primeNodeKey: string) => {
     let newExpandedKeys: TreeExpandedKeysType = { ...expandedKeys };

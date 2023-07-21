@@ -78,9 +78,9 @@ export function SingleMultipart(props: ComponentProps) {
   }
 
   const chooseMultipartFile = () => {
-    backend.chooseFileRelativeTo(currentRequest?.rest_file_path).then((file: string) => {
+    backend.chooseFileRelativeTo(currentRequest?.rest_file_path, (file: string) => {
       updateFromFilepath(file);
-    }).catch(catchError);
+    });
   }
 
   const updateDataSource = (event: any) => {

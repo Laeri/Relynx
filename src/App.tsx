@@ -19,7 +19,7 @@ import { catchError } from './common/errorhandling';
 
 export interface ToastContext {
   toast: Ref<any>,
-  showSuccess: (title: string, detail: string) => void
+  showSuccess: (title: string, detail: string, life?: number) => void
   showInfo: (title: string, detail: string, life?: number) => void
   showWarn: (title: string, detail: string, life?: number) => void
   showError: (title: string, detail: string) => void
@@ -76,8 +76,8 @@ function App() {
 
   const toastContext = {
     toast: toastRef,
-    showSuccess: (title: string, detail: string) => {
-      toastContext.show({ severity: 'success', summary: title, detail: detail, life: undefined });
+    showSuccess: (title: string, detail: string, life?: number) => {
+      toastContext.show({ severity: 'success', summary: title, detail: detail, life: life });
     },
     showInfo: (title: string, detail: string, life?: number) => {
       toastContext.show({ severity: 'info', summary: title, detail: detail, life: life });

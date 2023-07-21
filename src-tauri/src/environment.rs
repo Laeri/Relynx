@@ -2,7 +2,7 @@ use std::{collections::HashMap, path::PathBuf};
 
 use crate::{
     config::{load_collection_config, save_collection_config},
-    error::{DisplayErrorKind, FrontendError},
+    error::RelynxError,
     model::{
         Collection, EnvVarDescriptions, Environment, EnvironmentSecret, EnvironmentVariable,
         SingleEnvVarDescription,
@@ -19,7 +19,7 @@ pub fn load_environments_from_files(
     env_file_path: Option<&std::path::PathBuf>,
     private_env_file_path: Option<&std::path::PathBuf>,
     collection_path: Option<&std::path::PathBuf>,
-) -> Result<Vec<Environment>, FrontendError> {
+) -> Result<Vec<Environment>, RelynxError> {
     let mut environments: HashMap<String, Environment> = HashMap::new();
 
     if let Some(env_file_path) = env_file_path {
@@ -121,7 +121,7 @@ pub fn load_environments_from_files(
     Ok(environments.into_values().into_iter().collect())
 }
 
-pub fn load_environments(collection_path: PathBuf) -> Result<Vec<Environment>, FrontendError> {
+pub fn load_environments(collection_path: PathBuf) -> Result<Vec<Environment>, RelynxError> {
     let env_path = collection_path.join(HTTP_ENV_FILENAME);
     let private_env_path = collection_path.join(PRIVATE_HTTP_ENV_FILENAME);
     load_environments_from_files(
@@ -171,7 +171,7 @@ impl TryFrom<&EnvironmentSecret> for SingleEnvVarDescription {
 pub fn save_environments(
     collection_path: PathBuf,
     environments: Vec<Environment>,
-) -> Result<(), FrontendError> {
+) -> Result<(), RelynxError> {
     let env_path = collection_path.join(HTTP_ENV_FILENAME);
     let private_env_path = collection_path.join(PRIVATE_HTTP_ENV_FILENAME);
 
@@ -192,11 +192,7 @@ pub fn save_environments(
             .entry(environment.name.clone())
             .or_default();
         for variable in environment.variables.iter() {
-            env_key_values.insert(
-                variable.name.clone(),
-                // @TODO: log error
-                variable.initial_value.clone(),
-            );
+            env_key_values.insert(variable.name.clone(), variable.initial_value.clone());
         }
 
         for secret in environment
@@ -204,11 +200,7 @@ pub fn save_environments(
             .iter()
             .filter(|secret| secret.persist_to_file)
         {
-            private_env_key_values.insert(
-                secret.name.clone(),
-                // @TODO: log error
-                secret.initial_value.clone(),
-            );
+            private_env_key_values.insert(secret.name.clone(), secret.initial_value.clone());
         }
 
         // update descriptions
@@ -232,67 +224,63 @@ pub fn save_environments(
             .insert(environment.name, var_descriptions);
     }
 
-    // @TODO: log error, env_file_structure?
     let env_file_content =
-        serde_json::to_string::<EnvFileStructure>(&env_file_structure).map_err(|_err| {
-            let msg = "Could not save environments to file";
-            FrontendError::new_with_message(DisplayErrorKind::SaveEnvironmentsError, msg)
+        serde_json::to_string::<EnvFileStructure>(&env_file_structure).map_err(|err| {
+            log::error!("Could not serialize env_file_structure to string");
+            log::error!("Public env file structure: {:?}", env_file_structure);
+            log::error!("Io Error: {:?}", err);
+            RelynxError::SaveEnvironmentsError
         })?;
 
     let private_env_file_content =
-        serde_json::to_string::<EnvFileStructure>(&private_env_file_structure).map_err(|_err| {
-            let msg = "Could not save environments to file";
-            FrontendError::new_with_message(DisplayErrorKind::SaveEnvironmentsError, msg)
+        serde_json::to_string::<EnvFileStructure>(&private_env_file_structure).map_err(|_| {
+            // we do not log specifics as there are secrets within the file
+            log::error!("Error saving private env file structure to file!");
+            RelynxError::SaveEnvironmentsError
         })?;
 
-    // @TODO: log error
-    std::fs::write(&env_path, env_file_content).map_err(|_err| {
-        let msg = format!(
-            "Could not save environment to file: '{}'",
-            env_path.to_string_lossy()
-        );
-        FrontendError::new_with_message(DisplayErrorKind::SaveEnvironmentsError, msg)
+    std::fs::write(&env_path, env_file_content).map_err(|err| {
+        log::error!("Could not write environment content to file");
+        log::error!("Io Error: {:?}", err);
+
+        RelynxError::SaveEnvironmentsError
     })?;
 
-    std::fs::write(&private_env_path, private_env_file_content).map_err(|_err| {
-        let msg = format!(
-            "Could not save environment to file: '{}'",
-            env_path.to_string_lossy()
-        );
-        FrontendError::new_with_message(DisplayErrorKind::SaveEnvironmentsError, msg)
+    std::fs::write(&private_env_path, private_env_file_content).map_err(|_| {
+        // we do not log specifics as there are secrets within the file
+        log::error!("Error writing private environment to file");
+        RelynxError::SaveEnvironmentsError
     })?;
 
-    // @TODO log error
-    let _ = save_collection_config(&collection_config, &config_file_path);
+    let result = save_collection_config(&collection_config, &config_file_path);
+    if result.is_err() {
+        log::error!("Could not save collection config after saving environment!");
+        log::error!("Error: {:?}", result.unwrap_err());
+        log::error!("Config: {:?}", collection_config);
+        log::error!("Config path: {:?}", config_file_path);
+    }
 
     Ok(())
 }
 
-fn load_env_structure(env_path: &PathBuf) -> Result<EnvFileStructure, FrontendError> {
+fn load_env_structure(env_path: &PathBuf) -> Result<EnvFileStructure, RelynxError> {
     // the file does not need to exist, this is not an error
     if !env_path.exists() {
         return Ok(EnvFileStructure::new());
     }
     let env_file_content = std::fs::read_to_string(env_path);
     if env_file_content.is_err() {
-        let msg = format!(
-            "Could not read environment file: '{}'",
-            env_path.to_string_lossy(),
+        log::error!(
+            "Load env structure, could not read environment file: '{}'",
+            env_path.display()
         );
-        return Err(FrontendError::new_with_message(
-            DisplayErrorKind::LoadEnvironmentsError,
-            msg,
-        ));
+        return Err(RelynxError::LoadEnvironmentError);
     }
     let env_file_content = env_file_content.unwrap();
-    let env_structure =
-        serde_json::from_str::<EnvFileStructure>(&env_file_content).map_err(|_err| {
-            let msg = format!(
-                "Could not load environment file: '{}', it seems to be malformed",
-                env_path.to_string_lossy(),
-            );
-            FrontendError::new_with_message(DisplayErrorKind::LoadEnvironmentsError, msg)
-        })?;
+    let env_structure = serde_json::from_str::<EnvFileStructure>(&env_file_content).map_err(|_err| {
+                log::error!("Error in load_env_structure deserialize, could not load environment file at path: '{}', it seems to be malformed", env_path.display());
+        RelynxError::LoadEnvironmentError
+    })?;
 
     Ok(env_structure)
 }

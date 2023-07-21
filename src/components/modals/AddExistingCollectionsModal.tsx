@@ -19,11 +19,9 @@ export function AddExistingCollectionsModal(props: ComponentProps) {
   const toast = useContext(ToastContext);
 
   const openCollectionDirectoryPicker = () => {
-    backend.selectDirectory()
-      .then((result: string) => {
+    backend.selectDirectory((result: string) => {
         setCollectionPath(result);
-      })
-      .catch(catchError(toast));
+      });
   }
 
   return (

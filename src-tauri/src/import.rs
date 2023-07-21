@@ -6,7 +6,7 @@ use walkdir::{DirEntry, WalkDir};
 
 use crate::{
     config::{load_collection_config, save_collection_config, save_workspace},
-    error::{DisplayErrorKind, FrontendError},
+    error::RelynxError,
     model::{
         request_to_request_model, Collection, CollectionConfig, ImportWarning, RequestModel,
         Workspace,
@@ -14,7 +14,8 @@ use crate::{
     tree::{GroupOptions, RequestTree, RequestTreeNode},
 };
 use http_rest_file::{
-    model::{HttpRestFile, ParseError},
+    error::{ParseError, ParseErrorDetails},
+    model::HttpRestFile,
     parser::Parser as RestFileParser,
 };
 
@@ -32,7 +33,7 @@ pub struct ImportCollectionResult {
 #[derive(Serialize, Deserialize, Type, Debug)]
 pub struct LoadRequestsResult {
     pub request_tree: RequestTree,
-    pub errs: Vec<FrontendError>,
+    pub errs: Vec<ParseError>,
 }
 
 pub const RELYNX_IGNORE_FILE: &str = ".relynxignore";
@@ -54,7 +55,7 @@ fn hidden_relynx_folder(entry: &DirEntry) -> bool {
 
 pub fn load_requests_from_file(
     request_file_path: &std::path::Path,
-) -> Result<Vec<RequestModel>, ParseError> {
+) -> Result<Vec<RequestModel>, ParseErrorDetails> {
     let http_rest_file: HttpRestFile = RestFileParser::parse_file(&request_file_path)?;
     Ok(http_rest_file
         .requests
@@ -65,8 +66,8 @@ pub fn load_requests_from_file(
 
 pub fn load_requests_for_collection(
     collection: &Collection,
-) -> Result<LoadRequestsResult, FrontendError> {
-    let mut parse_errs: Vec<FrontendError> = Vec::new();
+) -> Result<LoadRequestsResult, RelynxError> {
+    let mut parse_errs: Vec<ParseErrorDetails> = Vec::new();
     let mut nodes: HashMap<PathBuf, Vec<RefCell<RequestTreeNode>>> = HashMap::new();
     let mut root = RequestTreeNode::new_group(GroupOptions::FullPath(collection.path.clone()));
 
@@ -151,7 +152,10 @@ pub fn load_requests_for_collection(
     println!("PARSE_ERROS {:?}", parse_errs);
     Ok(LoadRequestsResult {
         request_tree: RequestTree { root },
-        errs: parse_errs,
+        errs: parse_errs
+            .into_iter()
+            .map(|details| details.error)
+            .collect::<Vec<ParseError>>(),
     })
 }
 
@@ -180,22 +184,16 @@ pub fn import_jetbrains_folder(
     mut workspace: Workspace,
     jetbrains_folder: PathBuf,
     collection_name: String,
-) -> Result<Workspace, FrontendError> {
+) -> Result<Workspace, RelynxError> {
     let result = create_jetbrains_collection(jetbrains_folder, collection_name);
     if result.is_err() {
-        return Err(FrontendError::new_with_message(
-            DisplayErrorKind::Generic,
-            "Could not import collection".to_string(),
-        ));
+        return Err(RelynxError::ImportCollectionError)?;
     }
     let collection = result.unwrap();
     workspace.collections.push(collection);
     let result = save_workspace(&workspace);
     if result.is_err() {
-        return Err(FrontendError::new_with_message(
-            DisplayErrorKind::Generic,
-            "Could not import collection completely".to_string(),
-        ));
+        return Err(RelynxError::ImportCollectionError)?;
     }
     return Ok(workspace);
 }

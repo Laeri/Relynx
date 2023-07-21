@@ -1,8 +1,9 @@
 mod drag_and_drop;
+use crate::client::error::HttpError;
 use crate::client::options::ClientOptions;
 use crate::client::Client;
 use crate::config::{load_collection_config, save_collection_config, save_workspace};
-use crate::error::{DisplayErrorKind, FrontendError};
+use crate::error::RelynxError;
 use crate::import::{
     create_jetbrains_collection, import_jetbrains_folder, postman, LoadRequestsResult,
     RELYNX_IGNORE_FILE,
@@ -57,10 +58,7 @@ pub fn remove_collection(collection: Collection) -> Result<Workspace, rspc::Erro
         .iter()
         .position(|current| current.path == collection.path)
         // @TODO ERROR
-        .ok_or(FrontendError::new_with_message(
-            DisplayErrorKind::Generic,
-            "Could not remove collection from workspace".to_string(),
-        ))?;
+        .ok_or(RelynxError::RemoveCollectionError)?;
 
     workspace.collections.remove(position);
 
@@ -68,23 +66,21 @@ pub fn remove_collection(collection: Collection) -> Result<Workspace, rspc::Erro
     Ok(workspace)
 }
 
-// @TODO validate paths, createCollection -> should be empty...
 #[tauri::command]
-pub fn select_directory() -> Result<PathBuf, rspc::Error> {
+pub fn select_directory() -> Result<Option<PathBuf>, rspc::Error> {
     let result = tauri::api::dialog::blocking::FileDialogBuilder::default().pick_folder();
     match result {
-        Some(folder_path) => Ok(folder_path),
-        _ => Err(FrontendError::new(DisplayErrorKind::NoPathChosen).into()),
+        Some(folder_path) => Ok(Some(folder_path)),
+        None => Ok(None),
     }
 }
 
-// @TODO
 #[tauri::command]
-pub fn select_file() -> Result<PathBuf, rspc::Error> {
+pub fn select_file() -> Result<Option<PathBuf>, rspc::Error> {
     let result = tauri::api::dialog::blocking::FileDialogBuilder::default().pick_file();
     match result {
-        Some(folder_path) => Ok(folder_path),
-        _ => Err(FrontendError::new(DisplayErrorKind::NoPathChosen).into()),
+        Some(folder_path) => Ok(Some(folder_path)),
+        None => Ok(None),
     }
 }
 
@@ -186,9 +182,12 @@ pub fn add_existing_collections(
     // @TODO check that none are already within the workspace!
     workspace.collections.append(&mut collections);
 
-    // @TODO: log error
-    if let Err(_) = save_workspace(&workspace) {
+    if let Err(err) = save_workspace(&workspace) {
         num_imported = 0;
+        log::error!(
+            "Could not save workspace in add existing collections, err: {:?}",
+            err
+        );
     }
 
     Ok(AddCollectionsResult {
@@ -265,13 +264,21 @@ pub fn run_request(request_command: RunRequestCommand) -> Result<RequestResult, 
             &options,
             request_command.environment.as_ref(),
         )
-        .map_err(|http_err| {
-            eprintln!("ERROR: {:?}", http_err);
-            // @TODO:
-            FrontendError::new_with_message(
-                DisplayErrorKind::RequestSendError,
-                "There was an error when sending the request.",
-            )
+        .map_err(|http_err: HttpError| {
+            log::error!("Http error occurred: {:?}", http_err);
+            log::error!("Option: {:?}", options);
+            log::error!("Request: {:?}", request_command.request);
+            if let Some(environment) = request_command.environment {
+                log::error!("Environment name: {}", environment.name);
+                log::error!("Public environment values: {:?}", environment.variables);
+                log::error!(
+                    "Secret names (values are not logged!) {:?}",
+                    environment.secrets.into_iter().map(|secret| secret.name)
+                );
+            } else {
+                log::error!("Environment: None");
+            }
+            RelynxError::RequestSendError
         })?;
 
     let call = calls.last().unwrap();
@@ -317,11 +324,13 @@ pub fn run_request(request_command: RunRequestCommand) -> Result<RequestResult, 
             request_result.result_file_folder = parent_path.map(|p| p.to_path_buf());
 
             if result.is_err() {
-                // @TODO: log error
-                eprintln!("ERROR: {:?}", result.unwrap_err());
+                log::error!(
+                    "Could not save response of request to file {}",
+                    absolute_path.display()
+                );
                 let msg = format!(
                     "Could not save the response to file '{}'. Check if the folder of the file exists and that you have permissions to write to it.",
-                    absolute_path.to_string_lossy()
+                    absolute_path.display()
                 );
                 request_result.warnings.push(msg);
             }
@@ -339,11 +348,8 @@ pub fn save_request(command: SaveRequestCommand) -> Result<PathBuf, rspc::Error>
     } = command;
 
     if requests.is_empty() {
-        return Err(FrontendError::new_with_message(
-            DisplayErrorKind::SaveRequestError,
-            "Tried to save empty request list".to_string(),
-        )
-        .into());
+        log::error!("Tried to save empty request list");
+        return Err(RelynxError::SaveRequestError.into());
     }
 
     let old_path = requests[0].rest_file_path.clone();
@@ -357,14 +363,13 @@ pub fn save_request(command: SaveRequestCommand) -> Result<PathBuf, rspc::Error>
         // otherwise we will create a new file with the request and afterwards delete the old one
         let new_filename = sanitize_filename_with_options(&request.name, DEFAULT_OPTIONS)
             + &HttpRestFileExtension::get_default_extension();
-        let parent_path =
-            request
-                .rest_file_path
-                .parent()
-                .ok_or(FrontendError::new_with_message(
-                    DisplayErrorKind::Generic,
-                    "Could not create new filename for request",
-                ))?;
+        let parent_path = request.rest_file_path.parent().ok_or_else(|| {
+            log::error!(
+                "Could not save request as restfilepath: '{}' has no valid parent path.",
+                request.rest_file_path.display()
+            );
+            Into::<rspc::Error>::into(RelynxError::SaveRequestError)
+        })?;
         let new_path = parent_path.join(new_filename);
 
         // if the new path exists already keep the old one
@@ -378,11 +383,12 @@ pub fn save_request(command: SaveRequestCommand) -> Result<PathBuf, rspc::Error>
     };
 
     if !old_path.starts_with(&collection.path) || !file_path.starts_with(&collection.path) {
-        let msg = format!(
-            "Could not update request as it does not seem to belong to collection: {}",
-            collection.path.to_string_lossy()
+        log::error!(
+            "Could not update requests: '{:?}' as it does not seem to belong to collection: '{:?}'",
+            requests,
+            collection
         );
-        return Err(FrontendError::new_with_message(DisplayErrorKind::Generic, msg).into());
+        return Err(RelynxError::SaveRequestError.into());
     }
 
     let requests: Vec<Request> = requests.into_iter().map(Into::into).collect();
@@ -394,27 +400,25 @@ pub fn save_request(command: SaveRequestCommand) -> Result<PathBuf, rspc::Error>
         extension: Some(HttpRestFileExtension::Http),
     };
 
-    Serializer::serialize_to_file(&file_model).map_err(|_err| {
-        // @TODO: handle error
-        Into::<rspc::Error>::into(FrontendError::new_with_message(
-            DisplayErrorKind::SaveRequestError,
-            "Could not save request to file".to_string(),
-        ))
+    Serializer::serialize_to_file(&file_model).map_err(|err| {
+        log::error!(
+            "Serializing in save request failed for file_model: {:?}",
+            file_model
+        );
+        log::error!("Serde error: {:?}", err);
+        Into::<rspc::Error>::into(RelynxError::SaveRequestError)
     })?;
 
     if file_path != old_path {
         //if the name of a request changes do we also want to update hte filename? It shouldn't
         // be necessary but it might lead to weird cases if it doesn't... @IMPORTANT let model = requests[0].clone();
-        std::fs::remove_file(&old_path).map_err(|_err| {
-            // @TODO: handle error
-            let msg = format!(
+        std::fs::remove_file(&old_path).map_err(|err| {
+            log::error!(
                 "When renaming the request could not remove old file at path: {}",
-                old_path.to_string_lossy()
+                old_path.display()
             );
-            Into::<rspc::Error>::into(FrontendError::new_with_message(
-                DisplayErrorKind::RemoveOldRequestFile,
-                msg,
-            ))
+            log::error!("Io Error: {:?}", err);
+            Into::<rspc::Error>::into(RelynxError::SaveRequestError)
         })?;
     }
 
@@ -426,52 +430,49 @@ pub fn copy_to_clipboard(string: String) -> Result<(), rspc::Error> {
     let context = RELYNX_CONTEXT.lock().unwrap();
     let app_handle = context.app_handle.as_ref().unwrap();
     let clipboard = &mut app_handle.clipboard_manager();
-    clipboard.write_text(string.clone()).map_err(|_err| {
-        // @TODO: handle error
-        FrontendError::new_with_message(
-            DisplayErrorKind::CopyToClipboardError,
-            format!("Cannot copy content: '{:?}' to clipboard", string),
-        )
-        .into()
+    clipboard.write_text(string.clone()).map_err(|err| {
+        log::error!("Could not copy to clipboard, content: {}", string);
+        log::error!("Error: {:?}", err);
+        RelynxError::CopyToClipboardError.into()
     })
 }
 
 #[tauri::command]
-pub fn open_folder_native(app_handle: &tauri::AppHandle, path: &String) -> Result<(), rspc::Error> {
+pub fn open_folder_native(
+    app_handle: &tauri::AppHandle,
+    path: &PathBuf,
+) -> Result<(), rspc::Error> {
     // @TODO: we might want to restrict the path to collection folders
     let check_path = std::path::PathBuf::from(path.clone());
     if !check_path.exists() {
-        return Err(FrontendError::new_with_message(
-            DisplayErrorKind::InvalidOpenPath,
-            format!(
-                "Cannot open folder: '{}' in explorer as it does not exist",
-                check_path.to_string_lossy()
-            ),
-        )
-        .into());
+        log::error!(
+            "Cannot open folder: '{}' in explorer as it does not exist",
+            check_path.display()
+        );
+        return Err(
+            RelynxError::OpenFolderNativeError(check_path.to_string_lossy().to_string()).into(),
+        );
     }
 
     if !check_path.is_dir() {
-        return Err(FrontendError::new_with_message(
-            DisplayErrorKind::InvalidOpenPath,
-            format!(
-                "Cannot open folder: '{}' in explorer as it is not a directory",
-                check_path.to_string_lossy()
-            ),
-        )
-        .into());
+        log::error!(
+            "Folder to open is not a directory! Folder: '{}'",
+            check_path.display()
+        );
+        return Err(
+            RelynxError::OpenFolderNativeError(check_path.to_string_lossy().to_string()).into(),
+        );
     }
     let shell_scope = app_handle.shell_scope();
 
-    match shell::open(&shell_scope, path, None) {
+    match shell::open(&shell_scope, path.to_string_lossy(), None) {
         tauri::api::Result::Ok(_) => Ok(()),
         tauri::api::Result::Err(_err) => {
-            // @TODO: log error
-            Err(FrontendError::new_with_message(
-                DisplayErrorKind::InvalidOpenPath,
-                format!("Could not open directory: {}", path),
-            )
-            .into())
+            log::error!(
+                "shell::open for open folder not working with path: {}",
+                path.display()
+            );
+            Err(RelynxError::InvalidOpenPath(path.to_string_lossy().to_string()).into())
         }
     }
 }
@@ -530,14 +531,12 @@ pub fn add_request_node(params: AddRequestNodeParams) -> Result<RequestTreeNode,
         ));
 
         if request_path.exists() {
-            let msg = format!(
-                "Cannot save new request to path: '{}' as the file already exists",
-                request_path.to_string_lossy()
+            log::error!(
+                "Cannot save request to path: '{}' as the file already exists.",
+                request_path.display()
             );
-
-            return Err(FrontendError::new_with_message(
-                DisplayErrorKind::RequestFileAlreadyExists,
-                msg,
+            return Err(RelynxError::RequestFileAlreadyExists(
+                request_path.to_string_lossy().to_string(),
             )
             .into());
         }
@@ -553,8 +552,10 @@ pub fn add_request_node(params: AddRequestNodeParams) -> Result<RequestTreeNode,
     };
 
     if !file_model.path.starts_with(&collection.path) {
-        let msg = "Could not crate new request".to_string();
-        return Err(FrontendError::new_with_message(DisplayErrorKind::Generic, msg).into());
+        log::error!("Cannot create reques tas the file_models path is not within the collection.");
+        log::error!("FileModel: {:?}", file_model);
+        log::error!("Collection: {:?}", collection);
+        return Err(RelynxError::RequestCreateError.into());
     }
 
     match Serializer::serialize_to_file(&file_model) {
@@ -574,14 +575,12 @@ pub struct AddGroupNodeParams {
 
 #[tauri::command]
 pub fn add_group_node(params: AddGroupNodeParams) -> Result<RequestTreeNode, rspc::Error> {
-    let folder_name = sanitize_filename_with_options(params.group_name, DEFAULT_OPTIONS);
+    let folder_name = sanitize_filename_with_options(&params.group_name, DEFAULT_OPTIONS);
 
     if folder_name.is_empty() {
-        return Err(FrontendError::new_with_message(
-            DisplayErrorKind::AddGroupNodeError,
-            "Cannot add a group node with no name".to_string(),
-        )
-        .into());
+        log::error!("Cannot add a group node with no name");
+        log::error!("Params: {:?}", params);
+        return Err(RelynxError::CreateNewGroupGeneric.into());
     }
 
     if !params
@@ -589,14 +588,14 @@ pub fn add_group_node(params: AddGroupNodeParams) -> Result<RequestTreeNode, rsp
         .filepath
         .starts_with(&params.collection.path.to_string_lossy().to_string())
     {
-        let msg = format!(
+        log::error!(
             "The path: '{}' is not within the collection: '{}'",
-            params.parent.filepath.to_string_lossy(),
-            params.collection.path.to_string_lossy()
+            params.parent.filepath.display(),
+            params.collection.path.display()
         );
-        return Err(
-            FrontendError::new_with_message(DisplayErrorKind::AddGroupNodeError, msg).into(),
-        );
+        log::error!("Params: {:?}", params);
+
+        return Err(RelynxError::CreateNewGroupGeneric.into());
     }
 
     if params
@@ -605,31 +604,27 @@ pub fn add_group_node(params: AddGroupNodeParams) -> Result<RequestTreeNode, rsp
         .iter()
         .any(|child| child.name == folder_name)
     {
-        let msg = "There exists already a node with the same name in the parent".to_string();
-        return Err(
-            FrontendError::new_with_message(DisplayErrorKind::AddGroupNodeError, msg).into(),
-        );
+        log::error!("There exists already a node with the same name in the parent");
+        log::error!("Params: {:?}", params);
+        return Err(RelynxError::GroupNameAlreadyExistsInParent(folder_name).into());
     }
 
     let parent_path = PathBuf::from(params.parent.filepath);
     if !parent_path.exists() {
-        let msg = format!(
-            "The parent's path of the new group does not exist or has been removed. Cannot create new folder in nonexisting directory. Path: '{}'",
-            parent_path.to_string_lossy()
+        log::error!("The parent's path of the new group does not exist or has been removed. Cannot create new folder in nonexisting directory. Path: '{}'",
+parent_path.display()
         );
-        return Err(
-            FrontendError::new_with_message(DisplayErrorKind::AddGroupNodeError, msg).into(),
-        );
+        return Err(RelynxError::CreateNewGroupGeneric.into());
     }
 
     let path = parent_path.join(folder_name);
     if path.exists() {
-        let msg = format!(
+        log::error!(
             "There exists already a file/folder with path: {}",
-            path.to_string_lossy()
+            path.display()
         );
         return Err(
-            FrontendError::new_with_message(DisplayErrorKind::AddGroupNodeError, msg).into(),
+            RelynxError::GroupFolderAlreadyExists(path.to_string_lossy().to_string()).into(),
         );
     }
 
@@ -637,14 +632,13 @@ pub fn add_group_node(params: AddGroupNodeParams) -> Result<RequestTreeNode, rsp
         Ok(()) => Ok(RequestTreeNode::new_group(GroupOptions::FullPath(
             path.clone(),
         ))),
-        Err(_err) => {
-            // @TODO: log error
-            //
-            let msg = format!(
-                "Could not create new folder at path: '{}'",
-                path.to_string_lossy()
+        Err(err) => {
+            log::error!(
+                "Add group node, could not create new folder: '{}'",
+                path.display()
             );
-            Err(FrontendError::new_with_message(DisplayErrorKind::AddGroupNodeError, msg).into())
+            log::error!("Io Error: {:?}", err);
+            Err(RelynxError::CreateNewGroupError(path.to_string_lossy().to_string()).into())
         }
     }
 }
@@ -668,17 +662,12 @@ pub fn validate_group_name(
 ) -> Result<ValidateGroupNameResult, rspc::Error> {
     let ValidateGroupNameParams { old_path, new_name } = params;
 
-    let sanitized_name = sanitize_filename_with_options(new_name, DEFAULT_OPTIONS);
+    let sanitized_name = sanitize_filename_with_options(&new_name, DEFAULT_OPTIONS);
 
     let new_path = old_path
         .parent()
         .map(|parent_path| parent_path.join(&sanitized_name))
-        .ok_or_else(|| {
-            FrontendError::new_with_message(
-                DisplayErrorKind::Generic,
-                "Something is wrong with the path of the group.",
-            )
-        })?;
+        .ok_or_else(|| RelynxError::InvalidGroupName(new_name.clone(), sanitized_name.clone()))?;
 
     Ok(ValidateGroupNameResult {
         sanitized_name,
@@ -687,7 +676,7 @@ pub fn validate_group_name(
     })
 }
 
-#[derive(Serialize, Deserialize, rspc::Type, Debug)]
+#[derive(Serialize, Deserialize, rspc::Type, Debug, Clone)]
 pub struct RenameGroupParams {
     collection_path: PathBuf,
     old_path: PathBuf,
@@ -700,50 +689,55 @@ pub fn rename_group(params: RenameGroupParams) -> Result<PathBuf, rspc::Error> {
         collection_path,
         old_path,
         new_name,
-    } = params;
+    } = params.clone();
+
+    let new_name_sanitized = sanitize_filename_with_options(&new_name, DEFAULT_OPTIONS);
 
     let new_path = old_path
         .parent()
-        .map(|parent| parent.join(new_name))
+        .map(|parent| parent.join(&new_name_sanitized))
         .ok_or_else(|| {
-            return FrontendError::new_with_message(
-                DisplayErrorKind::Generic,
-                "Could not rename the group",
+            log::error!(
+                "Could not rename group as path join does not work, new_name: {:?}, sanitized: {:?}",
+                &new_name,
+                &new_name_sanitized
             );
+            log::error!("Params: {:?}", params);
+            return RelynxError::RenameGroupError(new_name.clone());
         })
         .map_err(Into::<rspc::Error>::into)?;
 
     if !(old_path.starts_with(&collection_path) && new_path.starts_with(&collection_path)) {
-        return Err(FrontendError::new_with_message(
-            DisplayErrorKind::Generic,
-            "Could not rename the group",
-        )
-        .into());
+        log::error!("Old or new path not within collection");
+        log::error!("new path: {}", new_path.display());
+        log::error!("Params: {:?}", params);
+        return Err(RelynxError::RenameGroupError(new_name.clone()).into());
     }
 
     if !old_path.exists() {
-        let msg = format!(
-            "The group's path: '{}' does not exist",
-            old_path.to_string_lossy()
-        );
-        return Err(FrontendError::new_with_message(DisplayErrorKind::Generic, msg).into());
+        log::error!("The group's path: '{}' does not exist", old_path.display());
+        log::error!("Params: {:?}", params);
+        return Err(RelynxError::RenameGroupError(new_name.clone()).into());
     }
 
     if new_path.exists() {
-        let msg = format!(
+        log::error!(
             "Cannot rename the group as there exists already a group with path: '{}'",
-            new_path.to_string_lossy()
+            new_path.display()
         );
-        return Err(FrontendError::new_with_message(DisplayErrorKind::Generic, msg).into());
+        log::error!("Params: {:?}", params);
+        return Err(RelynxError::RenameGroupError(new_name).into());
     }
 
     std::fs::rename(&old_path, &new_path)
-        .map_err(|_err| {
-            // @TODO: Log error
-            return FrontendError::new_with_message(
-                DisplayErrorKind::Generic,
-                "Could not rename the group",
+        .map_err(|err| {
+            log::error!(
+                "Rename Group: Could not rename '{}' to '{}",
+                old_path.display(),
+                new_path.display()
             );
+            log::error!("IO Error: {:?}", err);
+            return RelynxError::RenameGroupError(new_name);
         })
         .map_err(Into::<rspc::Error>::into)?;
 
@@ -762,25 +756,25 @@ pub fn delete_node(params: DeleteNodeParams) -> Result<(), rspc::Error> {
     let node = params.node;
 
     if node.filepath.as_os_str().is_empty() {
-        return Err(FrontendError::new_with_message(
-            DisplayErrorKind::NodeDeleteError,
-            "The node you want to delete has an invalid file path".to_string(),
-        )
-        .into());
+        log::error!(
+            "Node filepath is not valid for deletion. collection: '{:?}', node: '{:?}', file_node: '{:?}'",
+            collection, node, params.file_node
+        );
+        return Err(RelynxError::DeleteNodeError.into());
     }
 
     if !node
         .filepath
         .starts_with(&collection.path.to_string_lossy().to_string())
     {
-        let msg = format!(
+        log::error!(
             "The node: '{}' with path: '{}' is not within collection: '{}', collectionPath: '{}'",
             node.name,
-            node.filepath.to_string_lossy(),
+            node.filepath.display(),
             collection.name,
-            collection.path.to_string_lossy()
+            collection.path.display()
         );
-        return Err(FrontendError::new_with_message(DisplayErrorKind::NodeDeleteError, msg).into());
+        return Err(RelynxError::DeleteNodeError.into());
     }
 
     // if deleted node is part of a file, then we need to remove it from its request and resave /
@@ -804,16 +798,14 @@ pub fn delete_node(params: DeleteNodeParams) -> Result<(), rspc::Error> {
         };
         match Serializer::serialize_to_file(&file_model) {
             Ok(_) => return Ok(()),
-            Err(_err) => {
-                let msg = format!(
-                    "Could not remove request: '{}' from file: '{}'",
+            Err(err) => {
+                log::error!(
+                    "Could not remove request: '{}' from file: '{}",
                     node.name,
-                    file_node.filepath.to_string_lossy()
+                    file_node.filepath.display()
                 );
-                return Err(Into::<rspc::Error>::into(FrontendError::new_with_message(
-                    DisplayErrorKind::NodeDeleteError,
-                    msg,
-                )));
+                log::error!("Io Error: {:?}", err);
+                return Err(Into::<rspc::Error>::into(RelynxError::DeleteNodeError));
             }
         };
     }
@@ -821,7 +813,6 @@ pub fn delete_node(params: DeleteNodeParams) -> Result<(), rspc::Error> {
     // @TODO: if the node contains multiple children maybe ask if they want to delete everything
     // otherwise we delete either a single request (one file), or a directory with all its children
     if node.request.is_some() {
-        // @TODO: log error
         std::fs::remove_file(&node.filepath)
         // @TODO: check that only requests/folders are within the group so that nothing wanted is
         // removed as well
@@ -829,18 +820,21 @@ pub fn delete_node(params: DeleteNodeParams) -> Result<(), rspc::Error> {
         std::fs::remove_dir_all(&node.filepath)
     }
     .map_err(|err| {
-        let msg = format!("Could not delete node: {}, err: {}", node.name, err);
-        Into::<rspc::Error>::into(FrontendError::new_with_message(
-            DisplayErrorKind::NodeDeleteError,
-            msg,
-        ))
+        log::error!("Could not delete node: {}, err: {}", node.name, err);
+        log::error!("Io Error: {:?}", err);
+        Into::<rspc::Error>::into(RelynxError::DeleteNodeError)
     })?;
 
     let mut collection_config =
         load_collection_config(&collection.get_config_file_path()).unwrap_or_default();
     collection_config.path_orders.remove(&node.filepath);
-    // @TODO log error
-    let _ignored = save_collection_config(&collection_config, &collection.get_config_file_path());
+    // here we do not want to return an error as the actual deletion worked, just the config could
+    // not be updated which is not critical
+    let ignored = save_collection_config(&collection_config, &collection.get_config_file_path());
+    if ignored.is_err() {
+        log::error!("Could not save collection config after deleting node!");
+        log::error!("Io Error: {:?}", ignored.unwrap_err());
+    }
 
     Ok(())
 }
@@ -863,27 +857,34 @@ pub fn save_environments(params: SaveEnvironmentsParams) -> Result<(), rspc::Err
 }
 
 #[tauri::command]
-pub fn get_response_filepath(request_path: PathBuf) -> Result<PathBuf, rspc::Error> {
-    let error = FrontendError::new_with_message(
-        DisplayErrorKind::Generic,
-        "Could not resolve the file path",
-    );
-    let request_folder = request_path.parent().ok_or(error.clone())?;
+pub fn get_response_filepath(request_path: PathBuf) -> Result<Option<PathBuf>, rspc::Error> {
+    let request_folder = request_path.parent().ok_or({
+        log::error!(
+            "Could not resolve response path relative to request. request_path: {}",
+            request_path.display()
+        );
+        RelynxError::RelativeResponsePathError
+    })?;
 
     let mut file_dialog_builder = tauri::api::dialog::blocking::FileDialogBuilder::default();
     if let Some(parent) = request_path.parent() {
         file_dialog_builder = file_dialog_builder.set_directory(parent);
     }
-    let filepath = file_dialog_builder
-        .save_file()
-        .ok_or(rspc::Error::from(FrontendError::new(
-            DisplayErrorKind::NoPathChosen,
-        )))?;
+    let filepath = file_dialog_builder.save_file();
+    // canceled / none chosen
+    if filepath.is_none() {
+        return Ok(None);
+    }
+    let filepath = filepath.unwrap();
 
     filepath
         .strip_prefix(request_folder)
-        .map(|res| res.to_owned())
-        .map_err(|_err| error)
+        .map(|res| Some(res.to_owned()))
+        .map_err(|err| {
+            log::error!("Filepath is not relative could not strip prefix. Filepath: '{}', request_folder: '{}'", filepath.display(), request_folder.display());
+            log::error!("Err: {:?}", err);
+            RelynxError::RelativeResponsePathError
+        })
         .map_err(Into::into)
 }
 
@@ -904,20 +905,20 @@ pub fn validate_response_filepath(response_file_path: PathBuf) -> Result<bool, r
 /// displayed as a group
 pub fn hide_group(path: PathBuf) -> Result<(), rspc::Error> {
     if !path.exists() || !path.is_dir() {
-        return Err(FrontendError::new_with_message(
-            DisplayErrorKind::Generic,
-            "Could not hide group".to_string(),
-        )
-        .into());
+        log::error!(
+            "Could not hide group, path exists: {}, path is dir: {}",
+            path.exists(),
+            path.is_dir()
+        );
+
+        return Err(RelynxError::HideGroupError.into());
     }
 
     let ignorefile_path = path.join(RELYNX_IGNORE_FILE);
-    std::fs::write(ignorefile_path, "").map_err(|_err| {
-        // @TODO: log error
-        Into::<rspc::Error>::into(FrontendError::new_with_message(
-            DisplayErrorKind::Generic,
-            "Could not hide group",
-        ))
+    std::fs::write(ignorefile_path, "").map_err(|err| {
+        log::error!("Could not write relynx ignore file for hiding groups to file system!");
+        log::error!("Io Error: {:?}", err);
+        Into::<rspc::Error>::into(RelynxError::HideGroupError)
     })?;
 
     Ok(())
@@ -929,14 +930,27 @@ pub struct ChooseFileRelativeToParams {
 }
 
 #[tauri::command]
-pub fn choose_file_relative_to(params: ChooseFileRelativeToParams) -> Result<PathBuf, rspc::Error> {
+pub fn choose_file_relative_to(
+    params: ChooseFileRelativeToParams,
+) -> Result<Option<PathBuf>, rspc::Error> {
     let chosen_file = select_file()?;
+    // nothing chosen, cancelled
+    if chosen_file.is_none() {
+        return Ok(None);
+    }
+    let chosen_file = chosen_file.unwrap();
+
     if let Some(relative_path) = diff_paths(&chosen_file, &params.base_path) {
-        Ok(relative_path)
+        Ok(Some(relative_path))
     } else {
-        return Err(FrontendError::new_with_message(
-            DisplayErrorKind::Generic,
-            "The chosen file path cannot be relative to the given request.".to_string(),
+        log::error!(
+            "Could not create relative file paths for: '{}', and '{}",
+            chosen_file.display(),
+            params.base_path.display()
+        );
+        return Err(RelynxError::RelativePathChoiceError(
+            chosen_file.to_string_lossy().to_string(),
+            params.base_path.to_string_lossy().to_string(),
         )
         .into());
     }

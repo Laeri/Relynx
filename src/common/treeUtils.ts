@@ -252,8 +252,7 @@ export function isChildOf(requestTree: RequestTree, child: RequestTreeNode, pare
   let dragRParent = findParent(requestTree, child);
 
   if (!dragRParent) {
-    backend.logFrontendError(NewFError("isChildOf", "Error during drag and drop", "Something went wrong during drag and drop", ""))
-    console.error("Neither first nor second parent???");
+    console.error("Neither first nor second parent");
     return false;
   }
 
