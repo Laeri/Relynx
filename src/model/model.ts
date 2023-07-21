@@ -87,7 +87,7 @@ export function getCookies(requestModel: RequestModel): Cookie[] {
   let cookies = requestModel.headers.filter((header: Header) => {
     return header.key.toLowerCase() == "cookie";
   }).flatMap((header: Header) => {
-    return header.value.split(",");
+    return header.value.split(',');
   }).map((cookieValue: string) => {
     return { value: cookieValue };
   });

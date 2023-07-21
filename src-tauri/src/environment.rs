@@ -27,10 +27,10 @@ pub fn load_environments_from_files(
 
         for (env_name, key_val_map) in env_structure.iter() {
             let variables: Vec<EnvironmentVariable> = key_val_map
-                .into_iter()
+                .iter()
                 .map(|(var_name, value)| EnvironmentVariable {
-                    name: var_name.to_string(),
-                    initial_value: value.to_string(),
+                    name: var_name.clone(),
+                    initial_value: value.clone(),
                     current_value: None,
                     description: None, // @TODO: get description from collectionconfig :(
                 })
@@ -54,8 +54,8 @@ pub fn load_environments_from_files(
             let secrets: Vec<EnvironmentSecret> = key_val_map
                 .into_iter()
                 .map(|(var_name, value)| EnvironmentSecret {
-                    name: var_name.to_string(),
-                    initial_value: value.to_string(),
+                    name: var_name,
+                    initial_value: value,
                     current_value: None,
                     description: None, // @TODO: get description from collectionconfig :(
                     persist_to_file: true,
@@ -66,9 +66,7 @@ pub fn load_environments_from_files(
     }
 
     if let Some(collection_path) = collection_path {
-        let collection_config = load_collection_config(&collection_path);
-        if collection_config.is_ok() {
-            let mut collection_config = collection_config.unwrap();
+        if let Ok(mut collection_config) = load_collection_config(collection_path) {
             let mut to_remove_env: Vec<String> = Vec::new();
             for (env_name, descriptions) in collection_config.env_var_descriptions.iter_mut() {
                 let environment = environments.get_mut(env_name);
@@ -111,14 +109,11 @@ pub fn load_environments_from_files(
             for env_name in to_remove_env {
                 environments.remove(&env_name);
             }
-            // @TODO: error handling
-            let _ = save_collection_config(&collection_config, &collection_path);
-        } else {
-            // @TODO: log warning
+            let _ = save_collection_config(&collection_config, collection_path);
         }
     }
 
-    Ok(environments.into_values().into_iter().collect())
+    Ok(environments.into_values().collect())
 }
 
 pub fn load_environments(collection_path: PathBuf) -> Result<Vec<Environment>, RelynxError> {
@@ -139,7 +134,7 @@ impl TryFrom<&EnvironmentVariable> for SingleEnvVarDescription {
         }
 
         let description = value.description.clone().unwrap();
-        if description == "" {
+        if description.is_empty() {
             return Err(());
         }
 
@@ -239,14 +234,14 @@ pub fn save_environments(
             RelynxError::SaveEnvironmentsError
         })?;
 
-    std::fs::write(&env_path, env_file_content).map_err(|err| {
+    std::fs::write(env_path, env_file_content).map_err(|err| {
         log::error!("Could not write environment content to file");
         log::error!("Io Error: {:?}", err);
 
         RelynxError::SaveEnvironmentsError
     })?;
 
-    std::fs::write(&private_env_path, private_env_file_content).map_err(|_| {
+    std::fs::write(private_env_path, private_env_file_content).map_err(|_| {
         // we do not log specifics as there are secrets within the file
         log::error!("Error writing private environment to file");
         RelynxError::SaveEnvironmentsError

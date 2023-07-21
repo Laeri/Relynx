@@ -39,6 +39,7 @@ pub struct CookieAttribute {
     pub value: Option<String>,
 }
 
+#[allow(dead_code)]
 impl ResponseCookie {
     /// Parses value from Set-Cookie header into a `ResponseCookie`.
     ///

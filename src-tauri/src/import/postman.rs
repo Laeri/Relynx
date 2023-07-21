@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::config::save_workspace;
 use crate::error::RelynxError;
@@ -27,11 +27,11 @@ pub fn import(
             match collection {
                 PostmanCollection::V1_0_0(_spec) => {
                     log::error!("Cannot import v1_0_0 collection!");
-                    return Err(RelynxError::TriedPostmanImportV1_0_0);
+                    Err(RelynxError::TriedPostmanImportV1_0_0)
                 }
                 PostmanCollection::V2_0_0(_spec) => {
                     log::error!("Cannot import v1_0_0 collection!");
-                    return Err(RelynxError::TriedPostmanImportV2_0_0);
+                    Err(RelynxError::TriedPostmanImportV2_0_0)
                 }
                 PostmanCollection::V2_1_0(spec) => {
                     let collection = postman_to_request_tree(result_path, spec);
@@ -41,22 +41,23 @@ pub fn import(
                     // collection?
                     save_workspace(&workspace)?;
 
-                    return Ok(ImportCollectionResult { collection });
+                    Ok(ImportCollectionResult { collection })
                 }
             }
         }
         Err(err) => {
             log::error!("Could not import Postman collection, invalid format!");
             log::error!("Err: {:?}", err);
-            return Err(RelynxError::InvalidPostmanCollection);
+            Err(RelynxError::InvalidPostmanCollection)
         }
     }
 }
 
+#[allow(clippy::unused_unit)]
 fn into_request_tree_node(
     item: &postman_collection::v2_1_0::Items,
     filename: &str,
-    parent_path: &PathBuf,
+    parent_path: &Path,
     import_warnings: &mut Vec<ImportWarning>,
 ) -> Result<RequestTreeNode, ()> {
     let path = parent_path.join(filename);
@@ -72,7 +73,7 @@ fn into_request_tree_node(
             import_warnings.push(ImportWarning {
                 rest_file_path: path.to_string_lossy().to_string(),
                 is_group: false,
-                severity: Some(MessageSeverity::ERROR),
+                severity: Some(MessageSeverity::Error),
                 message: None,
             });
             ()
@@ -83,7 +84,7 @@ fn into_request_tree_node(
             import_warnings.push(ImportWarning {
                 rest_file_path: path.to_string_lossy().to_string(),
                 is_group: false,
-                severity: Some(MessageSeverity::ERROR),
+                severity: Some(MessageSeverity::Error),
                 message: None,
             });
 
@@ -100,7 +101,7 @@ fn into_request_tree_node(
             import_warnings.push(ImportWarning {
                 rest_file_path: path.to_string_lossy().to_string(),
                 is_group: true,
-                severity: Some(MessageSeverity::ERROR),
+                severity: Some(MessageSeverity::Error),
                 message: None,
             });
             ()
@@ -115,11 +116,10 @@ fn into_request_tree_node(
             .map(|(index, child)| {
                 into_request_tree_node(child, &item_names[index], &path, import_warnings)
             })
-            .filter(|el| el.is_ok())
-            .map(|el| el.unwrap())
+            .filter_map(|el| el.ok())
             .collect::<Vec<RequestTreeNode>>();
     }
-    return Ok(group);
+    Ok(group)
 }
 
 fn next_free_name(
@@ -137,14 +137,14 @@ fn next_free_name(
 
     loop {
         let name = format!("{}{}{}", base_name, index, extension);
-        if let None = existing_names.get(&name) {
+        if existing_names.get(&name).is_none() {
             return name;
         }
         index += 1;
     }
 }
 
-fn item_names(items: &Vec<Items>) -> Vec<String> {
+fn item_names(items: &[Items]) -> Vec<String> {
     let mut names: HashMap<String, ()> = HashMap::new();
     for item in items.iter() {
         let mut name = sanitize_filename(item.name.clone().unwrap_or(String::new()));
@@ -152,18 +152,18 @@ fn item_names(items: &Vec<Items>) -> Vec<String> {
             name = name + &http_rest_file::model::HttpRestFileExtension::Http.get_extension();
         }
         if name.is_empty() {
-            if let Some(_) = item.request {
+            if item.request.is_some() {
                 name = next_free_name("Request_", 1, &names, true);
             }
 
-            if let Some(_) = item.item {
+            if item.item.is_some() {
                 name = next_free_name("Group_", 1, &names, false);
             }
         }
         names.insert(name, ());
     }
 
-    names.keys().map(|k| k.clone()).collect::<Vec<String>>()
+    names.keys().cloned().collect()
 }
 
 fn postman_to_request_tree(
@@ -187,7 +187,7 @@ fn postman_to_request_tree(
             );
         });
 
-    let relynx_collection = Collection {
+    Collection {
         name: collection.info.name,
         path: import_result_path,
         description: match collection.info.description {
@@ -200,27 +200,26 @@ fn postman_to_request_tree(
         path_exists: true,
         import_warnings,
         current_env_name: String::new(),
-    };
-    relynx_collection
+    }
 }
 
 fn transform_request(
     postman_request: &postman_collection::v2_1_0::RequestUnion,
     name: &str,
-    request_path: &PathBuf,
+    request_path: &Path,
     import_warnings: &mut Vec<ImportWarning>,
 ) -> RequestModel {
     match postman_request {
         postman_collection::v2_1_0::RequestUnion::String(url) => RequestModel {
             id: uuid::Uuid::new_v4().to_string(),
             name: name.to_string(),
-            rest_file_path: request_path.clone(),
+            rest_file_path: request_path.to_owned(),
             url: url.clone(),
             ..Default::default()
         },
         postman_collection::v2_1_0::RequestUnion::RequestClass(ref request_class) => {
             let method = match request_class.method {
-                Some(ref string) => HttpMethod::new(&string).into(),
+                Some(ref string) => HttpMethod::new(string).into(),
                 None => WithDefault::<HttpMethod>::default(),
             };
 
@@ -239,7 +238,7 @@ fn transform_request(
                 Some(HeaderUnion::String(ref string)) => {
                     // @TODO are these multiple headers or a single one? Schema doesn't give more
                     // info
-                    let mut split = string.split(":");
+                    let mut split = string.split(':');
                     let key = split.next().unwrap_or_default();
                     let value = split.next().unwrap_or_default();
                     vec![crate::model::Header {
@@ -315,7 +314,7 @@ fn transform_request(
                                         if let "file" = &form_parameter_type[..] {
                                             let file_src = match form_param.src.clone() {
                                                 Some(FormParameterSrcUnion::File(file_src)) => {
-                                                    file_src.to_string()
+                                                    file_src
                                                 }
                                                 Some(FormParameterSrcUnion::Files(files)) => {
                                                     import_warnings.push(ImportWarning {
@@ -340,12 +339,12 @@ fn transform_request(
                                                 .to_string_lossy()
                                                 .to_string();
 
-                                        let disposition: http_rest_file::model::DispositionField = http_rest_file::model::DispositionField::new_with_filename(name.clone(),Some(filename));
+                                        let disposition: http_rest_file::model::DispositionField = http_rest_file::model::DispositionField::new_with_filename(name,Some(filename));
 
                                         parts.push(crate::model::Multipart {
                                                 headers,
                                             disposition,                                                                                                 data: DataSource::FromFilepath(
-                                                    file_src.to_string(),
+                                                    file_src
                                                 ),
                                             })
                                         } else {
@@ -391,12 +390,16 @@ fn transform_request(
                                     "application/json",
                                 ));
                                 let graphql = serde_json::to_string(&postman_body.graphql.clone().unwrap_or_default());
-                                if graphql.is_err() {
+                                let data_source = match graphql {
+                                    Ok(string) => DataSource::Raw(string),
+                                    Err(err) => {
+                                    log::error!("Error serializing postman graphql to string, err: {:?}", err);
                                     import_warnings.push(ImportWarning { rest_file_path: request_path.to_string_lossy().to_string(),  is_group: false, message: Some("GraphQl Body could not be imported".to_string()), severity: Some(MessageSeverity::Warn) });
-                                    DataSource::Raw(String::new());
-                                }
+                                    DataSource::Raw(String::new())
+                                    }
+                                };
                                 RequestBody::Raw {
-                                    data: DataSource::Raw(graphql.unwrap_or_default())
+                                    data: data_source
                                 }
                             },
                             None => RequestBody::None
@@ -421,8 +424,8 @@ fn transform_request(
                 id: uuid::Uuid::new_v4().to_string(),
                 name: name.to_string(),
                 description,
-                url: url.to_string(),
-                rest_file_path: request_path.clone(),
+                url,
+                rest_file_path: request_path.to_owned(),
                 body,
                 method: method.unwrap_or_default(),
                 headers,

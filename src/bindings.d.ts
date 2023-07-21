@@ -37,92 +37,92 @@ export type Procedures = {
     subscriptions: never
 };
 
-export type RedirectResponse = { save_response: boolean; save_path: string | null; overwrite: boolean }
-
 export type LicenseData = { license_key?: string | null; license_signature?: string | null; license_start?: string | null }
+
+export type SaveEnvironmentsParams = { collection_path: string; environments: Environment[] }
 
 export type DataSource<T> = { Raw: T } | { FromFilepath: string }
 
-export type ChooseFileRelativeToParams = { base_path: string }
-
-export type EnvironmentSecret = { name: string; initial_value: string; current_value: string | null; description: string | null; persist_to_file: boolean }
-
-export type RequestResult = { id: string; result: string; status_code: string; total_time: number; total_result_size: number; content_type: string | null; warnings: string[]; result_file: string | null; result_file_folder: string | null }
-
-export type AppEnvironment = "DEVELOPMENT" | "PRODUCTION"
-
-export type ValidateGroupNameParams = { old_path: string; new_name: string }
-
-export type ParseError = { NoRequestFoundInFile: string } | { CouldNotReadRequestFile: string } | { InvalidCommentStart: string } | { InvalidRequestUrl: string } | { InvalidHttpVersion: string } | "MissingPreRequestScript" | "MissingPreRequestScriptClose" | "MissingRequestTargetLine" | { TooManyElementsOnRequestLine: string } | { InvalidHeaderField: string } | { MissingMultipartHeaderBoundaryDefinition: string } | { MissingMultipartBoundary: { next_boundary: string; end_boundary: string } } | "MissingMultipartStartingBoundary" | { InvalidSingleMultipartHeaders: { header_parse_err: ParseError; error_msg: string } } | "MissingSingleMultipartContentDispositionHeader" | { WrongMultipartContentDispositionHeader: string } | { InvalidMultipartContentDispositionFormData: string } | { MalformedContentDispositionEntries: string } | "SingleMultipartMissingEmptyLine" | { MultipartShouldBeEndedWithBoundary: string } | "InvalidMultipartBoundaryLength" | { InvalidMultipartBoundaryCharacter: string } | { SingleMultipartNameMissing: string } | "MissingResponseHandlerClose" | "MissingRedirectResponsePath" | "ImportCollectionError" | "Unknown"
-
-export type UrlEncodedParam = { key: string; value: string }
+export type ImportPostmanCommandParams = { workspace: Workspace; import_postman_path: string; import_result_path: string }
 
 export type Multipart = { data: DataSource<string>; disposition: DispositionField; headers: Header[] }
 
-export type SaveRequestCommand = { requests: RequestModel[]; collection: Collection; old_name: string }
+export type RequestModel = { id: string; name: string; description: string; method: HttpMethod; url: string; query_params: QueryParam[]; headers: Header[]; body: RequestBody; rest_file_path: string; http_version: Replaced<HttpVersion>; settings: RequestSettings; redirect_response: RedirectResponse }
 
-export type RenameGroupParams = { collection_path: string; old_path: string; new_name: string }
-
-export type Header = { key: string; value: string; active: boolean }
-
-export type QueryParam = { key: string; value: string; active: boolean }
-
-export type EnvironmentVariable = { name: string; initial_value: string; current_value: string | null; description: string | null }
-
-export type AddExistingCollectionsParams = { path: string; workspace: Workspace }
-
-export type RequestTree = { root: RequestTreeNode }
-
-export type Environment = { name: string; variables: EnvironmentVariable[]; secrets: EnvironmentSecret[] }
-
-export type ImportPostmanCommandParams = { workspace: Workspace; import_postman_path: string; import_result_path: string }
+export type ParseError = { NoRequestFoundInFile: string } | { CouldNotReadRequestFile: string } | { InvalidCommentStart: string } | { InvalidRequestUrl: string } | { InvalidHttpVersion: string } | "MissingPreRequestScript" | "MissingPreRequestScriptClose" | "MissingRequestTargetLine" | { TooManyElementsOnRequestLine: string } | { InvalidHeaderField: string } | { MissingMultipartHeaderBoundaryDefinition: string } | { MissingMultipartBoundary: { next_boundary: string; end_boundary: string } } | "MissingMultipartStartingBoundary" | { InvalidSingleMultipartHeaders: { header_parse_err: ParseError; error_msg: string } } | "MissingSingleMultipartContentDispositionHeader" | { WrongMultipartContentDispositionHeader: string } | { InvalidMultipartContentDispositionFormData: string } | { MalformedContentDispositionEntries: string } | "SingleMultipartMissingEmptyLine" | { MultipartShouldBeEndedWithBoundary: string } | "InvalidMultipartBoundaryLength" | { InvalidMultipartBoundaryCharacter: string } | { SingleMultipartNameMissing: string } | "MissingResponseHandlerClose" | "MissingRedirectResponsePath" | "ImportCollectionError" | "Unknown"
 
 export type Workspace = { collections: Collection[] }
 
-export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" | "TRACE" | "OPTIONS" | "CONNECT" | { CUSTOM: string }
-
-export type ImportJetbrainsHttpFolderParams = { workspace: Workspace; import_jetbrains_folder: string; collection_name: string }
+export type UrlEncodedParam = { key: string; value: string }
 
 export type DeleteNodeParams = { collection: Collection; node: RequestTreeNode; file_node: RequestTreeNode | null }
 
-export type SaveEnvironmentsParams = { collection_path: string; environments: Environment[] }
+export type SaveRequestCommand = { requests: RequestModel[]; collection: Collection; old_name: string }
+
+export type AppEnvironment = "Development" | "Production"
+
+export type EnvironmentVariable = { name: string; initial_value: string; current_value: string | null; description: string | null }
+
+export type Header = { key: string; value: string; active: boolean }
+
+export type ValidateGroupNameResult = { sanitized_name: string; new_path: string; path_exists_already: boolean }
+
+export type Replaced<T> = { value: T; is_replaced: boolean }
+
+export type QueryParam = { key: string; value: string; active: boolean }
+
+export type RequestTree = { root: RequestTreeNode }
+
+export type RequestBody = "None" | { Multipart: { boundary: string; parts: Multipart[] } } | { UrlEncoded: { url_encoded_params: UrlEncodedParam[] } } | { Raw: { data: DataSource<string> } }
+
+export type ChooseFileRelativeToParams = { base_path: string }
+
+export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" | "TRACE" | "OPTIONS" | "CONNECT" | { CUSTOM: string }
+
+export type RedirectResponse = { save_response: boolean; save_path: string | null; overwrite: boolean }
+
+export type AddGroupNodeParams = { collection: Collection; parent: RequestTreeNode; group_name: string }
+
+export type EnvironmentSecret = { name: string; initial_value: string; current_value: string | null; description: string | null; persist_to_file: boolean }
+
+export type RunRequestCommand = { request: RequestModel; environment: Environment | null }
+
+export type AddCollectionsResult = { workspace: Workspace; num_imported: number; errored_collections: string[] }
+
+export type MessageSeverity = "warn" | "warn" | "success" | "error"
+
+export type RequestResult = { id: string; result: string; status_code: string; total_time: number; total_result_size: number; content_type: string | null; warnings: string[]; result_file: string | null; result_file_folder: string | null }
 
 export type Collection = { name: string; path: string; current_env_name: string; description: string; import_warnings: ImportWarning[]; path_exists?: boolean }
 
 export type DragAndDropResult = { new_drop_node: RequestTreeNode; remove_drag_node_parent: boolean }
 
-export type RequestBody = "None" | { Multipart: { boundary: string; parts: Multipart[] } } | { UrlEncoded: { url_encoded_params: UrlEncodedParam[] } } | { Raw: { data: DataSource<string> } }
-
 export type RequestSettings = { no_redirect: boolean | null; no_log: boolean | null; no_cookie_jar: boolean | null }
 
-export type ValidateGroupNameResult = { sanitized_name: string; new_path: string; path_exists_already: boolean }
+export type AddExistingCollectionsParams = { path: string; workspace: Workspace }
+
+export type ImportJetbrainsHttpFolderParams = { workspace: Workspace; import_jetbrains_folder: string; collection_name: string }
 
 export type ImportCollectionResult = { collection: Collection }
 
-export type DragAndDropParams = { collection: Collection; drag_node_parent: RequestTreeNode; drag_node: RequestTreeNode; drop_node: RequestTreeNode; drop_index: number }
+export type Environment = { name: string; variables: EnvironmentVariable[]; secrets: EnvironmentSecret[] }
 
-export type MessageSeverity = "warn" | "warn" | "success" | "error"
+export type ImportWarning = { rest_file_path: string; is_group: boolean; message: string | null; severity: MessageSeverity | null }
+
+export type DragAndDropParams = { collection: Collection; drag_node_parent: RequestTreeNode; drag_node: RequestTreeNode; drop_node: RequestTreeNode; drop_index: number }
 
 export type HttpVersion = { major: number; minor: number }
 
 export type LoadRequestsResult = { request_tree: RequestTree; errs: ParseError[] }
 
-export type Replaced<T> = { value: T; is_replaced: boolean }
+export type ValidateGroupNameParams = { old_path: string; new_name: string }
 
 export type RequestTreeNode = { id: string; name: string; request: RequestModel | null; children: RequestTreeNode[]; filepath: string; is_file_group: boolean }
 
-export type AddGroupNodeParams = { collection: Collection; parent: RequestTreeNode; group_name: string }
+export type RenameGroupParams = { collection_path: string; old_path: string; new_name: string }
 
 export type ReorderNodesParams = { collection: Collection; drag_node: RequestTreeNode; drop_node: RequestTreeNode; drop_index: number }
 
 export type DispositionField = { name: string; filename: string | null; filename_star: string | null }
-
-export type ImportWarning = { rest_file_path: string; is_group: boolean; message: string | null; severity: MessageSeverity | null }
-
-export type AddCollectionsResult = { workspace: Workspace; num_imported: number; errored_collections: string[] }
-
-export type RunRequestCommand = { request: RequestModel; environment: Environment | null }
-
-export type RequestModel = { id: string; name: string; description: string; method: HttpMethod; url: string; query_params: QueryParam[]; headers: Header[]; body: RequestBody; rest_file_path: string; http_version: Replaced<HttpVersion>; settings: RequestSettings; redirect_response: RedirectResponse }
 
 export type AddRequestNodeParams = { collection: Collection; parent: RequestTreeNode; request_name: string; requests_in_same_file: RequestModel[] }

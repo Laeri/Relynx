@@ -92,10 +92,8 @@ pub fn save_workspace(workspace: &Workspace) -> Result<(), RelynxError> {
     // example)
     workspace.collections.iter().for_each(|collection| {
         let config_path = collection.get_config_file_path();
-        let collection_config = load_collection_config(&config_path);
         // @TODO: handle error
-        if collection_config.is_ok() {
-            let mut collection_config = collection_config.unwrap();
+        if let Ok(mut collection_config) = load_collection_config(&config_path) {
             collection_config.name = collection.name.clone();
             // @TODO: handle error
             let _result = save_collection_config(&collection_config, &config_path);

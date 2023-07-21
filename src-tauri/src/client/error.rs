@@ -19,6 +19,7 @@
 use std::path::PathBuf;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[allow(dead_code)]
 pub enum HttpError {
     CouldNotParseResponse,
     CouldNotUncompressResponse {

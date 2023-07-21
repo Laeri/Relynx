@@ -41,6 +41,7 @@ pub struct ClientOptions {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[allow(dead_code)]
 pub enum Verbosity {
     Verbose,
     VeryVerbose,
@@ -74,6 +75,7 @@ impl Default for ClientOptions {
 
 impl ClientOptions {
     /// Returns the list of options for the curl command line equivalent to this [`ClientOptions`].
+    #[allow(dead_code)]
     pub fn curl_args(&self) -> Vec<String> {
         let mut arguments = vec![];
 

@@ -251,7 +251,6 @@ export function RequestComponent(_props: ComponentProps) {
     let newRequest = updatedRequestModel(currentRequest, {});
 
     changeRequestUrlParams(newRequest, oldParam, newParam);
-    console.log('new request', newRequest);
     updateRequest(newRequest);
   }
 

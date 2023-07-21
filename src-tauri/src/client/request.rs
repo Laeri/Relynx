@@ -17,7 +17,7 @@
  */
 use url::Url;
 
-use super::{client_model::RequestCookie, error::HttpError};
+use super::error::HttpError;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Request {
@@ -46,60 +46,7 @@ impl std::fmt::Display for Header {
     }
 }
 
-/// Returns all `headers` values for given `name`.
-pub fn get_values(headers: &[Header], name: &str) -> Vec<String> {
-    headers
-        .iter()
-        .filter_map(|Header { name: key, value }| {
-            if key.to_lowercase() == name.to_lowercase() {
-                Some(value.to_string())
-            } else {
-                None
-            }
-        })
-        .collect()
-}
-
-impl Header {
-    pub fn new(name: &str, value: &str) -> Self {
-        Header {
-            name: name.to_string(),
-            value: value.to_string(),
-        }
-    }
-}
-
 impl Request {
-    /// Extracts query string params from the url of the request.
-    pub fn query_string_params(&self) -> Vec<Param> {
-        let u = Url::parse(self.url.as_str()).expect("valid url");
-        let mut params = vec![];
-        for (name, value) in u.query_pairs() {
-            let param = Param {
-                name: name.to_string(),
-                value: value.to_string(),
-            };
-            params.push(param);
-        }
-        params
-    }
-
-    /// Returns a list of request headers cookie.
-    ///
-    /// see <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cookie>
-    pub fn cookies(&self) -> Vec<RequestCookie> {
-        self.headers
-            .iter()
-            .filter(|h| h.name.as_str() == "Cookie")
-            .flat_map(|h| parse_cookies(h.value.as_str().trim()))
-            .collect()
-    }
-
-    /// Returns optional Content-type header value.
-    pub fn content_type(&self) -> Option<String> {
-        get_values(&self.headers, "Content-Type").get(0).cloned()
-    }
-
     /// Returns the base url http(s)://host(:port)
     pub fn base_url(&self) -> Result<String, HttpError> {
         // FIXME: is it possible to do it with libcurl?
@@ -121,129 +68,9 @@ impl Request {
     }
 }
 
-fn parse_cookies(s: &str) -> Vec<RequestCookie> {
-    s.split(';').map(|t| parse_cookie(t.trim())).collect()
-}
-
-fn parse_cookie(s: &str) -> RequestCookie {
-    match s.find('=') {
-        Some(i) => RequestCookie {
-            name: s.split_at(i).0.to_string(),
-            value: s.split_at(i + 1).1.to_string(),
-        },
-        None => RequestCookie {
-            name: s.to_string(),
-            value: "".to_string(),
-        },
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn hello_request() -> Request {
-        Request {
-            method: "GET".to_string(),
-            url: "http://localhost:8000/hello".to_string(),
-            headers: vec![
-                Header::new("Host", "localhost:8000"),
-                Header::new("Accept", "*/*"),
-                Header::new("User-Agent", "hurl/1.0"),
-            ],
-            body: vec![],
-        }
-    }
-
-    fn query_string_request() -> Request {
-        Request {
-            method: "GET".to_string(),
-            url: "http://localhost:8000/querystring-params?param1=value1&param2=&param3=a%3Db&param4=1%2C2%2C3".to_string(),
-            headers: vec![],
-            body: vec![],
-        }
-    }
-
-    fn cookies_request() -> Request {
-        Request {
-            method: "GET".to_string(),
-            url: "http://localhost:8000/cookies".to_string(),
-            headers: vec![Header::new("Cookie", "cookie1=value1; cookie2=value2")],
-            body: vec![],
-        }
-    }
-
-    #[test]
-    fn test_query_string() {
-        assert!(hello_request().query_string_params().is_empty());
-        assert_eq!(
-            query_string_request().query_string_params(),
-            vec![
-                Param {
-                    name: "param1".to_string(),
-                    value: "value1".to_string(),
-                },
-                Param {
-                    name: "param2".to_string(),
-                    value: "".to_string(),
-                },
-                Param {
-                    name: "param3".to_string(),
-                    value: "a=b".to_string(),
-                },
-                Param {
-                    name: "param4".to_string(),
-                    value: "1,2,3".to_string(),
-                },
-            ]
-        )
-    }
-
-    #[test]
-    fn test_cookies() {
-        assert!(hello_request().cookies().is_empty());
-        assert_eq!(
-            cookies_request().cookies(),
-            vec![
-                RequestCookie {
-                    name: "cookie1".to_string(),
-                    value: "value1".to_string(),
-                },
-                RequestCookie {
-                    name: "cookie2".to_string(),
-                    value: "value2".to_string(),
-                },
-            ]
-        )
-    }
-
-    #[test]
-    fn test_parse_cookies() {
-        assert_eq!(
-            parse_cookies("cookie1=value1; cookie2=value2"),
-            vec![
-                RequestCookie {
-                    name: "cookie1".to_string(),
-                    value: "value1".to_string(),
-                },
-                RequestCookie {
-                    name: "cookie2".to_string(),
-                    value: "value2".to_string(),
-                },
-            ]
-        )
-    }
-
-    #[test]
-    fn test_parse_cookie() {
-        assert_eq!(
-            parse_cookie("cookie1=value1"),
-            RequestCookie {
-                name: "cookie1".to_string(),
-                value: "value1".to_string(),
-            },
-        )
-    }
 
     #[test]
     fn test_base_url() {

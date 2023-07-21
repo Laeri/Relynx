@@ -1,8 +1,4 @@
-use crate::{
-    config::get_data_dir,
-    error::RelynxError,
-    get_license_pub_key,
-};
+use crate::{config::get_data_dir, error::RelynxError, get_license_pub_key};
 
 use base64::{
     engine::{self, general_purpose},
@@ -57,7 +53,10 @@ pub fn get_license_data() -> Result<LicenseData, RelynxError> {
         license_data
     } else {
         let content = std::fs::read_to_string(&license_path).map_err(|io_err| {
-            log::error!("Could not read license to string, path: '{}", license_path.display());
+            log::error!(
+                "Could not read license to string, path: '{}",
+                license_path.display()
+            );
             log::error!("Io Error: {:?}", io_err);
             RelynxError::LoadLicenseDataError
         })?;
@@ -83,6 +82,7 @@ pub fn save_license_data(license_data: &LicenseData) -> Result<(), RelynxError> 
                 "During save license data cannot create data directory: '{}'",
                 data_dir.display()
             );
+            log::error!("Io Error: {:?}", err);
             RelynxError::SaveLicenseDataError
         })?;
     }
@@ -101,6 +101,7 @@ pub fn save_license_data(license_data: &LicenseData) -> Result<(), RelynxError> 
                 "Could not write license data to file, path: '{}'",
                 license_path.display()
             );
+            log::error!("Io Error: {:?}", err);
             RelynxError::SaveLicenseDataError
         })
 }
@@ -157,7 +158,7 @@ pub fn verify_signature(license_data: &LicenseData) -> Result<bool, RelynxError>
         RelynxError::LicenseInvalid
     })?;
 
-    let verifying_key_openssl: VerifyingKey<Sha256> = VerifyingKey::new(pub_key.clone());
+    let verifying_key_openssl: VerifyingKey<Sha256> = VerifyingKey::new(pub_key);
     let result = verifying_key_openssl.verify(base64_decoded_payload.as_slice(), &signature);
     if result.is_err() {
         return Ok(false);
@@ -182,5 +183,5 @@ pub fn verify_signature(license_data: &LicenseData) -> Result<bool, RelynxError>
     })?;
 
     // if we got to here we could decode correctly the license and the signature matches
-    return Ok(true);
+    Ok(true)
 }

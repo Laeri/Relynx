@@ -25,26 +25,21 @@ pub mod options;
 mod request;
 mod timings;
 
-use std::path::PathBuf;
-
-use curl::easy::{self, List, SslOpt};
-use http_rest_file::model::{DataSource, HttpMethod, HttpVersion, UrlEncodedParam};
-use std::io::Read;
-use std::str::FromStr;
-
-use crate::model::{Environment, GetHeadersOption, Header, Multipart, RequestBody, RequestModel};
-
 use self::certificate::Certificate;
-use self::client_model::{parse_cookies, Call, Cookie, RequestCookie, Response};
+use self::client_model::{parse_cookies, Call, RequestCookie, Response};
 use self::error::HttpError;
 use self::options::{ClientOptions, Verbosity};
 use self::timings::Timings;
+use crate::model::{Environment, GetHeadersOption, Header, Multipart, RequestBody, RequestModel};
 use base64::engine::general_purpose;
 use base64::Engine;
 use chrono::Utc;
+use curl::easy::{self, List, SslOpt};
 use encoding::all::ISO_8859_1;
 use encoding::{DecoderTrap, Encoding};
-use url::Url;
+use http_rest_file::model::{DataSource, HttpMethod, HttpVersion, UrlEncodedParam};
+use std::io::Read;
+use std::path::PathBuf;
 
 /// Defines an HTTP client to execute HTTP requests.
 ///
@@ -386,7 +381,7 @@ impl Client {
                 return Err(HttpError::Libcurl {
                     code,
                     description,
-                    url: url.to_string(),
+                    url,
                 });
             }
         }
@@ -394,7 +389,7 @@ impl Client {
         let status = self.handle.response_code().unwrap();
         // TODO: explain why status_lines is Vec ?
         let version = match status_lines.last() {
-            None => return Err(HttpError::StatuslineIsMissing { url: url.clone() }),
+            None => return Err(HttpError::StatuslineIsMissing { url }),
             Some(status_line) => self.parse_response_version(status_line)?,
         };
         let headers = self.parse_response_headers(&response_headers);
@@ -434,7 +429,7 @@ impl Client {
             headers,
             body: response_body,
             duration,
-            url: url.clone(),
+            url,
             certificate,
         };
 
@@ -541,7 +536,7 @@ impl Client {
         {
             let user_agent = match options.user_agent {
                 Some(ref u) => u.clone(),
-                None => format!("relynx"), //@TODONone => format!("relynx/{}", clap::crate_version!()),
+                None => "relynx".to_string(),
             };
             list.append(format!("User-Agent: {user_agent}").as_str())
                 .unwrap();
@@ -599,15 +594,13 @@ impl Client {
                     raw_data.as_bytes().to_vec()
                 }
                 http_rest_file::model::DataSource::FromFilepath(ref path) => {
-                    let result =
-                        std::fs::read(&std::path::PathBuf::from(path)).map_err(|_err| {
-                            let _msg = format!(
-                                "Could not read data of file: '{}'. Check if the file exists.",
-                                path
-                            );
-                            HttpError::CouldNotReadFile(PathBuf::from(path))
-                        })?;
-                    result
+                    std::fs::read(&std::path::PathBuf::from(path)).map_err(|_err| {
+                        let _msg = format!(
+                            "Could not read data of file: '{}'. Check if the file exists.",
+                            path
+                        );
+                        HttpError::CouldNotReadFile(PathBuf::from(path))
+                    })?
                 }
             };
             // @TODO error log
@@ -707,39 +700,6 @@ impl Client {
             Some(location)
         }
     }
-
-    /// Returns cookie storage.
-    pub fn get_cookie_storage(&mut self) -> Vec<Cookie> {
-        let list = self.handle.cookies().unwrap();
-        let mut cookies = vec![];
-        for cookie in list.iter() {
-            let line = std::str::from_utf8(cookie).unwrap();
-            if let Ok(cookie) = Cookie::from_str(line) {
-                cookies.push(cookie);
-            } else {
-                log::warn!("Warning: line:'{}' can not be parsed as cookie", line);
-            }
-        }
-        cookies
-    }
-
-    /// Adds a cookie to the cookie jar.
-    pub fn add_cookie(&mut self, cookie: &Cookie, options: &ClientOptions) {
-        if options.verbosity.is_some() {
-            log::info!("* add to cookie store: {cookie}");
-        }
-        self.handle
-            .cookie_list(cookie.to_string().as_str())
-            .unwrap();
-    }
-
-    /// Clears cookie storage.
-    pub fn clear_cookie_storage(&mut self, options: &ClientOptions) {
-        if options.verbosity.is_some() {
-            log::info!("* clear cookie storage");
-        }
-        self.handle.cookie_list("ALL").unwrap();
-    }
 }
 
 /// Returns the redirect url.
@@ -749,42 +709,6 @@ fn get_redirect_url(location: &str, base_url: &str) -> String {
     } else {
         location.to_string()
     }
-}
-
-/// Returns cookies from both cookies from the cookie storage and the request.
-pub fn all_cookies(cookie_storage: &[Cookie], request_model: &RequestModel) -> Vec<RequestCookie> {
-    let mut cookies = request_model.cookies().clone();
-    cookies.append(
-        &mut cookie_storage
-            .iter()
-            .filter(|c| c.expires != "1") // cookie expired when libcurl set value to 1?
-            .filter(|c| match_cookie(c, request_model.url.as_str()))
-            .map(|c| RequestCookie {
-                name: c.name.clone(),
-                value: c.value.clone(),
-            })
-            .collect(),
-    );
-    cookies
-}
-
-/// Matches cookie for a given URL.
-pub fn match_cookie(cookie: &Cookie, url: &str) -> bool {
-    // FIXME: is it possible to do it with libcurl?
-    let url = match Url::parse(url) {
-        Ok(url) => url,
-        Err(_) => return false,
-    };
-    if let Some(domain) = url.domain() {
-        if cookie.include_subdomain == "FALSE" {
-            if cookie.domain != domain {
-                return false;
-            }
-        } else if !domain.ends_with(cookie.domain.as_str()) {
-            return false;
-        }
-    }
-    url.path().starts_with(cookie.path.as_str())
 }
 
 /// Splits an array of bytes into HTTP lines (\r\n separator).
@@ -852,37 +776,6 @@ mod tests {
         assert_eq!(lines.get(0).unwrap().as_str(), "GET /hello HTTP/1.1");
         assert_eq!(lines.get(1).unwrap().as_str(), "Host: localhost:8000");
         assert_eq!(lines.get(2).unwrap().as_str(), "");
-    }
-
-    #[test]
-    fn test_match_cookie() {
-        let cookie = Cookie {
-            domain: "example.com".to_string(),
-            include_subdomain: "FALSE".to_string(),
-            path: "/".to_string(),
-            https: "".to_string(),
-            expires: "".to_string(),
-            name: "".to_string(),
-            value: "".to_string(),
-            http_only: false,
-        };
-        assert!(match_cookie(&cookie, "http://example.com/toto"));
-        assert!(!match_cookie(&cookie, "http://sub.example.com/tata"));
-        assert!(!match_cookie(&cookie, "http://toto/tata"));
-
-        let cookie = Cookie {
-            domain: "example.com".to_string(),
-            include_subdomain: "TRUE".to_string(),
-            path: "/toto".to_string(),
-            https: "".to_string(),
-            expires: "".to_string(),
-            name: "".to_string(),
-            value: "".to_string(),
-            http_only: false,
-        };
-        assert!(match_cookie(&cookie, "http://example.com/toto"));
-        assert!(match_cookie(&cookie, "http://sub.example.com/toto"));
-        assert!(!match_cookie(&cookie, "http://example.com/tata"));
     }
 
     #[test]

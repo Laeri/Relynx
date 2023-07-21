@@ -162,7 +162,7 @@ export function hasContentType(requestModel: RequestModel, contentType: string):
   if (requestContentType === undefined || requestContentType === null) {
     return false;
   }
-  return requestContentType.split(";").some((part: string) => part === contentType);
+  return requestContentType.split(';').some((part: string) => part === contentType);
 }
 
 export function getRawText(requestBody: RequestBody): string | undefined {
@@ -211,7 +211,6 @@ export function setHeader(request: RequestModel, header: Header) {
 }
 
 function searchParamsToQueryParams(urlParams: URLSearchParams): QueryParam[] {
-  console.log("query entries: ", Array.from(urlParams.entries()));
   let result = Array.from(urlParams.entries()).map(([key, value]: [string, string]) => {
     let param: QueryParam = {
       key: key,
@@ -220,7 +219,6 @@ function searchParamsToQueryParams(urlParams: URLSearchParams): QueryParam[] {
     }
     return param;
   });
-  console.log('result: ', result);
   return result;
 }
 
@@ -231,14 +229,13 @@ function queryParamsToString(queryParams: QueryParam[]): string {
 }
 
 export function changeUrlParams(url: string, oldParam: QueryParam | undefined, newParam: QueryParam | undefined): string {
-  let urlSplit = url.split("?");
+  let urlSplit = url.split('?');
   if (urlSplit.length == 1) {
     urlSplit = [url, ""];
   }
 
   let searchQuery = new URLSearchParams(urlSplit[1]);
   let queryParams = searchParamsToQueryParams(searchQuery);
-  console.log('query here: ', queryParams);
   // change url param
   if (oldParam && newParam) {
     let index = queryParams.findIndex((param: QueryParam) => param.key === oldParam.key);
@@ -267,27 +264,21 @@ export function changeUrlParams(url: string, oldParam: QueryParam | undefined, n
 
 export function changeRequestUrlParams(request: RequestModel, oldParam: QueryParam | undefined, newParam: QueryParam | undefined) {
   let url = changeUrlParams(request.url, oldParam, newParam);
-  console.log('new url: ', url);
   request.url = url;
   let queryParams = extractQueryParamsFromUrl(request);
-  console.log('query params: ', queryParams);
   request.query_params = queryParams;
 }
 
 export function extractQueryParamsFromUrl(request: RequestModel): QueryParam[] {
   try {
     let url = new URL(request.url);
-    console.log('try');
     return searchParamsToQueryParams(url.searchParams);
   } catch (err) {
-    let split = request.url.split("?");
+    let split = request.url.split('?');
     if (split.length > 1) {
-      console.log('here');
       let searchQuery = new URLSearchParams(split[1]);
-      console.log('search query: ', searchQuery);
       return searchParamsToQueryParams(searchQuery);
     } else {
-      console.log('split length smaller');
       return []
     }
   }

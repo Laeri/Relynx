@@ -1,4 +1,7 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
 use http_rest_file::model::{
     DataSource, DispositionField, Header as HttpRestFileHeader, HttpMethod, HttpRestFile,
@@ -17,8 +20,8 @@ pub struct Workspace {
 
 #[derive(Serialize, Deserialize, Type, Debug)]
 pub enum AppEnvironment {
-    DEVELOPMENT,
-    PRODUCTION,
+    Development,
+    Production,
 }
 
 type ISO8601 = String;
@@ -54,7 +57,7 @@ impl Collection {
         Collection::config_file_path(&PathBuf::from(&self.path))
     }
 
-    pub fn config_file_path(collection_folder_path: &PathBuf) -> PathBuf {
+    pub fn config_file_path(collection_folder_path: &Path) -> PathBuf {
         collection_folder_path.join(COLLECTION_CONFIGFILE)
     }
 }
@@ -62,15 +65,16 @@ impl Collection {
 #[derive(Serialize, Deserialize, Type, Debug, Clone)]
 pub enum MessageSeverity {
     #[serde(rename = "warn")]
-    INFO,
+    Info,
 
     #[serde(rename = "warn")]
     Warn,
+
     #[serde(rename = "success")]
-    SUCCESS,
+    Success,
 
     #[serde(rename = "error")]
-    ERROR,
+    Error,
 }
 
 // @TODO
@@ -168,27 +172,27 @@ pub fn query_params_from_url(url: &str) -> Vec<QueryParam> {
         return vec![];
     }
 
-    let mut split = url.split("?");
+    let mut split = url.split('?');
     let (_, query) = (split.next(), split.next());
     if query.is_none() {
         return vec![];
     }
-    let parts = query.unwrap().split("&");
-    return parts
+    let parts = query.unwrap().split('&');
+    parts
         .into_iter()
         .map(|part| {
-            let mut part_split = part.split("=");
+            let mut part_split = part.split('=');
             let (key, value) = (
                 part_split.next().map(ToString::to_string),
                 part_split.next().map(ToString::to_string),
             );
-            return QueryParam {
+            QueryParam {
                 key: key.unwrap_or_default(),
                 value: value.unwrap_or_default(),
                 active: true,
-            };
+            }
         })
-        .collect::<Vec<QueryParam>>();
+        .collect::<Vec<QueryParam>>()
 }
 
 pub fn request_to_request_model(
@@ -293,16 +297,16 @@ pub enum RequestBody {
 
 impl RequestBody {
     pub fn is_none(&self) -> bool {
-        return matches!(self, RequestBody::None);
+        matches!(self, RequestBody::None)
     }
     pub fn is_multipart(&self) -> bool {
-        return matches!(self, RequestBody::Multipart { .. });
+        matches!(self, RequestBody::Multipart { .. })
     }
     pub fn is_url_encoded(&self) -> bool {
-        return matches!(self, RequestBody::UrlEncoded { .. });
+        matches!(self, RequestBody::UrlEncoded { .. })
     }
     pub fn is_raw(&self) -> bool {
-        return matches!(self, RequestBody::Raw { .. });
+        matches!(self, RequestBody::Raw { .. })
     }
 }
 
@@ -520,15 +524,7 @@ impl RequestModel {
             ref url_encoded_params,
         } = self.body
         {
-            if env.is_none() {
-                Some(
-                    url_encoded_params
-                        .iter()
-                        .map(|param| param.clone())
-                        .collect(),
-                )
-            } else {
-                let env = env.unwrap();
+            if let Some(env) = env {
                 Some(
                     url_encoded_params
                         .iter()
@@ -539,6 +535,8 @@ impl RequestModel {
                         })
                         .collect(),
                 )
+            } else {
+                Some(url_encoded_params.clone())
             }
         } else {
             None

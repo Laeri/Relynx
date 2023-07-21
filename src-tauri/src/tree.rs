@@ -46,8 +46,7 @@ impl RequestTreeNode {
         match options {
             GroupOptions::FullPath(path) => {
                 node.filepath = path.clone();
-                let group_path = std::path::PathBuf::from(path.clone());
-                node.name = match group_path.file_name() {
+                node.name = match path.file_name() {
                     Some(file_name) => file_name.to_string_lossy().to_string(),
                     None => sanitize_filename_with_options(
                         "Group_".to_string() + &uuid::Uuid::new_v4().to_string(),
@@ -60,17 +59,20 @@ impl RequestTreeNode {
     }
 
     pub fn new_file_group(path: PathBuf) -> Self {
-        let mut node = RequestTreeNode::default();
-        node.name = match path.file_name() {
+        let node_name = match path.file_name() {
             Some(file_name) => file_name.to_string_lossy().to_string(),
             None => sanitize_filename_with_options(
                 "Request_".to_string() + &uuid::Uuid::new_v4().to_string(),
                 DEFAULT_OPTIONS,
             ),
         };
-        node.is_file_group = true;
-        node.filepath = path;
-        node
+
+        RequestTreeNode {
+            name: node_name,
+            is_file_group: true,
+            filepath: path,
+            ..Default::default()
+        }
     }
 
     pub fn any_child_with_name(&self, name: &str) -> bool {

@@ -32,7 +32,7 @@ export const checkLicenseDataValid = (licenseData: LicenseData): Promise<boolean
 
 
 export const splitLicense = (license: string): LicenseData | undefined => {
-  let split = license.split(":");
+  let split = license.split(':');
   if (split.length != 2) {
     return undefined;
   }

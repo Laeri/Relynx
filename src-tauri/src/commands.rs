@@ -28,7 +28,7 @@ use http_rest_file::{
 use license::LicenseData;
 use serde::{Deserialize, Serialize};
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Mutex; // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 use tauri::{api::shell, Manager};
 use tauri::{AppHandle, ClipboardManager};
@@ -86,7 +86,7 @@ pub fn select_file() -> Result<Option<PathBuf>, rspc::Error> {
 
 #[tauri::command]
 pub fn is_directory_empty(path: PathBuf) -> Result<bool, rspc::Error> {
-    let it = std::fs::read_dir(&path);
+    let it = std::fs::read_dir(path);
     if it.is_err() {
         return Ok(false);
     }
@@ -171,9 +171,8 @@ pub fn add_existing_collections(
             }
             index += 1;
         }
-        let collection = create_jetbrains_collection(path, name);
-        if collection.is_ok() {
-            collections.push(collection.unwrap());
+        if let Ok(collection) = create_jetbrains_collection(path, name) {
+            collections.push(collection);
         }
     }
 
@@ -250,13 +249,16 @@ pub fn run_request(request_command: RunRequestCommand) -> Result<RequestResult, 
     // @TODO: cookie input file...
     // @TODO: handle intellij redirect options
     let mut client = Client::new(None);
-    let mut options = ClientOptions::default();
-    options.follow_location = !request_command
+    let follow_location = !request_command
         .request
         .settings
         .no_redirect
         .unwrap_or(false);
 
+    let options = ClientOptions {
+        follow_location,
+        ..Default::default()
+    };
     // @TODO: set options from request settings
     let calls = client
         .execute(
@@ -314,7 +316,6 @@ pub fn run_request(request_command: RunRequestCommand) -> Result<RequestResult, 
             // @TODO: maybe make the path private and only allow access over this method
             let absolute_path = redirect_response
                 .get_absolute_path(&request_command.request)
-                .clone()
                 .unwrap_or(PathBuf::from("request_result"));
 
             // @TODO: emit a warning if we could not save the file
@@ -396,7 +397,7 @@ pub fn save_request(command: SaveRequestCommand) -> Result<PathBuf, rspc::Error>
     let file_model = http_rest_file::model::HttpRestFile {
         errs: vec![],
         requests,
-        path: Box::new(PathBuf::from(file_path.clone())),
+        path: Box::new(file_path.clone()),
         extension: Some(HttpRestFileExtension::Http),
     };
 
@@ -440,10 +441,9 @@ pub fn copy_to_clipboard(string: String) -> Result<(), rspc::Error> {
 #[tauri::command]
 pub fn open_folder_native(
     app_handle: &tauri::AppHandle,
-    path: &PathBuf,
+    check_path: &Path,
 ) -> Result<(), rspc::Error> {
     // @TODO: we might want to restrict the path to collection folders
-    let check_path = std::path::PathBuf::from(path.clone());
     if !check_path.exists() {
         log::error!(
             "Cannot open folder: '{}' in explorer as it does not exist",
@@ -465,14 +465,14 @@ pub fn open_folder_native(
     }
     let shell_scope = app_handle.shell_scope();
 
-    match shell::open(&shell_scope, path.to_string_lossy(), None) {
+    match shell::open(&shell_scope, check_path.to_string_lossy(), None) {
         tauri::api::Result::Ok(_) => Ok(()),
         tauri::api::Result::Err(_err) => {
             log::error!(
                 "shell::open for open folder not working with path: {}",
-                path.display()
+                check_path.display()
             );
-            Err(RelynxError::InvalidOpenPath(path.to_string_lossy().to_string()).into())
+            Err(RelynxError::InvalidOpenPath(check_path.to_string_lossy().to_string()).into())
         }
     }
 }
@@ -499,8 +499,7 @@ pub fn add_request_node(params: AddRequestNodeParams) -> Result<RequestTreeNode,
         // new request is added last within the file
         let mut models = requests_in_same_file;
 
-        let request_model =
-            RequestModel::new(request_name, &PathBuf::from(parent.filepath.clone()));
+        let request_model = RequestModel::new(request_name, &parent.filepath);
 
         // if parent is a file group then the request has the same path as it is in the same file
         let new_request_tree_node = Ok(RequestTreeNode::new_request_node(
@@ -521,7 +520,7 @@ pub fn add_request_node(params: AddRequestNodeParams) -> Result<RequestTreeNode,
             new_request_tree_node,
         )
     } else {
-        let request_path = RequestModel::create_request_path(&request_name, parent.filepath.into());
+        let request_path = RequestModel::create_request_path(&request_name, parent.filepath);
 
         let new_request = RequestModel::new(request_name, &request_path);
         // @TODO: check if any node with same name exists and return
@@ -583,11 +582,7 @@ pub fn add_group_node(params: AddGroupNodeParams) -> Result<RequestTreeNode, rsp
         return Err(RelynxError::CreateNewGroupGeneric.into());
     }
 
-    if !params
-        .parent
-        .filepath
-        .starts_with(&params.collection.path.to_string_lossy().to_string())
-    {
+    if !params.parent.filepath.starts_with(&params.collection.path) {
         log::error!(
             "The path: '{}' is not within the collection: '{}'",
             params.parent.filepath.display(),
@@ -609,7 +604,7 @@ pub fn add_group_node(params: AddGroupNodeParams) -> Result<RequestTreeNode, rsp
         return Err(RelynxError::GroupNameAlreadyExistsInParent(folder_name).into());
     }
 
-    let parent_path = PathBuf::from(params.parent.filepath);
+    let parent_path = params.parent.filepath;
     if !parent_path.exists() {
         log::error!("The parent's path of the new group does not exist or has been removed. Cannot create new folder in nonexisting directory. Path: '{}'",
 parent_path.display()
@@ -628,10 +623,8 @@ parent_path.display()
         );
     }
 
-    match std::fs::create_dir(path.clone()) {
-        Ok(()) => Ok(RequestTreeNode::new_group(GroupOptions::FullPath(
-            path.clone(),
-        ))),
+    match std::fs::create_dir(&path) {
+        Ok(()) => Ok(RequestTreeNode::new_group(GroupOptions::FullPath(path))),
         Err(err) => {
             log::error!(
                 "Add group node, could not create new folder: '{}'",
@@ -703,7 +696,7 @@ pub fn rename_group(params: RenameGroupParams) -> Result<PathBuf, rspc::Error> {
                 &new_name_sanitized
             );
             log::error!("Params: {:?}", params);
-            return RelynxError::RenameGroupError(new_name.clone());
+            RelynxError::RenameGroupError(new_name.clone())
         })
         .map_err(Into::<rspc::Error>::into)?;
 
@@ -711,13 +704,13 @@ pub fn rename_group(params: RenameGroupParams) -> Result<PathBuf, rspc::Error> {
         log::error!("Old or new path not within collection");
         log::error!("new path: {}", new_path.display());
         log::error!("Params: {:?}", params);
-        return Err(RelynxError::RenameGroupError(new_name.clone()).into());
+        return Err(RelynxError::RenameGroupError(new_name).into());
     }
 
     if !old_path.exists() {
         log::error!("The group's path: '{}' does not exist", old_path.display());
         log::error!("Params: {:?}", params);
-        return Err(RelynxError::RenameGroupError(new_name.clone()).into());
+        return Err(RelynxError::RenameGroupError(new_name).into());
     }
 
     if new_path.exists() {
@@ -737,7 +730,7 @@ pub fn rename_group(params: RenameGroupParams) -> Result<PathBuf, rspc::Error> {
                 new_path.display()
             );
             log::error!("IO Error: {:?}", err);
-            return RelynxError::RenameGroupError(new_name);
+            RelynxError::RenameGroupError(new_name)
         })
         .map_err(Into::<rspc::Error>::into)?;
 
@@ -763,10 +756,7 @@ pub fn delete_node(params: DeleteNodeParams) -> Result<(), rspc::Error> {
         return Err(RelynxError::DeleteNodeError.into());
     }
 
-    if !node
-        .filepath
-        .starts_with(&collection.path.to_string_lossy().to_string())
-    {
+    if !node.filepath.starts_with(&collection.path) {
         log::error!(
             "The node: '{}' with path: '{}' is not within collection: '{}', collectionPath: '{}'",
             node.name,
@@ -794,7 +784,7 @@ pub fn delete_node(params: DeleteNodeParams) -> Result<(), rspc::Error> {
                 .collect::<Vec<http_rest_file::model::Request>>(),
             errs: vec![],
             extension: Some(HttpRestFileExtension::Http),
-            path: Box::new(PathBuf::from(file_node.filepath.clone())),
+            path: Box::new(file_node.filepath.clone()),
         };
         match Serializer::serialize_to_file(&file_model) {
             Ok(_) => return Ok(()),
@@ -974,8 +964,8 @@ pub fn is_signature_valid(license_data: &LicenseData) -> Result<bool, rspc::Erro
 #[tauri::command]
 pub fn get_app_environment() -> Result<AppEnvironment, rspc::Error> {
     if cfg!(debug_assertions) {
-        Ok(AppEnvironment::DEVELOPMENT)
+        Ok(AppEnvironment::Development)
     } else {
-        Ok(AppEnvironment::PRODUCTION)
+        Ok(AppEnvironment::Production)
     }
 }

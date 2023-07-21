@@ -1,6 +1,6 @@
+use rspc::Type;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use rspc::Type;
 
 #[derive(Error, Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Type)]
 /// All these errors will be displayed to the user in the frontend
@@ -101,7 +101,7 @@ pub enum RelynxError {
     TriedPostmanImportV2_0_0,
     #[error("The Postman collection has an invalid format. Could not import collection.")]
     InvalidPostmanCollection,
-    
+
     #[error("Load environment error")]
     LoadEnvironmentError,
 }

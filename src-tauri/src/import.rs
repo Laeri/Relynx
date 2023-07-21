@@ -56,7 +56,7 @@ fn hidden_relynx_folder(entry: &DirEntry) -> bool {
 pub fn load_requests_from_file(
     request_file_path: &std::path::Path,
 ) -> Result<Vec<RequestModel>, ParseErrorDetails> {
-    let http_rest_file: HttpRestFile = RestFileParser::parse_file(&request_file_path)?;
+    let http_rest_file: HttpRestFile = RestFileParser::parse_file(request_file_path)?;
     Ok(http_rest_file
         .requests
         .into_iter()
@@ -106,7 +106,7 @@ pub fn load_requests_for_collection(
                     }
                     Err(err) => {
                         println!("Single parse err: {:?}", err);
-                        parse_errs.push(err.into())
+                        parse_errs.push(err)
                     }
                 }
             }
@@ -162,22 +162,22 @@ pub fn load_requests_for_collection(
 pub fn create_jetbrains_collection(
     path: PathBuf,
     collection_name: String,
-) -> Result<Collection, ()> {
-    let mut collection_config = CollectionConfig::default();
-    collection_config.name = collection_name;
+) -> Result<Collection, RelynxError> {
+    let collection_config = CollectionConfig {
+        name: collection_name,
+        ..Default::default()
+    };
     let collection = Collection {
         name: collection_config.name.clone(),
-        path: path.clone(),
+        path,
         description: "".to_string(),
         current_env_name: "".to_string(),
         import_warnings: Vec::new(),
         path_exists: true,
     };
 
-    if let Ok(_) = save_collection_config(&collection_config, &collection.get_config_file_path()) {
-        return Ok(collection);
-    }
-    return Err(());
+    save_collection_config(&collection_config, &collection.get_config_file_path())
+        .map(|_| collection)
 }
 
 pub fn import_jetbrains_folder(
@@ -195,5 +195,5 @@ pub fn import_jetbrains_folder(
     if result.is_err() {
         return Err(RelynxError::ImportCollectionError)?;
     }
-    return Ok(workspace);
+    Ok(workspace)
 }

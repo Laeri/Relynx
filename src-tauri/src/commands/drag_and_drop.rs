@@ -97,7 +97,7 @@ pub fn drag_and_drop(params: DragAndDropParams) -> Result<DragAndDropResult, rsp
             .iter_mut()
             .for_each(|child| child.filepath = drop_node.filepath.clone());
     } else {
-        drag_node.filepath = new_path.clone();
+        drag_node.filepath = new_path;
         if let Some(request) = drag_node.request.as_mut() {
             request.rest_file_path = drag_node.filepath.clone();
         }
