@@ -178,6 +178,15 @@ class Backend {
   isSignatureValid(licenseData: LicenseData): Promise<boolean> {
     return api.query(['is_signature_valid', licenseData]);
   }
+
+  get_log_path(): Promise<string> {
+    return api.query(['get_log_path']);
+  }
+
+  copy_logfile_content_to_clipboard(): Promise<null> {
+    return api.query(['copy_logfile_content_to_clipboard'])
+  }
+
 }
 
 

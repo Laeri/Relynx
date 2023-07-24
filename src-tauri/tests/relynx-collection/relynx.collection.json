@@ -1,12 +1,12 @@
 {
   "name": "MockServer",
   "path_orders": {
-    "/home/laeri/Documents/Projects/relynx/relynx/src-tauri/tests/relynx-collection/simple/get_request.http": 0,
-    "/home/laeri/Documents/Projects/relynx/relynx/src-tauri/tests/relynx-collection/simple/get_request_with_params.http": 1,
+    "/home/laeri/Documents/Projects/relynx/relynx/src-tauri/tests/relynx-collection/simple/get_request.http": 1,
+    "/home/laeri/Documents/Projects/relynx/relynx/src-tauri/tests/relynx-collection/simple/get_request_with_params.http": 0,
     "/home/laeri/Documents/Projects/relynx/relynx/src-tauri/tests/relynx-collection/simple/get_request_with_headers.http": 2
   },
   "env_var_descriptions": {
-    "Manual Test": [],
-    "Base Environment": []
+    "Base Environment": [],
+    "Manual Test": []
   }
 }

@@ -24,19 +24,6 @@ pub enum AppEnvironment {
     Production,
 }
 
-type ISO8601 = String;
-
-#[derive(Serialize, Deserialize, Type, Default, Debug)]
-pub struct LicenseData {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub license_key: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub license_signature: Option<String>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub license_start: Option<ISO8601>,
-}
-
 #[derive(Serialize, Deserialize, Type, Debug, Clone)]
 pub struct Collection {
     pub name: String,

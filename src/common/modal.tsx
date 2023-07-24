@@ -11,6 +11,7 @@ import { CreateCollectionModal } from "../components/modals/CreateCollectionModa
 import { ImportResultModal } from "../components/modals/ImportResultModal";
 import { ImportPostmanModal } from "../components/modals/ImportPostmanModal";
 import { ImportJetbrainsHttpFolder } from "../components/modals/ImportJetbrainsHttpFolder";
+import { ErrorReportingModal } from "../components/modals/ErrorReportingModal";
 
 
 export const addCollectionToWorkspace = (newCollection: Collection) => {
@@ -112,7 +113,7 @@ const doJetbrainsHttpImport = (toast: ToastContext, workspace: Workspace, collec
     return <ImportJetbrainsHttpFolder isOpen={isOpen} onResolve={onResolve} onReject={onReject} />
   });
 
-  jetbrainsImportModal().then((result?: { collectionPath: string}) => {
+  jetbrainsImportModal().then((result?: { collectionPath: string }) => {
     if (!result) {
       return
     }
@@ -136,7 +137,7 @@ export const openImportCollectionModal = (workspace: Workspace) => {
     return <ImportCollectionModal isOpen={isOpen} onResolve={onResolve} onReject={onReject} />
   });
 
-  importCollectionModal().then((result?: { importType: ImportType, collectionName: string}) => {
+  importCollectionModal().then((result?: { importType: ImportType, collectionName: string }) => {
     if (!result) {
       return
     }
@@ -147,4 +148,13 @@ export const openImportCollectionModal = (workspace: Workspace) => {
       doJetbrainsHttpImport(toast, workspace, result.collectionName);
     }
   }).catch(catchError(toast))
+}
+
+export const openErrorReportingModal = (errorMsg: string) => {
+  const modalPromise = create(({ onResolve, onReject, isOpen }) => {
+    return <ErrorReportingModal errorMsg={errorMsg} isOpen={isOpen} onResolve={onResolve} onReject={() => onReject()} />
+  });
+  modalPromise().then(() => {
+  })
+
 }

@@ -36,6 +36,9 @@ export interface RelynxState {
   trialShown: boolean,
   setTrialShown: () => void,
 
+  logPath: string | undefined
+  setLogPath: (logPath: string) => void
+
 }
 
 //@TODO: Use immertype Callback = (state: State) => void;
@@ -140,6 +143,14 @@ export const useRequestModelStore = create<RelynxState>((set) => {
       return {
         ...state,
         trialShown: true
+      }
+    }),
+
+    logPath: undefined,
+    setLogPath: (logPath: string) => set((state: RelynxState) => {
+      return {
+        ...state,
+        logPath
       }
     })
   }

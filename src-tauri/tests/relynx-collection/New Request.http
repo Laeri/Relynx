@@ -1,0 +1,2 @@
+# @name=New Request
+GET {{base_url}}?abc=def

@@ -15,6 +15,16 @@ fn get_dirs() -> Option<ProjectDirs> {
 pub fn get_data_dir() -> Option<std::path::PathBuf> {
     get_dirs().map(|dirs| dirs.data_local_dir().to_path_buf())
 }
+
+pub fn get_log_dir() -> Option<std::path::PathBuf> {
+    get_data_dir().map(|dir| dir.join("logs"))
+}
+
+// the file 'relynx.log' is a convention by the tauri log plugin
+pub fn get_log_filepath() -> Option<std::path::PathBuf> {
+    get_log_dir().map(|dir| dir.join("relynx.log"))
+}
+
 pub fn get_config_dir() -> Option<std::path::PathBuf> {
     get_dirs().map(|dirs| dirs.config_dir().to_path_buf())
 }
@@ -103,7 +113,12 @@ pub fn save_workspace(workspace: &Workspace) -> Result<(), RelynxError> {
 }
 
 pub fn load_collection_config(config_file_path: &PathBuf) -> Result<CollectionConfig, RelynxError> {
-    let content = std::fs::read_to_string(config_file_path).map_err(|err| {
+    let config_file_path = if config_file_path.is_dir() {
+        config_file_path.join(COLLECTION_CONFIGFILE)
+    } else {
+        config_file_path.clone()
+    };
+    let content = std::fs::read_to_string(&config_file_path).map_err(|err| {
         log::error!("Io Error: {:?}", err);
         log::error!(
             "Could not read config content to str, path: '{:?}'",

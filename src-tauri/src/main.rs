@@ -16,8 +16,9 @@ mod tree;
 
 use commands::{
     add_existing_collections, add_group_node, add_request_node, choose_file_relative_to,
-    copy_to_clipboard, delete_node, drag_and_drop, get_app_environment, get_response_filepath,
-    hide_group, import_jetbrains_folder_command, import_postman_collection, is_directory_empty,
+    copy_logfile_content_to_clipboard, copy_to_clipboard, delete_node, drag_and_drop,
+    get_app_environment, get_log_path_command, get_response_filepath, hide_group,
+    import_jetbrains_folder_command, import_postman_collection, is_directory_empty,
     is_signature_valid, load_environments, load_license_data_command, load_requests_for_collection,
     load_workspace, open_folder_native, remove_collection, rename_group,
     reorder_nodes_within_parent, run_request, save_environments, save_license_data_command,
@@ -27,7 +28,9 @@ use commands::{
     ImportJetbrainsHttpFolderParams, ImportPostmanCommandParams, RenameGroupParams,
     ReorderNodesParams, SaveEnvironmentsParams, ValidateGroupNameParams, RELYNX_CONTEXT,
 };
+use config::get_data_dir;
 use license::LicenseData;
+use log::LevelFilter;
 use model::{Collection, RunRequestCommand, SaveRequestCommand, Workspace};
 use rspc::Router;
 use std::{path::PathBuf, sync::Arc};
@@ -153,6 +156,10 @@ fn router() -> Arc<Router> {
                 t(|_, params: LicenseData| is_signature_valid(&params))
             })
             .query("get_app_environment", |t| t(|_, ()| get_app_environment()))
+            .query("get_log_path", |t| t(|_, ()| get_log_path_command()))
+            .query("copy_logfile_content_to_clipboard", |t| {
+                t(|_, ()| copy_logfile_content_to_clipboard())
+            })
             .build();
     Arc::new(router)
 }
@@ -162,11 +169,22 @@ fn main() {
     let _guard = rt.enter();
     let context = tauri::generate_context!();
     let app_builder = tauri::Builder::default();
+    let log_level_filter = if cfg!(debug_assertions) {
+        LevelFilter::Trace
+    } else {
+        LevelFilter::Info
+    };
+    let log_dir = get_data_dir().map(|dir| dir.join("logs"));
+    let mut log_targets = vec![LogTarget::Stdout];
+    if let Some(log_dir) = log_dir {
+        log_targets = vec![LogTarget::Folder(log_dir), LogTarget::Stdout];
+    }
     let app = app_builder
         .plugin(rspc::integrations::tauri::plugin(router(), || {}))
         .plugin(
             tauri_plugin_log::Builder::default()
-                .targets([LogTarget::LogDir, LogTarget::Stdout, LogTarget::Webview])
+                .targets(log_targets)
+                .level(log_level_filter)
                 .build(),
         )
         .build(context)

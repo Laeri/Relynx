@@ -5,7 +5,8 @@ import { backend } from "../rpc";
 
 interface ComponentProps {
   value: string,
-  tooltip?: string
+  tooltip?: string,
+  style?: any
 }
 
 export function CopyToClipboard(props: ComponentProps) {
@@ -13,6 +14,7 @@ export function CopyToClipboard(props: ComponentProps) {
 
   const copyToClipboard = () => {
     backend.copyToClipboard(props.value).then(() => {
+      console.log('toast: ', toast);
       toast.showInfo(`Copied '${props.value}' to clipboard`, "", 2000);
     }).catch((_err) => {
       toast.showError("Could not copy content to clipboard", "");
@@ -24,6 +26,6 @@ export function CopyToClipboard(props: ComponentProps) {
     <Button icon={"pi pi-copy"} onClick={copyToClipboard}
       tooltip={props.tooltip ?? "Copy result to clipboard"}
       className={"p-button-rounded p-button-text"} aria-label={"Copy result to clipboard"}
-      style={{ marginLeft: '10px' }}></Button>
+      style={{ marginLeft: '10px', ...(props.style ?? {}) }}></Button>
   )
 }

@@ -104,6 +104,9 @@ pub enum RelynxError {
 
     #[error("Load environment error")]
     LoadEnvironmentError,
+
+    #[error("Could not locate log folder")]
+    LogFolderMissing,
 }
 
 impl From<RelynxError> for rspc::Error {

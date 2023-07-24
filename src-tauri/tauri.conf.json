@@ -42,7 +42,15 @@
       "csp": null
     },
     "updater": {
-      "active": false
+      "active": true,
+      "endpoints": [
+        "https://download.relynx.app/app/{{target}}/{{arch}}/{{current_version}}"
+      ],
+      "dialog": true,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEJBNjQ5NDE5NkUwNUE1MwpSV1JUV3VDV1FVbW1DMnpvOGZyM1V0cldpSGdqVlB3c0dTczdYZE43a2RjeXZBaXlYTGN0YkZaWgo=",
+       "windows": {
+        "installMode": "basicUi"
+      }
     },
     "windows": [
       {

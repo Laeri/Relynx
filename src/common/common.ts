@@ -3,6 +3,7 @@ import { Collection, RequestTreeNode } from "../bindings";
 
 export const RELYNX_WEBSITE = "https://relynx.app";
 export const RELYNX_BUY_LINK = "https://relynx.app";
+export const RELYNX_MAIL = "info@relynx.app";
 
 type SyntaxHighlightLanguage =
   "html" | "json" | "xml" | "text"

@@ -2,7 +2,9 @@ mod drag_and_drop;
 use crate::client::error::HttpError;
 use crate::client::options::ClientOptions;
 use crate::client::Client;
-use crate::config::{load_collection_config, save_collection_config, save_workspace};
+use crate::config::{
+    get_log_filepath, load_collection_config, save_collection_config, save_workspace,
+};
 use crate::error::RelynxError;
 use crate::import::{
     create_jetbrains_collection, import_jetbrains_folder, postman, LoadRequestsResult,
@@ -44,6 +46,7 @@ pub static RELYNX_CONTEXT: Mutex<Context> = Mutex::new(Context { app_handle: Non
 
 #[tauri::command]
 pub fn load_workspace() -> Result<Workspace, rspc::Error> {
+    log::info!("LOAD WORKSPACE");
     crate::config::load_workspace().map_err(Into::<rspc::Error>::into)
 }
 
@@ -968,4 +971,21 @@ pub fn get_app_environment() -> Result<AppEnvironment, rspc::Error> {
     } else {
         Ok(AppEnvironment::Production)
     }
+}
+
+#[tauri::command]
+pub fn get_log_path_command() -> Result<PathBuf, rspc::Error> {
+    get_log_filepath().ok_or(RelynxError::LogFolderMissing.into())
+}
+
+#[tauri::command]
+pub fn copy_logfile_content_to_clipboard() -> Result<(), rspc::Error> {
+    let logpath =
+        get_log_filepath().ok_or(Into::<rspc::Error>::into(RelynxError::LogFolderMissing))?;
+    let log_content = std::fs::read_to_string(logpath).map_err(|err| {
+        log::error!("Cannot open log file!");
+        log::error!("Err: {:?}", err);
+        Into::<rspc::Error>::into(RelynxError::LogFolderMissing)
+    })?;
+    copy_to_clipboard(log_content)
 }

@@ -4,7 +4,7 @@ import { OverlayPanel } from "primereact/overlaypanel";
 import { useContext, useRef, useState } from "react";
 import { useRequestModelStore } from "../../stores/requestStore";
 import { catchError } from "../../common/errorhandling";
-import { ToastContext } from "../../App";
+import { routes, ToastContext } from "../../App";
 import { useNavigate } from "react-router";
 import { Collection, Workspace } from "../../bindings";
 import { backend } from "../../rpc";
@@ -59,7 +59,7 @@ export function CollectionEntry(props: ComponentProps) {
     // @ts-ignore
     op.current.hide();
     selectCollection(props.collection);
-    navigate('/collection');
+    navigate(routes.collection);
   }
 
   const openRenameCollectionModal = () => {

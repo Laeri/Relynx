@@ -16,6 +16,8 @@ import { backend } from './rpc';
 import { EnvironmentComponent } from './components/EnvironmentComponent';
 import { CollectionOverviewComponent } from './components/collection/CollectionOverviewComponent';
 import { catchError } from './common/errorhandling';
+import { Button } from 'primereact/button';
+import { openErrorReportingModal } from './common/modal';
 
 export interface ToastContext {
   toast: Ref<any>,
@@ -36,12 +38,13 @@ export const routes = {
   root: "/",
   collection: "/collection",
   request: "/collection/request",
-  environment: "/collection/environment"
+  environment: "/collection/environment",
 }
 
 function App() {
 
   const updateWorkspace = useRequestModelStore((state) => state.updateWorkspace);
+  const setLogPath = useRequestModelStore((state) => state.setLogPath);
 
   const toastRef: any = useRef(null);
 
@@ -56,22 +59,28 @@ function App() {
     backend.loadWorkspace()
       .then((workspace: Workspace) => {
         updateWorkspace(workspace);
+      }).catch(catchError);
 
-        // checkLicenseAndContinue = () => {
-        //   // @TODO:M3K-84 continue and check if license is valid, by decrypting it
-        //   let valid = licenseValid(this.props.app.config.license_key)
-        //   if (valid) {
-        //     this.continueToOverview()
-        //   } else {
-        //     this.setState({
-        //       errorText: t('login.error.license_unspecified')
-        //     })
-        //   }
-        // }
-      }).catch(catchError)
+    backend.get_log_path().then((logPath: string) => {
+      setLogPath(logPath);
+    })
   }, []);
 
 
+  interface CustomErrorTemplateProps {
+    errorMsg: string
+  }
+  const CustomErrorTemplate = (props: CustomErrorTemplateProps) => {
+    return (
+      <div style={{ width: '100%' }}>
+        <div className="p-toast-message-text">
+          <span className="p-toast-summary">Error loading requests</span>
+        </div>{props.errorMsg}
+
+        <Button severity='secondary' raised={true} style={{marginTop: '20px' }} onClick={() => openErrorReportingModal(props.errorMsg)}>Report Error</Button>
+      </div>
+    )
+  }
 
 
   const toastContext = {
@@ -85,9 +94,24 @@ function App() {
     showWarn: (title: string, detail: string, life?: number) => {
       toastContext.show({ severity: 'warn', summary: title, detail: detail, life: life });
     },
+    // showError: (title: string, detail: string, life?: number) => {
+    //   toastContext.show({ severity: 'error', summary: title, detail: '', life: life });
+    // },
+
     showError: (title: string, detail: string) => {
-      toastContext.show({ severity: 'error', summary: title, detail: detail, life: undefined });
+      if (!toastRef?.current) {
+        console.error("No toast container present to show messages");
+        return
+      }
+      toastRef?.current.show({
+        severity: 'error',
+        content: (<CustomErrorTemplate errorMsg={detail ?? title ?? ""} />),
+        summary: title,
+        detail: detail,
+        life: 50000
+      });
     },
+
     show: (params: { severity: string, summary: string, detail: string, life?: number }) => {
       if (!toastRef?.current) {
         console.error("No toast container present to show messages");
@@ -117,16 +141,16 @@ function App() {
               <Route element={<EnvironmentComponent />} path={routes.environment} />
             </Routes>
           </main>
+          {/*Container element for toast rendering: https://primereact.org/toast/*/}
+          <Toast ref={toastRef} />
 
         </MemoryRouter>
 
+        {/*Container element for confirm popups: https://primereact.org/confirmpopup/*/}
+        <ConfirmPopup />
+        {/*Container element for modals using react-modal-promise */}
+        <ModalContainer />
       </ToastContext.Provider>
-      {/*Container element for toast rendering: https://primereact.org/toast/*/}
-      <Toast ref={toastRef} />
-      {/*Container element for confirm popups: https://primereact.org/confirmpopup/*/}
-      <ConfirmPopup />
-      {/*Container element for modals using react-modal-promise */}
-      <ModalContainer />
     </div>
 
   );
