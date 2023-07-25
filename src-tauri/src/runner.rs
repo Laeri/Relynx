@@ -130,9 +130,10 @@ mod tests {
         // Configure the server to expect a single GET /foo request and respond
         // with a 200 status code.
         let matchers = all_of![
-            request::method_path("GET", "/devices"),
-            request::query("firstName=firstValue&secondName=secondValue&fromEnv=thirdValue"),
-            request::headers(contains(("User-Agent", "relynx")))
+            request::method_path("GET", "/get"),
+            request::headers(contains(("user-agent", "relynx"))),
+            request::headers(contains(("accept", "*/*"))),
+            request::query("firstName=firstValue&secondName=secondValue"),
         ];
         server.expect(Expectation::matching(matchers).respond_with(status_code(200)));
 
@@ -144,6 +145,131 @@ mod tests {
 
         let filepath =
             PathBuf::from("../tests/relynx-collection/simple/get_request_with_headers.http");
+
+        let result = load_and_run(&filepath, &options, &environment);
+
+        assert!(result.is_ok());
+        let runs = result.unwrap();
+
+        assert_eq!(runs[0].calls[0].response.status, 200);
+    }
+
+    #[test]
+    pub fn test_simple_post() {
+        let (server, environment) = setup();
+        // Configure the server to expect a single GET /foo request and respond
+        // with a 200 status code.
+        let matchers = all_of![request::method_path("POST", "/post"),];
+        server.expect(Expectation::matching(matchers).respond_with(status_code(200)));
+
+        let options = ClientOptions::default();
+
+        let filepath = PathBuf::from("../tests/relynx-collection/simple/post_request.http");
+
+        let result = load_and_run(&filepath, &options, &environment);
+
+        assert!(result.is_ok());
+        let runs = result.unwrap();
+
+        assert_eq!(runs[0].calls[0].response.status, 200);
+    }
+
+    #[test]
+    pub fn test_simple_custom_verb() {
+        let (server, environment) = setup();
+        // Configure the server to expect a single GET /foo request and respond
+        // with a 200 status code.
+        let matchers = all_of![request::method_path("CUSTOM_VERB", "/"),];
+        server.expect(Expectation::matching(matchers).respond_with(status_code(200)));
+
+        let options = ClientOptions::default();
+
+        let filepath = PathBuf::from("../tests/relynx-collection/simple/custom_verb.http");
+
+        let result = load_and_run(&filepath, &options, &environment);
+
+        assert!(result.is_ok());
+        let runs = result.unwrap();
+
+        assert_eq!(runs[0].calls[0].response.status, 200);
+    }
+
+    #[test]
+    pub fn test_post_form_url_encoded() {
+        let (server, environment) = setup();
+        // Configure the server to expect a single GET /foo request and respond
+        // with a 200 status code.
+        let matchers = all_of![
+            request::method_path("POST", "/post"),
+            request::headers(contains((
+                "content-type",
+                "application/x-www-form-urlencoded"
+            ))),
+            request::body("abc=def&ghi=jkl")
+        ];
+        server.expect(Expectation::matching(matchers).respond_with(status_code(200)));
+
+        let options = ClientOptions::default();
+
+        let filepath = PathBuf::from("../tests/relynx-collection/simple/post_form_urlencoded.http");
+
+        let result = load_and_run(&filepath, &options, &environment);
+
+        assert!(result.is_ok());
+        let runs = result.unwrap();
+
+        assert_eq!(runs[0].calls[0].response.status, 200);
+    }
+
+    #[test]
+    pub fn test_post_json() {
+        let (server, environment) = setup();
+        // Configure the server to expect a single GET /foo request and respond
+        // with a 200 status code.
+        let matchers = all_of![
+            request::method_path("POST", "/post"),
+            request::headers(contains(("content-type", "application/json"))),
+            request::body(json_decoded(eq(serde_json::json!({
+                "key1": "value1",
+                "sub1": {
+                    "key2": "value2"
+                }
+            }))))
+        ];
+        server.expect(Expectation::matching(matchers).respond_with(status_code(200)));
+
+        let options = ClientOptions::default();
+
+        let filepath = PathBuf::from("../tests/relynx-collection/simple/post_json.http");
+
+        let result = load_and_run(&filepath, &options, &environment);
+
+        assert!(result.is_ok());
+        let runs = result.unwrap();
+
+        assert_eq!(runs[0].calls[0].response.status, 200);
+    }
+
+    #[test]
+    pub fn test_post_multipart() {
+        let (server, environment) = setup();
+        // Configure the server to expect a single GET /foo request and respond
+        // with a 200 status code.
+        let matchers = all_of![
+            request::method_path("POST", "/post"),
+            request::headers(contains(("content-type", "application/json"))),
+            request::body(json_decoded(eq(serde_json::json!({
+                "key1": "value1",
+                "sub1": {
+                    "key2": "value2"
+                }
+            }))))
+        ];
+        server.expect(Expectation::matching(matchers).respond_with(status_code(200)));
+
+        let options = ClientOptions::default();
+
+        let filepath = PathBuf::from("../tests/relynx-collection/simple/post_json.http");
 
         let result = load_and_run(&filepath, &options, &environment);
 

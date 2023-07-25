@@ -1,6 +1,4 @@
 # @name=Get Request With Headers
-GET {{base_url}}/devices?firstName=firstValue&secondName=secondValue&fromEnv={{fromEnv}}
+GET {{base_url}}/get?firstName=firstValue&secondName=secondValue
 User-Agent: relynx
 Accept: */*
-CustomHeader: CustomHeaderValue
-small-header: small-header-value
