@@ -1,8 +1,8 @@
 import { Button } from "primereact/button"
 import { Checkbox } from "primereact/checkbox"
 import { InputText } from "primereact/inputtext"
-import { useState } from "react"
-import { Collection, RequestModel, RequestSettings } from "../bindings"
+import { useEffect, useState } from "react"
+import { Collection, RequestModel, RequestSettings, SaveResponse } from "../bindings"
 import { catchError } from "../common/errorhandling"
 import { updatedRequestModel } from "../model/model"
 import { backend } from "../rpc"
@@ -17,6 +17,21 @@ interface ComponentProps {
 export function RequestSettingsComponent(props: ComponentProps) {
 
   const [responseFilepathValid, setResponseFilepathValid] = useState<boolean>(true);
+  const [saveToFile, setSaveToFile] = useState<boolean>(false);
+  const [overwrite, setOverwrite] = useState<boolean>(false);
+  const [path, setPath] = useState<string>("");
+
+  useEffect(() => {
+    let isOutputPresent = props.request.save_response != null
+    setSaveToFile(isOutputPresent);
+    if (isOutputPresent) {
+      let save_response = props.request.save_response as SaveResponse;
+      // @ts-ignore
+      let usesNewFile = save_response.NewFileIfExists != undefined && save_response.NewFileIfExists != null;
+      setOverwrite(!usesNewFile);
+
+    }
+  }, []);
 
   const updateRequestSettings = (partial: Partial<RequestSettings>) => {
     let new_settings = { ...props.request.settings, ...partial };
@@ -26,13 +41,33 @@ export function RequestSettingsComponent(props: ComponentProps) {
 
   const updateSaveResponse = (shouldSaveToFile: boolean) => {
     let newRequest = updatedRequestModel(props.request, {});
-    newRequest.redirect_response.save_response = shouldSaveToFile;
+    setSaveToFile(shouldSaveToFile);
+    if (shouldSaveToFile) {
+      if (overwrite) {
+        newRequest.save_response = {
+          RewriteFile: path
+        }
+      } else {
+        newRequest.save_response = {
+          NewFileIfExists: path
+        }
+      }
+    } else {
+      newRequest.save_response = null;
+    }
+
     props.updateRequest(newRequest);
   }
 
   const updateResponseFilepath = (path: string) => {
     let newRequest = updatedRequestModel(props.request, {});
-    newRequest.redirect_response.save_path = path;
+    setPath(path);
+    // @ts-ignore
+    if (newRequest.save_response != null && newRequest.save_response.NewFileIfExists != null && newRequest.save_response.NewFileIfExists !== undefined) {
+      newRequest.save_response = { NewFileIfExists: path };
+    } else {
+      newRequest.save_response = { RewriteFile: path };
+    }
     props.updateRequest(newRequest);
 
     backend.validateResponseFilepath(path).then((valid: boolean) => {
@@ -42,16 +77,19 @@ export function RequestSettingsComponent(props: ComponentProps) {
 
   const updateOverwriteResponse = (overwrite: boolean) => {
     let newRequest = updatedRequestModel(props.request, {});
-    newRequest.redirect_response.overwrite = overwrite;
+    setOverwrite(overwrite);
+    if (overwrite) {
+      newRequest.save_response = { RewriteFile: path };
+    } else {
+      newRequest.save_response = { NewFileIfExists: path };
+    }
     props.updateRequest(newRequest);
 
   }
 
   const selectResponseFilePath = () => {
     backend.getResponseFilepath(props.request.rest_file_path, (result: string) => {
-      let newRequest = updatedRequestModel(props.request, {});
-      newRequest.redirect_response.save_path = result;
-      props.updateRequest(newRequest);
+      updateResponseFilepath(result);
     });
   }
   return (
@@ -88,18 +126,18 @@ export function RequestSettingsComponent(props: ComponentProps) {
         <h3>Save Response</h3>
         <p style={{ marginTop: '20px', textAlign: 'left' }}>Choose if you want to save the response of a request to a file</p>
         <div style={{ display: 'flex', alignItems: 'center', marginTop: '20px' }}>
-          <Checkbox inputId="save_response" name="save_response" value="save_response" onChange={(e) => updateSaveResponse(e.target.checked ?? false)} checked={props.request.redirect_response.save_response} />
+          <Checkbox inputId="save_response" name="save_response" value="save_response" onChange={(e) => updateSaveResponse(e.target.checked ?? false)} checked={saveToFile} />
           <label htmlFor="save_response" style={{ marginLeft: '20px' }}>Save response to file</label>
           <HelpTooltip style={{ marginLeft: '20px' }} text="If checked the response from a request will be saved to a chosen file." />
         </div>
 
-        {props.request.redirect_response.save_response &&
+        {props.request.save_response &&
           <div style={{ marginTop: '30px', display: 'flex', flexDirection: 'column', alignItems: 'start' }}>
 
             <p style={{ textAlign: 'start' }}>Choose a path where you want to save the response. Choose a relative path that is the same for all members of your team. Consider choosing a folder or file extension that you can gitignore.</p>
 
             <div style={{ marginTop: '20px', display: 'flex', alignItems: 'center' }}>
-              <InputText disabled={true} aria-invalid="true" style={{ flexGrow: 1 }} value={props.request.redirect_response.save_path ?? ''} onChange={(e) => { updateResponseFilepath(e.target.value) }} />
+              <InputText disabled={true} aria-invalid="true" style={{ flexGrow: 1 }} value={path} onChange={(e) => { updateResponseFilepath(e.target.value) }} />
               <Button label={"Choose filepath"}
                 onClick={selectResponseFilePath} style={{ marginLeft: '30px' }} />
             </div>
@@ -108,7 +146,7 @@ export function RequestSettingsComponent(props: ComponentProps) {
             }
 
             <div style={{ display: 'flex', alignItems: 'center', marginTop: '20px' }}>
-              <Checkbox inputId="overwrite_file" name="overwrite_file" value="overwrite_file" onChange={(e) => updateOverwriteResponse(e.target.checked ?? false)} checked={props.request.redirect_response.overwrite} />
+              <Checkbox inputId="overwrite_file" name="overwrite_file" value="overwrite_file" onChange={(e) => updateOverwriteResponse(e.target.checked ?? false)} checked={overwrite} />
               <label htmlFor="overwrite_file" style={{ marginLeft: '20px' }}>Overwrite File </label>
               <HelpTooltip style={{ marginLeft: '20px' }} text="If overwrite is chosen then the file will be overwriten for every new response received. If not checked a new file will be generated with appended number -1, -2, ..." />
             </div>

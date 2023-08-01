@@ -2,7 +2,7 @@ use crate::{
     client::{client_model::Call, options::ClientOptions, Client},
     error::RelynxError,
     import::load_requests_from_file,
-    model::Environment,
+    model::{Environment, RunLogger},
 };
 
 #[derive(Debug, PartialEq)]
@@ -16,22 +16,29 @@ pub fn load_and_run(
     options: &ClientOptions,
     environment: &Environment,
 ) -> Result<Vec<RequestRun>, RelynxError> {
-    let request_models = load_requests_from_file(request_path).map_err(|err_details| {
+    let (request_models, errs) = load_requests_from_file(request_path).map_err(|err_details| {
         log::error!("Could not parse files, err_deails: {:?}", err_details);
         log::error!("Request path: '{}'", request_path.display());
         RelynxError::ParseErrorGeneric
     })?;
+    if !errs.is_empty() {
+        log::error!("Could not parse files, errs: {:?}", errs);
+        log::error!("Request path: '{}'", request_path.display());
+        return Err(RelynxError::ParseErrorGeneric);
+    }
+
+    let logger = RunLogger::new(false);
 
     let mut request_runs: Vec<RequestRun> = Vec::new();
 
     for request_model in request_models {
         let mut client = Client::new(None);
         let calls = client
-            .execute(&request_model, options, Some(environment))
+            .execute(&request_model, options, Some(environment), &logger)
             .map_err(|http_err| {
                 log::error!("Error during execute in load_and_run");
                 log::error!("Http Error: {:?}", http_err);
-                RelynxError::RequestSendError
+                RelynxError::RequestSendErrorGeneric
             })?;
         request_runs.push(RequestRun { calls });
     }

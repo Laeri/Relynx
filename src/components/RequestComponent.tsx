@@ -9,7 +9,7 @@ import { useRequestModelStore } from "../stores/requestStore";
 import { backend } from '../rpc';
 import { RequestModel, QueryParam, Header, Collection, ImportWarning, RunRequestCommand, RequestResult, EnvironmentVariable, EnvironmentSecret, HttpMethod } from '../bindings';
 import { ToastContext } from "../App";
-import { catchError } from "../common/errorhandling";
+import { catchError, catchErrorWithTitle } from "../common/errorhandling";
 import { Message } from "primereact/message";
 import { hasInvalidFileBody } from "../common/requestUtils";
 import { updatedRequestModel, newRequestHeader } from '../model/model';
@@ -153,7 +153,7 @@ export function RequestComponent(_props: ComponentProps) {
       result.warnings.forEach((warning: string) => {
         toast.showWarn('', warning, 30000);
       });
-    }).catch(catchError(toast)).finally(() => {
+    }).catch((err) => catchErrorWithTitle("There was an error sending the request", err)).finally(() => {
       setIsSendingRequest(false);
     });
   }
@@ -183,7 +183,7 @@ export function RequestComponent(_props: ComponentProps) {
     setUrl(newRequest.url);
     backend.saveRequest(requestsInSameFile, currentCollection, currentRequest.name).then(() => {
       storeUpdateRequestAndTree(newRequest)
-    }).catch(catchError(toast));
+    }).catch(catchError);
 
   }
 
@@ -350,7 +350,7 @@ export function RequestComponent(_props: ComponentProps) {
     updateWorkspace(newWorkspace);
     backend.updateWorkspace(newWorkspace).then(() => {
       // do nothing
-    }).catch(catchError(toast));
+    }).catch(catchError);
   }
 
   const cancelCurrentRequest = () => {

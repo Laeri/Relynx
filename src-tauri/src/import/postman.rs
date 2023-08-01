@@ -4,8 +4,8 @@ use std::path::{Path, PathBuf};
 use crate::config::save_workspace;
 use crate::error::RelynxError;
 use crate::model::{
-    Collection, ImportCollectionResult, ImportWarning, MessageSeverity, Multipart,
-    RedirectResponse, Replaced, RequestBody, RequestModel, Workspace,
+    Collection, ImportCollectionResult, ImportWarning, MessageSeverity, Multipart, Replaced,
+    RequestBody, RequestModel, Workspace,
 };
 use crate::sanitize::sanitize_filename;
 use crate::tree::{GroupOptions, RequestTreeNode};
@@ -432,10 +432,9 @@ fn transform_request(
                 settings: RequestSettings::default(),
                 query_params: vec![],
                 http_version, // scripts are not imported from postman
-                // pre_request_script: None,
-                // response_handler: None,
-                // @TODO maybe rename redirect in http_rest_file library to output_redirect
-                redirect_response: RedirectResponse::no_save(),
+                pre_request_script: None,
+                response_handler: None,
+                save_response: None,
             }
         }
     }

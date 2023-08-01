@@ -61,7 +61,7 @@ export function EnvironmentComponent(_props: ComponentProps) {
     // @ts-ignore
     backend.saveEnvironments(collection, newEnvironments).then((_result: any) => {
       // ignored
-    }).catch(catchError(toast))
+    }).catch(catchError)
   }
 
 
@@ -105,7 +105,7 @@ export function EnvironmentComponent(_props: ComponentProps) {
     backend.saveEnvironments(collection, newEnvironments).then(() => {
       setEnvironments(newEnvironments);
       setStoreCurrentEnvironment(newEnviron);
-    }).catch(catchError(toast))
+    }).catch(catchError)
   }
 
   const openDeleteConfirmDialog = () => {

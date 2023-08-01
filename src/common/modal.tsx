@@ -15,17 +15,16 @@ import { ErrorReportingModal } from "../components/modals/ErrorReportingModal";
 
 
 export const addCollectionToWorkspace = (newCollection: Collection) => {
-  const toast = ExternalToast;
   let updatedWorkspace = newWorkspace();
   const workspace = useRequestModelStore.getState().workspace
   const updateWorkspaceInStore = useRequestModelStore.getState().updateWorkspace;
   updatedWorkspace.collections = [...workspace.collections, newCollection];
   backend.updateWorkspace(updatedWorkspace).then(() => {
     updateWorkspaceInStore(updatedWorkspace);
-  }).catch(catchError(toast));
+  }).catch(catchError);
 }
 
-export const openCreateCollectionModal = (workspace: Workspace): Promise<Collection | undefined> => {
+export const openCreateCollectionModal = (): Promise<Collection | undefined> => {
   const createCollectionModal = create(({ isOpen, onResolve, onReject }) => {
     return <CreateCollectionModal isOpen={isOpen} onResolve={onResolve} onReject={onReject} />
   });
@@ -75,9 +74,7 @@ export const openAddExistingCollectionsModal = (workspace: Workspace, toast: Toa
         }
       }
       return Promise.resolve(result)
-    }).catch((err: any) => {
-      catchError(ExternalToast)(err);
-    });
+    }).catch(catchError);
   });
 }
 
@@ -143,16 +140,16 @@ export const openImportCollectionModal = (workspace: Workspace) => {
     }
 
     if (result.importType === ImportType.Postman) {
-      doPostmanImport(toast, workspace, result.collectionName);
+      doPostmanImport(toast as ToastContext, workspace, result.collectionName);
     } else if (result.importType === ImportType.JetbrainsHttpRest) {
-      doJetbrainsHttpImport(toast, workspace, result.collectionName);
+      doJetbrainsHttpImport(toast as ToastContext, workspace, result.collectionName);
     }
-  }).catch(catchError(toast))
+  }).catch(catchError)
 }
 
-export const openErrorReportingModal = (errorMsg: string) => {
+export const openErrorReportingModal = (title: string, detail: string) => {
   const modalPromise = create(({ onResolve, onReject, isOpen }) => {
-    return <ErrorReportingModal errorMsg={errorMsg} isOpen={isOpen} onResolve={onResolve} onReject={() => onReject()} />
+    return <ErrorReportingModal title={title} detail={detail} isOpen={isOpen} onResolve={onResolve} onReject={() => onReject()} />
   });
   modalPromise().then(() => {
   })

@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use rspc::Type;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -8,7 +10,9 @@ pub enum RelynxError {
     #[error("Could not remove collection from workspace")]
     RemoveCollectionError,
     #[error("There was an error when sending the request")]
-    RequestSendError,
+    RequestSendErrorGeneric,
+    #[error("{0}")]
+    RequestSendErrorWithMsg(String),
 
     #[error("Could not open directory: '{0}'")]
     InvalidOpenPath(String),
@@ -117,4 +121,11 @@ impl From<RelynxError> for rspc::Error {
             error,
         )
     }
+}
+
+#[derive(Serialize, Deserialize, Type, Debug, PartialEq)]
+pub struct ParseErrorMsg {
+    pub filepath: PathBuf,
+    pub filename: String,
+    pub msg: String,
 }

@@ -6,18 +6,14 @@ use walkdir::{DirEntry, WalkDir};
 
 use crate::{
     config::{load_collection_config, save_collection_config, save_workspace},
-    error::RelynxError,
+    error::{ParseErrorMsg, RelynxError},
     model::{
         request_to_request_model, Collection, CollectionConfig, ImportWarning, RequestModel,
         Workspace,
     },
     tree::{GroupOptions, RequestTree, RequestTreeNode},
 };
-use http_rest_file::{
-    error::{ParseError, ParseErrorDetails},
-    model::HttpRestFile,
-    parser::Parser as RestFileParser,
-};
+use http_rest_file::{model::HttpRestFile, parser::Parser as RestFileParser};
 
 pub mod postman;
 
@@ -33,7 +29,7 @@ pub struct ImportCollectionResult {
 #[derive(Serialize, Deserialize, Type, Debug)]
 pub struct LoadRequestsResult {
     pub request_tree: RequestTree,
-    pub errs: Vec<ParseError>,
+    pub errs: Vec<ParseErrorMsg>,
 }
 
 pub const RELYNX_IGNORE_FILE: &str = ".relynxignore";
@@ -55,19 +51,49 @@ fn hidden_relynx_folder(entry: &DirEntry) -> bool {
 
 pub fn load_requests_from_file(
     request_file_path: &std::path::Path,
-) -> Result<Vec<RequestModel>, ParseErrorDetails> {
-    let http_rest_file: HttpRestFile = RestFileParser::parse_file(request_file_path)?;
-    Ok(http_rest_file
-        .requests
+) -> Result<(Vec<RequestModel>, Vec<ParseErrorMsg>), ParseErrorMsg> {
+    let filename = request_file_path
+        .file_name()
+        .map(|os_str| os_str.to_string_lossy().to_string())
+        .unwrap_or_default();
+    let http_rest_file: HttpRestFile =
+        RestFileParser::parse_file(request_file_path).map_err(|err| ParseErrorMsg {
+            filepath: request_file_path.to_owned(),
+            filename: filename.clone(),
+            msg: err.to_string(),
+        })?;
+    let mut requests = http_rest_file.requests;
+    let errs: Vec<ParseErrorMsg> = http_rest_file
+        .errs
+        .iter()
+        .flat_map(|err| err.details.clone())
+        .map(|details| ParseErrorMsg {
+            filepath: request_file_path.to_owned(),
+            filename: filename.clone(),
+            msg: details.error.to_string(),
+        })
+        .collect();
+
+    // if there are any requests that have errors we try to convert them
+    if !http_rest_file.errs.is_empty() {
+        let fixed_requests: Vec<http_rest_file::model::Request> = http_rest_file
+            .errs
+            .into_iter()
+            .map(|err| Into::<http_rest_file::model::Request>::into(err.partial_request))
+            .collect::<Vec<http_rest_file::model::Request>>();
+        requests.extend(fixed_requests);
+    }
+    let request_models = requests
         .into_iter()
         .map(|request| request_to_request_model(request, &request_file_path.to_owned()))
-        .collect::<Vec<RequestModel>>())
+        .collect::<Vec<RequestModel>>();
+    Ok((request_models, errs))
 }
 
 pub fn load_requests_for_collection(
     collection: &Collection,
 ) -> Result<LoadRequestsResult, RelynxError> {
-    let mut parse_errs: Vec<ParseErrorDetails> = Vec::new();
+    let mut parse_errs: Vec<ParseErrorMsg> = Vec::new();
     let mut nodes: HashMap<PathBuf, Vec<RefCell<RequestTreeNode>>> = HashMap::new();
     let mut root = RequestTreeNode::new_group(GroupOptions::FullPath(collection.path.clone()));
 
@@ -78,13 +104,13 @@ pub fn load_requests_for_collection(
         if entry.path().to_string_lossy() == collection.path.to_string_lossy() {
             continue;
         }
-        // @TODO: error
         let parent_path = entry.path().parent().unwrap();
         if entry.file_type().is_file() {
             if RestFileParser::has_valid_extension(&entry.file_name().to_string_lossy().to_string())
             {
                 match load_requests_from_file(entry.path()) {
-                    Ok(mut request_models) => {
+                    Ok((mut request_models, errs)) => {
+                        parse_errs.extend(errs);
                         let path = entry.path().to_owned();
 
                         let node = if request_models.len() == 1 {
@@ -105,13 +131,11 @@ pub fn load_requests_for_collection(
                         elements.push(RefCell::new(node));
                     }
                     Err(err) => {
-                        println!("Single parse err: {:?}", err);
                         parse_errs.push(err)
                     }
                 }
             }
         } else {
-            // @TODO handle error
             let path = entry.path();
             let group_node = RequestTreeNode::new_group(GroupOptions::FullPath(path.to_owned()));
             let entry = nodes.entry(parent_path.to_owned());
@@ -149,13 +173,9 @@ pub fn load_requests_for_collection(
         };
     }
 
-    println!("PARSE_ERROS {:?}", parse_errs);
     Ok(LoadRequestsResult {
         request_tree: RequestTree { root },
-        errs: parse_errs
-            .into_iter()
-            .map(|details| details.error)
-            .collect::<Vec<ParseError>>(),
+        errs: parse_errs,
     })
 }
 

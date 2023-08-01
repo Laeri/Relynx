@@ -1,13 +1,11 @@
 import { Dropdown } from "primereact/dropdown";
 import { InputTextarea } from "primereact/inputtextarea";
 import { useEffect, useState } from "react";
-import SyntaxHighlighter from "react-syntax-highlighter/dist/esm/default-highlight";
 import { RequestModel } from "../../bindings";
 import { DataSourceFromFilepath, DataSourceRaw, RequestBodyRaw } from "../../model/request"
 import { RelynxState, useRequestModelStore } from "../../stores/requestStore";
 import { Filepicker } from "../Filepicker";
 import { RawType } from "./RequestBodyComp";
-import { dracula } from "react-syntax-highlighter/dist/cjs/styles/hljs";
 
 interface ComponentProps {
   bodyText: RequestBodyRaw,
@@ -32,13 +30,15 @@ export function TextBody(props: ComponentProps) {
   const [text, setText] = useState<string>("");
   const [path, setPath] = useState<string>("");
 
-
   const currentRequest = useRequestModelStore((state: RelynxState) => state.currentRequest as RequestModel);
 
   useEffect(() => {
     setText((props.bodyText.Raw.data as DataSourceRaw<string>).Raw);
+  }, [props.bodyText.Raw.data]);
+
+  useEffect(() => {
     setPath((props.bodyFile.Raw.data as DataSourceFromFilepath).FromFilepath);
-  }, [props.bodyText, props.bodyFile]);
+  }, [props.bodyFile.Raw.data]);
 
   const updateText = (newText: string) => {
     setText(newText);
@@ -70,7 +70,7 @@ export function TextBody(props: ComponentProps) {
         (props.rawType == "text") &&
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
           <h4 style={{ marginBottom: '20px' }}>Text</h4>
-          <InputTextarea  value={text} onChange={(e: any) => updateText(e.target.value)}
+          <InputTextarea value={text} onChange={(e: any) => updateText(e.target.value)}
             style={{ width: '100%' }}
             rows={80}
             cols={70}

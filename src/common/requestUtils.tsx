@@ -1,17 +1,14 @@
-import { addRequestToRequestTree, findNode, PrimeNode } from "./treeUtils";
-
+import { addRequestToRequestTree } from "./treeUtils";
 import { ToastContext } from "../App";
 import { NewFError } from "../model/error";
 import { catchError, displayAndLogErr } from "./errorhandling";
 import { create } from "react-modal-promise";
 import { CreateRequestModal } from "../components/modals/CreateRequestModal";
-import { newRequestModel } from "../model/request";
 import { backend } from '../rpc';
 import { useRequestModelStore } from "../stores/requestStore";
 import { Collection, RequestModel, RequestTree, RequestTreeNode } from '../bindings';
 import { getDefaultRequestName } from "./common";
 
-// @TODO why is parentPrime never used?
 export const createNewRequestNode = (parent: RequestTreeNode, toast: ToastContext, expandNode: (nodeKey: string) => void) => {
   // @TODO: expand parent prime
 
@@ -52,7 +49,7 @@ export const createNewRequestNode = (parent: RequestTreeNode, toast: ToastContex
       updateRequestTree(newTree);
       setCurrentRequest(node.request as RequestModel);
       expandNode(parent.id);
-    }).catch(catchError(toast));
+    }).catch(catchError);
 
   });
 }
@@ -61,8 +58,3 @@ export const createNewRequestNode = (parent: RequestTreeNode, toast: ToastContex
 export function hasInvalidFileBody(request: RequestModel) {
   return false
 }
-/* export function hasInvalidFileBody(request: RequestModel) {
-  return request.body?.BodyType == BodyTypes.BINARY_FILE &&
-    (request.body.BinaryFilePath === "" || request.body.BinaryFilePath === undefined || request.body.BinaryFilePath === null)
-} */
-

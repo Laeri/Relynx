@@ -64,7 +64,7 @@ fn router() -> Arc<Router> {
                 t(|_, collection: Collection| remove_collection(collection))
             })
             .query("select_directory", |t| t(|_, ()| select_directory()))
-            .query("select_file", |t| t(|_, ()| select_file()))
+            .query("select_file", |t| t(|_, ()| select_file(None)))
             .query("is_directory_empty", |t| {
                 t(|_, path: PathBuf| is_directory_empty(path))
             })

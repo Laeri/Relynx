@@ -41,9 +41,6 @@ export interface RelynxState {
 
 }
 
-//@TODO: Use immertype Callback = (state: State) => void;
-//const setState = (fn: Callback) => set(produce(fn));
-
 export const useRequestModelStore = create<RelynxState>((set) => {
 
   return {
@@ -147,10 +144,11 @@ export const useRequestModelStore = create<RelynxState>((set) => {
     }),
 
     logPath: undefined,
+
     setLogPath: (logPath: string) => set((state: RelynxState) => {
       return {
         ...state,
-        logPath
+        logPath: logPath
       }
     })
   }

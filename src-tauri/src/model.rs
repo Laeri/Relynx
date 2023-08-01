@@ -5,9 +5,9 @@ use std::{
 
 use http_rest_file::model::{
     DataSource, DispositionField, Header as HttpRestFileHeader, HttpMethod, HttpRestFile,
-    HttpRestFileExtension, HttpVersion, Multipart as HttpRestfileMultipart, Request,
-    RequestBody as HttpRestFileBody, RequestLine, RequestSettings, SaveResponse, UrlEncodedParam,
-    WithDefault,
+    HttpRestFileExtension, HttpVersion, Multipart as HttpRestfileMultipart, PreRequestScript,
+    Request, RequestBody as HttpRestFileBody, RequestLine, RequestSettings, ResponseHandler,
+    SaveResponse as RestFileSaveResponse, UrlEncodedParam, WithDefault,
 };
 
 use rspc::Type;
@@ -186,24 +186,6 @@ pub fn request_to_request_model(
     value: http_rest_file::model::Request,
     path: &std::path::PathBuf,
 ) -> RequestModel {
-    let redirect_response = match value.save_response {
-        Some(SaveResponse::NewFileIfExists(ref path)) => RedirectResponse {
-            save_response: true,
-            save_path: Some(path.clone()),
-            overwrite: false,
-        },
-        Some(SaveResponse::RewriteFile(ref path)) => RedirectResponse {
-            save_response: true,
-            save_path: Some(path.clone()),
-            overwrite: true,
-        },
-        None => RedirectResponse {
-            save_response: false,
-            save_path: None,
-            overwrite: true,
-        },
-    };
-
     RequestModel {
         id: uuid::Uuid::new_v4().to_string(),
         name: value.name.clone().unwrap_or(String::new()),
@@ -216,7 +198,9 @@ pub fn request_to_request_model(
         query_params: query_params_from_url(&value.request_line.target.to_string()),
         headers: value.headers.iter().map(Into::into).collect(),
         settings: value.settings,
-        redirect_response,
+        save_response: value.save_response.map(Into::<SaveResponse>::into),
+        pre_request_script: value.pre_request_script,
+        response_handler: value.response_handler,
     }
 }
 
@@ -331,38 +315,51 @@ impl From<&HttpRestfileMultipart> for Multipart {
 }
 
 #[derive(Serialize, Deserialize, Type, Debug, Clone, PartialEq, Eq)]
-pub struct RedirectResponse {
-    // save response result to file or not?
-    pub save_response: bool,
-    // if the response is saved in which path
-    pub save_path: Option<PathBuf>,
-    // if the respones is saved and the file exists already overwrite or create new files?
-    pub overwrite: bool,
+pub enum SaveResponse {
+    // save the response into a new file if there exists already an existing save (use incremental
+    // numbering for filename)
+    NewFileIfExists(std::path::PathBuf),
+    // save the response to a file and overwrite it if present
+    RewriteFile(std::path::PathBuf),
 }
 
-impl RedirectResponse {
-    pub fn no_save() -> Self {
-        RedirectResponse {
-            save_response: false,
-            save_path: None,
-            overwrite: true,
+impl SaveResponse {
+    pub fn get_path(&self) -> &PathBuf {
+        match self {
+            SaveResponse::RewriteFile(path) => path,
+            SaveResponse::NewFileIfExists(path) => path,
         }
+    }
+    pub fn is_path_empty(&self) -> bool {
+        self.get_path().to_string_lossy().is_empty()
     }
 
     pub fn get_absolute_path(&self, request: &RequestModel) -> Option<PathBuf> {
+        let path = self.get_path();
         let request_path = PathBuf::from(&request.rest_file_path);
         let request_folder = request_path.parent()?;
-        let save_path = self.save_path.as_ref()?;
-        Some(request_folder.join(save_path))
+        if path.is_absolute() {
+            Some(path.clone())
+        } else {
+            Some(request_folder.join(path))
+        }
     }
 }
 
-impl Default for RedirectResponse {
-    fn default() -> Self {
-        RedirectResponse {
-            save_response: false,
-            save_path: None,
-            overwrite: true,
+impl From<RestFileSaveResponse> for SaveResponse {
+    fn from(value: RestFileSaveResponse) -> Self {
+        match value {
+            RestFileSaveResponse::RewriteFile(path) => SaveResponse::RewriteFile(path),
+            RestFileSaveResponse::NewFileIfExists(path) => SaveResponse::NewFileIfExists(path),
+        }
+    }
+}
+
+impl From<SaveResponse> for RestFileSaveResponse {
+    fn from(value: SaveResponse) -> Self {
+        match value {
+            SaveResponse::RewriteFile(path) => RestFileSaveResponse::RewriteFile(path),
+            SaveResponse::NewFileIfExists(path) => RestFileSaveResponse::NewFileIfExists(path),
         }
     }
 }
@@ -380,7 +377,9 @@ pub struct RequestModel {
     pub rest_file_path: PathBuf,
     pub http_version: Replaced<HttpVersion>,
     pub settings: RequestSettings,
-    pub redirect_response: RedirectResponse,
+    pub save_response: Option<SaveResponse>,
+    pub pre_request_script: Option<PreRequestScript>,
+    pub response_handler: Option<ResponseHandler>,
 }
 
 const DEFAULT_HTTP_EXTENSION: &str = "http";
@@ -402,7 +401,9 @@ impl Default for RequestModel {
                 is_replaced: true,
             },
             settings: RequestSettings::default(),
-            redirect_response: RedirectResponse::default(),
+            save_response: None,
+            pre_request_script: None,
+            response_handler: None,
         }
     }
 }
@@ -428,7 +429,6 @@ impl RequestModel {
         }
         let env = env.unwrap();
         let url = env.replace_values_in_str(&self.url);
-        println!("url: {:?}, replaced: {:?}", self.url, url);
 
         let host_header = self.get_header_values("Host", GetHeadersOption::JustValues);
         let mut url_with_host: Option<String> = None;
@@ -593,7 +593,9 @@ impl RequestModel {
                 is_replaced: true,
             },
             settings: RequestSettings::default(),
-            redirect_response: RedirectResponse::default(),
+            save_response: None,
+            pre_request_script: None,
+            response_handler: None,
         }
     }
 }
@@ -798,27 +800,6 @@ impl From<&RequestModel> for http_rest_file::model::Request {
         };
         let target = value.url.as_str().into();
 
-        let save_response = match value.redirect_response {
-            RedirectResponse {
-                save_response: false,
-                ..
-            } => None,
-            RedirectResponse {
-                ref save_path,
-                overwrite,
-                ..
-            } => {
-                if overwrite {
-                    Some(SaveResponse::RewriteFile(
-                        save_path.clone().unwrap_or(PathBuf::new()),
-                    ))
-                } else {
-                    Some(SaveResponse::NewFileIfExists(
-                        save_path.clone().unwrap_or(PathBuf::new()),
-                    ))
-                }
-            }
-        };
         // filter out headers which have no key
         let headers: Vec<http_rest_file::model::Header> = value
             .headers
@@ -837,9 +818,44 @@ impl From<&RequestModel> for http_rest_file::model::Request {
             headers,
             comments,
             settings: value.settings.clone(),
-            pre_request_script: None,
-            response_handler: None,
-            save_response,
+            pre_request_script: value.pre_request_script.clone(),
+            response_handler: value.response_handler.clone(),
+            save_response: value
+                .save_response
+                .clone()
+                .map(Into::<RestFileSaveResponse>::into),
         }
+    }
+}
+
+pub struct RunLogger {
+    no_log: bool,
+}
+
+impl RunLogger {
+    pub fn new(no_log: bool) -> Self {
+        log::warn!("Not logging current request as no_log is set!");
+        RunLogger { no_log }
+    }
+
+    pub fn log_error<S: AsRef<str>>(&self, msg: S) {
+        if self.no_log {
+            return;
+        }
+        log::error!("{}", msg.as_ref());
+    }
+
+    pub fn log_info<S: AsRef<str>>(&self, msg: S) {
+        if self.no_log {
+            return;
+        }
+        log::info!("{}", msg.as_ref());
+    }
+
+    pub fn log_debug<S: AsRef<str>>(&self, msg: S) {
+        if self.no_log {
+            return;
+        }
+        log::debug!("{}", msg.as_ref());
     }
 }

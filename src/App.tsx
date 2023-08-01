@@ -1,5 +1,5 @@
 import './App.css';
-import { createContext, Ref, useContext, useEffect, useRef } from 'react';
+import { createContext, Ref, useEffect, useRef, useState } from 'react';
 import 'primereact/resources/primereact.min.css';
 import '../node_modules/primeicons/primeicons.css';
 import './theme.css';
@@ -15,9 +15,9 @@ import { RequestComponent } from './components/RequestComponent';
 import { backend } from './rpc';
 import { EnvironmentComponent } from './components/EnvironmentComponent';
 import { CollectionOverviewComponent } from './components/collection/CollectionOverviewComponent';
-import { catchError } from './common/errorhandling';
 import { Button } from 'primereact/button';
 import { openErrorReportingModal } from './common/modal';
+import { catchError } from './common/errorhandling';
 
 export interface ToastContext {
   toast: Ref<any>,
@@ -32,7 +32,7 @@ export interface ToastContext {
 // @ts-ignore
 export const ToastContext = createContext<ToastContext>();
 
-export let ExternalToast: ToastContext
+export let ExternalToast: ToastContext | undefined;
 
 export const routes = {
   root: "/",
@@ -41,6 +41,8 @@ export const routes = {
   environment: "/collection/environment",
 }
 
+
+
 function App() {
 
   const updateWorkspace = useRequestModelStore((state) => state.updateWorkspace);
@@ -48,40 +50,7 @@ function App() {
 
   const toastRef: any = useRef(null);
 
-  const toast = useContext(ToastContext);
-  ExternalToast = toast;
-
-  // Load workspace initially from backend
-  useEffect(() => {
-
-    // @TODO: REMOVE
-    backend.isSignatureValid({ license_key: "", license_signature: "" });;
-    backend.loadWorkspace()
-      .then((workspace: Workspace) => {
-        updateWorkspace(workspace);
-      }).catch(catchError);
-
-    backend.get_log_path().then((logPath: string) => {
-      setLogPath(logPath);
-    })
-  }, []);
-
-
-  interface CustomErrorTemplateProps {
-    errorMsg: string
-  }
-  const CustomErrorTemplate = (props: CustomErrorTemplateProps) => {
-    return (
-      <div style={{ width: '100%' }}>
-        <div className="p-toast-message-text">
-          <span className="p-toast-summary">Error loading requests</span>
-        </div>{props.errorMsg}
-
-        <Button severity='secondary' raised={true} style={{marginTop: '20px' }} onClick={() => openErrorReportingModal(props.errorMsg)}>Report Error</Button>
-      </div>
-    )
-  }
-
+  const [initialized, setInitialized] = useState<boolean>(false);
 
   const toastContext = {
     toast: toastRef,
@@ -94,10 +63,6 @@ function App() {
     showWarn: (title: string, detail: string, life?: number) => {
       toastContext.show({ severity: 'warn', summary: title, detail: detail, life: life });
     },
-    // showError: (title: string, detail: string, life?: number) => {
-    //   toastContext.show({ severity: 'error', summary: title, detail: '', life: life });
-    // },
-
     showError: (title: string, detail: string) => {
       if (!toastRef?.current) {
         console.error("No toast container present to show messages");
@@ -105,7 +70,7 @@ function App() {
       }
       toastRef?.current.show({
         severity: 'error',
-        content: (<CustomErrorTemplate errorMsg={detail ?? title ?? ""} />),
+        content: (<CustomErrorTemplate title={title} detail={detail} />),
         summary: title,
         detail: detail,
         life: 50000
@@ -123,8 +88,40 @@ function App() {
         detail: params.detail,
         life: params.life ?? 7000
       });
-    },
+    }
+  };
+
+
+  // Load workspace initially from backend
+  useEffect(() => {
+    ExternalToast = toastContext;
+    backend.loadWorkspace()
+      .then((workspace: Workspace) => {
+        updateWorkspace(workspace);
+      }).catch(catchError);
+
+    backend.get_log_path().then((logPath: string) => {
+      setLogPath(logPath);
+    });
+  }, []);
+
+
+  interface CustomErrorTemplateProps {
+    title: string,
+    detail: string
   }
+  const CustomErrorTemplate = (props: CustomErrorTemplateProps) => {
+    return (
+      <div style={{ width: '100%' }}>
+        <h3>{props.title}</h3>
+        <p style={{marginTop: '20px'}}>{props.detail}</p>
+
+        <Button severity='secondary' raised={true} style={{ marginTop: '20px' }} onClick={() => openErrorReportingModal(props. title, props.detail)}>Report Error</Button>
+      </div>
+    )
+  }
+
+
 
   return (
 

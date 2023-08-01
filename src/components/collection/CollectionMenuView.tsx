@@ -6,11 +6,11 @@ import { ToastContext } from "../../App";
 import { createNewRequestNode } from "../../common/requestUtils";
 import { createNewGroupNode, RequestTreeComponent } from "../RequestTreeComponent";
 import { CollectionInfo } from "./CollectionInfo";
-import { Collection, RequestTree, RequestTreeNode } from "../../bindings";
+import { Collection, ParseErrorMsg, RequestTree, RequestTreeNode } from "../../bindings";
 //
 import { backend } from '../../rpc';
 import { LoadRequestsResult } from "../../bindings";
-import { catchError, formatParseErrorsMsg } from "../../common/errorhandling";
+import { catchError } from "../../common/errorhandling";
 import { ProgressSpinner } from "primereact/progressspinner";
 
 interface ComponentProps {
@@ -33,12 +33,19 @@ export function CollectionMenuView(props: ComponentProps) {
   useEffect(() => {
     backend.loadRequestsForCollection(collection).then((result: LoadRequestsResult) => {
       if (result.errs.length > 0) {
-        let allParseErrors = formatParseErrorsMsg(result.errs);
-        toast.showError("Error loading requests", allParseErrors);
+        let errorsForFilename = new Map<String, String>();
+        result.errs.forEach((err: ParseErrorMsg) => {
+          let errString = errorsForFilename.get(err.filename) ?? "";
+          errString += err.msg + "\n\n";
+          errorsForFilename.set(err.filename, errString);
+        });
+        errorsForFilename.forEach((value, key) => {
+          toast.showError(`Error loading request: '${key}'`, value.toString());
+        })
       }
       updateRequestTree(result.request_tree);
       setInitFinished(true);
-    }).catch(catchError(toast));
+    }).catch(catchError);
   }, []);
 
   // eslint-disable-line react-hooks/exhaustive-deps

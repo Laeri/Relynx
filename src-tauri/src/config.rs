@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::error::RelynxError;
 use crate::model::{CollectionConfig, Workspace};
@@ -30,13 +30,20 @@ pub fn get_config_dir() -> Option<std::path::PathBuf> {
 }
 
 pub fn load_workspace() -> Result<Workspace, RelynxError> {
-    // @TODO @ERR could not use ProjectDirs
-    let config_dir = get_config_dir().ok_or(RelynxError::LoadWorkspaceError)?;
+    let config_dir = get_config_dir()
+        .ok_or(RelynxError::LoadWorkspaceError)
+        .map_err(|err| {
+            log::error!("Could not load workspace as config dir cannot be determined!");
+            err
+        })?;
 
     let workspace_file_path = config_dir.join(WORKSPACE_FILENAME);
 
     if !config_dir.exists() {
-        // @TODO @ERR could not create workspace folder
+        log::info!(
+            "Config dir: '{}' does not exist yet when loading workspace. Creating new one.",
+            config_dir.display()
+        );
         fs::create_dir(config_dir).map_err(|io_err| {
             log::error!("Io Error: {:?}", io_err);
             log::error!("Could not create config dir when loading the workspace");
@@ -102,21 +109,29 @@ pub fn save_workspace(workspace: &Workspace) -> Result<(), RelynxError> {
     // example)
     workspace.collections.iter().for_each(|collection| {
         let config_path = collection.get_config_file_path();
-        // @TODO: handle error
-        if let Ok(mut collection_config) = load_collection_config(&config_path) {
+        match load_collection_config(&config_path){
+            Ok(mut collection_config) => {
             collection_config.name = collection.name.clone();
-            // @TODO: handle error
-            let _result = save_collection_config(&collection_config, &config_path);
+            let result = save_collection_config(&collection_config, &config_path);
+            if result.is_err() {
+                log::error!("Could not update collection config file after saving workspace for collection: {}!", collection.name);
+                log::error!("Error: {:?}", result.unwrap_err());
+            }
+            },
+                Err(err) => {
+                log::error!("Could not load collection config after saving workspace, collection: '{}', path: '{}'", collection.name, config_path.display());
+                log::error!("Error: {:?}", err);
+            }
         }
     });
     Ok(())
 }
 
-pub fn load_collection_config(config_file_path: &PathBuf) -> Result<CollectionConfig, RelynxError> {
+pub fn load_collection_config(config_file_path: &Path) -> Result<CollectionConfig, RelynxError> {
     let config_file_path = if config_file_path.is_dir() {
         config_file_path.join(COLLECTION_CONFIGFILE)
     } else {
-        config_file_path.clone()
+        config_file_path.to_owned()
     };
     let content = std::fs::read_to_string(&config_file_path).map_err(|err| {
         log::error!("Io Error: {:?}", err);

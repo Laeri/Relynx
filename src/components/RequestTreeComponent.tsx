@@ -57,7 +57,7 @@ export const createNewGroupNode = (toast: ToastContext, expandNode: (parentKey: 
       if (parentPrime) {
         expandNode(parentPrime.key);
       }
-    }).catch(catchError(toast))
+    }).catch(catchError)
   });
 }
 
@@ -111,7 +111,7 @@ export const deleteNode = (toast: ToastContext, collection: Collection, requestT
       }
       toast.showInfo(successMessage, "", 2000);
     }
-  }).catch(catchError(toast));
+  }).catch(catchError);
 }
 
 
@@ -203,7 +203,7 @@ export function RequestTreeComponent(props: ComponentProps) {
           displayAndLogErr(error, toast);
         }
         updateRequestTree(newTree);
-      }).catch(catchError(toast));
+      }).catch(catchError);
 
     } else {
       // or it is a drag and drop
@@ -221,7 +221,7 @@ export function RequestTreeComponent(props: ComponentProps) {
         if (dropNode) {
           expandNode(dropNode.key);
         }
-      }).catch(catchError(toast));
+      }).catch(catchError);
     }
 
   }

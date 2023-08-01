@@ -13,8 +13,8 @@ use crate::import::{
 use crate::license::{self, verify_signature};
 use crate::model::{
     AddCollectionsResult, AppEnvironment, Collection, CollectionConfig, Environment,
-    ImportCollectionResult, RequestModel, RequestResult, RunRequestCommand, SaveRequestCommand,
-    Workspace,
+    ImportCollectionResult, RequestModel, RequestResult, RunLogger, RunRequestCommand,
+    SaveRequestCommand, Workspace,
 };
 use crate::pathdiff::diff_paths;
 use crate::sanitize::sanitize_filename_with_options;
@@ -46,13 +46,11 @@ pub static RELYNX_CONTEXT: Mutex<Context> = Mutex::new(Context { app_handle: Non
 
 #[tauri::command]
 pub fn load_workspace() -> Result<Workspace, rspc::Error> {
-    log::info!("LOAD WORKSPACE");
     crate::config::load_workspace().map_err(Into::<rspc::Error>::into)
 }
 
 #[tauri::command]
 pub fn remove_collection(collection: Collection) -> Result<Workspace, rspc::Error> {
-    // @TODO error could not remove collection
     let mut workspace: Workspace =
         crate::config::load_workspace().map_err(Into::<rspc::Error>::into)?;
 
@@ -60,12 +58,19 @@ pub fn remove_collection(collection: Collection) -> Result<Workspace, rspc::Erro
         .collections
         .iter()
         .position(|current| current.path == collection.path)
-        // @TODO ERROR
-        .ok_or(RelynxError::RemoveCollectionError)?;
+        .ok_or(RelynxError::RemoveCollectionError)
+        .map_err(|err| {
+            log::error!("Could not remove collection as it could not be found");
+            err
+        })?;
 
     workspace.collections.remove(position);
 
-    crate::config::save_workspace(&workspace)?;
+    crate::config::save_workspace(&workspace).map_err(|err| {
+        log::error!("Could not save collection after remove_collection");
+        log::error!("Error: {:?}", err);
+        RelynxError::RemoveCollectionError
+    })?;
     Ok(workspace)
 }
 
@@ -79,8 +84,13 @@ pub fn select_directory() -> Result<Option<PathBuf>, rspc::Error> {
 }
 
 #[tauri::command]
-pub fn select_file() -> Result<Option<PathBuf>, rspc::Error> {
-    let result = tauri::api::dialog::blocking::FileDialogBuilder::default().pick_file();
+pub fn select_file(default_folder: Option<&Path>) -> Result<Option<PathBuf>, rspc::Error> {
+    let mut builder = tauri::api::dialog::blocking::FileDialogBuilder::default();
+    if let Some(default_folder) = default_folder {
+        builder = builder.set_directory(default_folder);
+    }
+    let result = builder.pick_file();
+
     match result {
         Some(folder_path) => Ok(Some(folder_path)),
         None => Ok(None),
@@ -262,28 +272,45 @@ pub fn run_request(request_command: RunRequestCommand) -> Result<RequestResult, 
         follow_location,
         ..Default::default()
     };
+
+    let no_log = request_command.request.settings.no_log.unwrap_or(false);
+    let logger = RunLogger::new(no_log);
     // @TODO: set options from request settings
     let calls = client
         .execute(
             &request_command.request,
             &options,
             request_command.environment.as_ref(),
+            &logger,
         )
         .map_err(|http_err: HttpError| {
-            log::error!("Http error occurred: {:?}", http_err);
-            log::error!("Option: {:?}", options);
-            log::error!("Request: {:?}", request_command.request);
-            if let Some(environment) = request_command.environment {
-                log::error!("Environment name: {}", environment.name);
-                log::error!("Public environment values: {:?}", environment.variables);
-                log::error!(
-                    "Secret names (values are not logged!) {:?}",
-                    environment.secrets.into_iter().map(|secret| secret.name)
-                );
-            } else {
-                log::error!("Environment: None");
+            if !no_log {
+                logger.log_error(format!("Http error occurred: {:?}", http_err));
+                logger.log_error(format!("Option: {:?}", options));
+                logger.log_error(format!("Request: {:?}", request_command.request));
+                if let Some(environment) = request_command.environment {
+                    // @TODO
+                    log::error!("Environment name: {}", environment.name);
+                    log::error!("Public environment values: {:?}", environment.variables);
+                    log::error!(
+                        "Secret names (values are not logged!) {:?}",
+                        environment.secrets.into_iter().map(|secret| secret.name)
+                    );
+                } else {
+                    log::error!("Environment: None");
+                }
             }
-            RelynxError::RequestSendError
+            if !no_log {
+                match http_err {
+                    HttpError::InvalidUrl(url) => RelynxError::RequestSendErrorWithMsg(format!(
+                        "Something is wrong with the url: {}",
+                        url
+                    )),
+                    _ => RelynxError::RequestSendErrorGeneric,
+                }
+            } else {
+                RelynxError::RequestSendErrorGeneric
+            }
         })?;
 
     let call = calls.last().unwrap();
@@ -311,13 +338,12 @@ pub fn run_request(request_command: RunRequestCommand) -> Result<RequestResult, 
         result_file_folder: None,
     };
 
-    let redirect_response = &request_command.request.redirect_response;
-    if redirect_response.save_response {
-        if redirect_response.save_path.is_none() {
+    if let Some(ref save_response) = request_command.request.save_response {
+        if save_response.is_path_empty() {
             request_result.warnings.push("Could not save the response to file as no path is present. Configure the response path in the request's settings or choose that the result should not be saved to a file.".to_string());
         } else {
             // @TODO: maybe make the path private and only allow access over this method
-            let absolute_path = redirect_response
+            let absolute_path = save_response
                 .get_absolute_path(&request_command.request)
                 .unwrap_or(PathBuf::from("request_result"));
 
@@ -561,11 +587,13 @@ pub fn add_request_node(params: AddRequestNodeParams) -> Result<RequestTreeNode,
     }
 
     match Serializer::serialize_to_file(&file_model) {
-        Ok(()) => return node,
-        // @TODO: handle error
-        Err(_err) => {}
+        Ok(()) => node,
+        Err(err) => {
+            log::error!("Could not serialize to file");
+            log::error!("Err: {:?}", err);
+            Err(RelynxError::RequestCreateError.into())
+        }
     }
-    node
 }
 
 #[derive(Serialize, Deserialize, rspc::Type, Debug)]
@@ -926,7 +954,12 @@ pub struct ChooseFileRelativeToParams {
 pub fn choose_file_relative_to(
     params: ChooseFileRelativeToParams,
 ) -> Result<Option<PathBuf>, rspc::Error> {
-    let chosen_file = select_file()?;
+    let base_path_folder = if params.base_path.is_dir() {
+        Some(params.base_path.as_path())
+    } else {
+        params.base_path.parent().to_owned()
+    };
+    let chosen_file = select_file(base_path_folder)?;
     // nothing chosen, cancelled
     if chosen_file.is_none() {
         return Ok(None);

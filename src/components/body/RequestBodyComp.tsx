@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { RequestModel, Header, Environment } from '../../bindings';
 import BodySelectMenu, { BodyType, BodyTypes, TextBodyTypes, toMimeType } from "./BodySelectMenu";
-import { DataSourceFromFilepath, get_content_type, hasContentType, newMultipartPart, RequestBodyMultipart, RequestBodyRaw, RequestBodyUrlEncoded, setHeader } from "../../model/request";
+import { DataSourceFromFilepath, get_content_type, hasContentType, isDataSourceFromFile, newMultipartPart, RequestBodyMultipart, RequestBodyRaw, RequestBodyUrlEncoded, setHeader } from "../../model/request";
 import { MultipartBody } from "./MultipartBody";
 import { UrlEncodedBody } from "./UrlEncodedBody";
 import { RawTypes, TextBody } from "./TextBody";
@@ -172,11 +172,17 @@ export function RequestBodyComp(props: ComponentProps) {
     if (!newRequest) {
       newRequest = structuredClone(props.request);
     }
+    if (isDataSourceFromFile(newBody.Raw.data)) {
+      setRawTextFileBody(newBody);
+    } else {
+      setRawTextBody(newBody);
+    }
     newRequest.body = newBody;
     props.updateRequest(newRequest);
   }
 
   const updateRawType = (newRawType: RawType, newRequest?: RequestModel) => {
+
     if (!newRequest) {
       newRequest = structuredClone(props.request)
     }

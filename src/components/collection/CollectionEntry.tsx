@@ -51,7 +51,7 @@ export function CollectionEntry(props: ComponentProps) {
     backend.removeCollection(props.collection).then((workspace: Workspace) => {
       updateWorkspace(workspace);
       onHide();
-    }).catch(catchError(toast));
+    }).catch(catchError);
   }
 
 

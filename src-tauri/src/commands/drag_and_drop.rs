@@ -245,7 +245,6 @@ fn dd_remove_old_location(
         drag_node_parent.children.remove(pos);
     }
 
-    // @TODO: @ERROR
     // if we dragged out of a file node and there are no requests left then remove the file
     if drag_node_parent.is_file_group {
         // if we drag out of a file group and it is empty remove it

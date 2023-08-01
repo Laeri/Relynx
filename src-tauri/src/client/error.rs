@@ -18,34 +18,42 @@
 
 use std::path::PathBuf;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+use thiserror::Error;
+
+#[derive(Error, Clone, Debug, PartialEq, Eq)]
 #[allow(dead_code)]
 pub enum HttpError {
+    #[error("Could not parse response")]
     CouldNotParseResponse,
-    CouldNotUncompressResponse {
-        description: String,
-    },
-    InvalidCharset {
-        charset: String,
-    },
-    InvalidDecoding {
-        charset: String,
-    },
+    #[error("Could not uncompress response, description: '{description}'")]
+    CouldNotUncompressResponse { description: String },
+    #[error("Invalid charset: '{charset}'")]
+    InvalidCharset { charset: String },
+    #[error("Invalid decoding, charset: '{charset}'")]
+    InvalidDecoding { charset: String },
+    #[error("Libcurl error, code: '{code}', description: '{description}', url: '{url}'")]
     Libcurl {
         code: i32,
         description: String,
         url: String,
     },
-    StatuslineIsMissing {
-        url: String,
-    },
+    #[error("Status line is missing, url: '{url}'")]
+    StatuslineIsMissing { url: String },
+    #[error("Too many redirects")]
     TooManyRedirect,
-    UnsupportedContentEncoding {
-        description: String,
-    },
+    #[error("Unsupported encoding, description: '{description}'")]
+    UnsupportedContentEncoding { description: String },
+
+    #[error("Invalid url: '{0}'")]
     InvalidUrl(String),
-    CouldNotReadFile(PathBuf),
-    // @TODO: modified
+
+    #[error("The body file does not exist: '{0}'")]
+    CouldNotReadBodyFile(PathBuf),
+
+    #[error("The request body multipart file does not exist: '{0}'")]
+    CouldNotReadBodyPartFromFile(PathBuf),
+
+    #[error("Form error")]
     FormError,
 }
 

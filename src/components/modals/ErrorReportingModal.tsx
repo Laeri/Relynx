@@ -13,7 +13,8 @@ interface ComponentProps {
   isOpen: boolean
   onResolve: (result?: {}) => void
   onReject: () => void,
-  errorMsg: string
+  title: string,
+  detail: string
 }
 
 export function ErrorReportingModal(props: ComponentProps) {
@@ -45,10 +46,11 @@ export function ErrorReportingModal(props: ComponentProps) {
         marginBottom: '0px',
         marginTop: '20px'
       }}>
-        <h1>{props.errorMsg}</h1>
-        <p style={{textAlign: 'left'}}>
-          If this error persists you can report this error by writing an email to <Chip label={RELYNX_MAIL} /> <CopyToClipboard tooltip="Copy email to clipboard" value={RELYNX_MAIL} /> <br /><br />
-          Please mention as well what you were doing before the error occurred.
+        <h1>{props.title}</h1>
+        <p style={{textAlign: 'left', marginTop: '20px'}}>{props.detail}</p>
+        <p style={{textAlign: 'left', marginTop: '20px'}}>
+          If this error persists you can report it by writing an email to <Chip label={RELYNX_MAIL} /> <CopyToClipboard tooltip="Copy email to clipboard" value={RELYNX_MAIL} /> <br /><br />
+          Please mention as well what you were doing before the error occurred and include relevant request files or the collection folder if possible.
         </p>
         {
           (logPath !== undefined) &&

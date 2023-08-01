@@ -1,21 +1,18 @@
 
 export interface FrontendError {
-  kind: string,
-  message: string
+  id: string,
+  title: string,
+  message: string,
+  devMsg: string
 };
 
-export type BackendError = string;
-
-export function newFrontendError(): FrontendError {
+export function NewFError(id: string, title: string, message: string, devMsg: string): FrontendError {
   return {
-    kind: "Generic",
-    message: ""
+    id,
+    title,
+    message,
+    devMsg
   };
-}
-
-export function NewFError(id: string, title: string, userMsg: string, errorMsg: string): FrontendError {
-  let frontendError = newFrontendError();
-  return frontendError;
 }
 
 export type CancellationToken = {

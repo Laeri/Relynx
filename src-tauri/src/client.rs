@@ -30,7 +30,9 @@ use self::client_model::{parse_cookies, Call, RequestCookie, Response};
 use self::error::HttpError;
 use self::options::{ClientOptions, Verbosity};
 use self::timings::Timings;
-use crate::model::{Environment, GetHeadersOption, Header, Multipart, RequestBody, RequestModel};
+use crate::model::{
+    Environment, GetHeadersOption, Header, Multipart, RequestBody, RequestModel, RunLogger,
+};
 use base64::engine::general_purpose;
 use base64::Engine;
 use chrono::Utc;
@@ -103,11 +105,14 @@ impl Client {
         request_model: &RequestModel,
         options: &ClientOptions,
         environment: Option<&Environment>,
+        logger: &RunLogger,
     ) -> Result<Vec<Call>, HttpError> {
         if options.follow_location {
-            self.execute_with_redirect(request_model, options, environment)
+            logger.log_info("Run request: follow location");
+            self.execute_with_redirect(request_model, options, environment, logger)
         } else {
-            self.execute_without_redirect(request_model, options, environment)
+            logger.log_info("Run request  no redirect following");
+            self.execute_without_redirect(request_model, options, environment, logger)
                 .map(|result_call| vec![result_call])
         }
     }
@@ -119,7 +124,7 @@ impl Client {
         request_model: &RequestModel,
         options: &ClientOptions,
         environment: Option<&Environment>,
-        //logger: &Logger,
+        logger: &RunLogger, //logger: &Logger,
     ) -> Result<Vec<Call>, HttpError> {
         let mut calls = vec![];
 
@@ -129,7 +134,8 @@ impl Client {
         let mut request_model = request_model.clone();
         let mut redirect_count = 0;
         loop {
-            let call = dbg!(self.execute_without_redirect(&request_model, options, environment))?;
+            let call =
+                self.execute_without_redirect(&request_model, options, environment, logger)?;
             let base_url = call.request.base_url()?;
             let redirect_url = self.get_follow_location(&call.response, &base_url);
             calls.push(call);
@@ -137,13 +143,13 @@ impl Client {
                 break;
             }
             let redirect_url = redirect_url.unwrap();
-            println!("Redirect url: {:?}", redirect_url);
-            // logger.debug("");
-            // logger.debug(format!("=> Redirect to {redirect_url}").as_str());
-            // logger.debug("");
+
+            logger.log_debug(format!("=> Redirect to {redirect_url}").as_str());
+
             redirect_count += 1;
             if let Some(max_redirect) = options.max_redirect {
                 if redirect_count > max_redirect {
+                    logger.log_error("Too many redirects present");
                     return Err(HttpError::TooManyRedirect);
                 }
             }
@@ -158,8 +164,9 @@ impl Client {
     fn execute_without_redirect(
         &mut self,
         request_model: &RequestModel,
-        options: &ClientOptions, //@TODO:logger: &Logger,
+        options: &ClientOptions,
         environment: Option<&Environment>,
+        logger: &RunLogger,
     ) -> Result<Call, HttpError> {
         // Set handle attributes that have not been set or reset.
 
@@ -206,14 +213,18 @@ impl Client {
 
         self.set_ssl_options(options.ssl_no_revoke);
 
-        let url = dbg!(request_model.get_url_with_env(true, environment));
+        let url = request_model.get_url_with_env(true, environment);
+        logger.log_debug(format!("=>Url: {}", url).as_str());
+
         self.handle.url(url.as_str()).unwrap();
         let method = &request_model.method;
         self.set_method(method);
         self.set_cookies(&request_model.cookies());
         if let RequestBody::UrlEncoded { .. } = request_model.body {
             self.set_form_url_encoded(
-                &dbg!(request_model.get_url_encoded_params_with_env(environment)).unwrap(),
+                &request_model
+                    .get_url_encoded_params_with_env(environment)
+                    .unwrap(),
             );
         }
         if let RequestBody::Multipart {
@@ -221,25 +232,28 @@ impl Client {
             ref parts,
         } = request_model.body
         {
-            // @TODO: log error
-            self.set_multipart(boundary, parts)?;
+            self.set_multipart(boundary, parts, logger)?;
         }
-        // @TODO: check this again
+
         let request_body_bytes: Option<Vec<u8>> = match request_model.body {
             RequestBody::None => None,
             RequestBody::Raw { ref data } => match data {
                 DataSource::Raw(ref raw_data) => Some(raw_data.as_bytes().to_vec()),
                 DataSource::FromFilepath(ref filepath) => {
                     let filepath = PathBuf::from(filepath);
-                    let content = std::fs::read(&filepath)
-                        .map_err(|_err| HttpError::CouldNotReadFile(filepath))?; // @TODO: log
-                                                                                 // error
+                    let content = std::fs::read(&filepath).map_err(|err| {
+                        log::error!(
+                            "File not present for multipart body, path: {}",
+                            filepath.display()
+                        );
+                        log::error!("Io Error: {:?}", err);
+                        HttpError::CouldNotReadBodyFile(filepath)
+                    })?;
                     Some(content)
                 }
             },
-            RequestBody::Multipart { .. } => None, // @TODO: is sent as separate fields?
-            RequestBody::UrlEncoded { .. } => None, // Urlencoded is sent within
-                                                    // url part, so no body here
+            RequestBody::Multipart { .. } => None, // Nothing done here, handled separately
+            RequestBody::UrlEncoded { .. } => None, // Nothing done here, handled separately
         };
 
         if let Some(ref bytes) = request_body_bytes {
@@ -254,7 +268,6 @@ impl Client {
         let mut request_headers: Vec<Header> = vec![];
         let mut status_lines = vec![];
         let mut response_headers = vec![];
-        // @TODO: why does form aka url encoded still count as body, where is this used?
         let has_body_data = request_body_bytes.is_some()
             || request_model.body.is_url_encoded()
             || request_model.body.is_multipart();
@@ -286,7 +299,9 @@ impl Client {
                     // Return all request headers (not one by one)
                     easy::InfoType::HeaderOut => {
                         let mut lines = split_lines(data);
-                        //@TODO:logger.debug_method_version_out(&lines[0]);
+                        logger.log_debug(
+                            format!("deasy infotype headerout lines: {:?}", &lines[0]).as_str(),
+                        );
 
                         // Extracts request headers from libcurl debug info.
                         lines.pop().unwrap(); // Remove last empty line.
@@ -344,8 +359,8 @@ impl Client {
                         let len = data.len();
                         if very_verbose && len > 0 {
                             let text = std::str::from_utf8(&data[..len - 1]);
-                            if let Ok(_text) = text {
-                                // @TODO:logger.debug_curl(text);
+                            if let Ok(text) = text {
+                                logger.log_debug(format!("Curl text: {}", text).as_str());
                             }
                         }
                     }
@@ -354,7 +369,7 @@ impl Client {
                 .unwrap();
             transfer
                 .header_function(|h| {
-                    if let Some(s) = decode_header(h) {
+                    if let Some(s) = decode_header(h, logger) {
                         if s.starts_with("HTTP/") {
                             status_lines.push(s);
                         } else {
@@ -397,8 +412,8 @@ impl Client {
         let certificate = if let Some(cert_info) = easy_ext::get_certinfo(&self.handle)? {
             match Certificate::try_from(cert_info) {
                 Ok(value) => Some(value),
-                Err(_message) => {
-                    // @TODO:logger.error(format!("can not parse certificate - {message}").as_str());
+                Err(message) => {
+                    logger.log_error(format!("can not parse certificate - {message}").as_str());
                     None
                 }
             }
@@ -466,23 +481,6 @@ impl Client {
         })
     }
 
-    /// Generates URL.
-    //@TODO: do we keep query string as its own field on request model? fn generate_url(&mut self, url: &str, params: &[Param]) -> String {
-    //     if params.is_empty() {
-    //         url.to_string()
-    //     } else {
-    //         let url = if url.ends_with('?') {
-    //             url.to_string()
-    //         } else if url.contains('?') {
-    //             format!("{url}&")
-    //         } else {
-    //             format!("{url}?")
-    //         };
-    //         let s = self.url_encode_params(params);
-    //         format!("{url}{s}")
-    //     }
-    // }
-
     /// Sets HTTP method.
     fn set_method(&mut self, method: &HttpMethod) {
         self.handle
@@ -499,7 +497,6 @@ impl Client {
     ) {
         let mut list = easy::List::new();
 
-        println!("LIST: {:?}", list);
         for header in &request.get_headers_with_env(env) {
             list.append(format!("{}: {}", header.key, header.value).as_str())
                 .unwrap();
@@ -586,7 +583,12 @@ impl Client {
     }
 
     /// Sets multipart form data.
-    fn set_multipart(&mut self, _boundary: &str, parts: &[Multipart]) -> Result<(), HttpError> {
+    fn set_multipart(
+        &mut self,
+        _boundary: &str,
+        parts: &[Multipart],
+        logger: &RunLogger,
+    ) -> Result<(), HttpError> {
         let mut form = easy::Form::new();
         for part in parts {
             let contents = match part.data {
@@ -594,12 +596,13 @@ impl Client {
                     raw_data.as_bytes().to_vec()
                 }
                 http_rest_file::model::DataSource::FromFilepath(ref path) => {
-                    std::fs::read(&std::path::PathBuf::from(path)).map_err(|_err| {
-                        let _msg = format!(
-                            "Could not read data of file: '{}'. Check if the file exists.",
+                    std::fs::read(&std::path::PathBuf::from(path)).map_err(|err| {
+                        logger.log_error(format!(
+                            "Could not read of file: '{}'. Check if the file exists!",
                             path
-                        );
-                        HttpError::CouldNotReadFile(PathBuf::from(path))
+                        ));
+                        logger.log_error(format!("Error: {:?}", err));
+                        HttpError::CouldNotReadBodyPartFromFile(PathBuf::from(path))
                     })?
                 }
             };
@@ -621,7 +624,11 @@ impl Client {
             //@TODO what about this... .buffer(filename, data.clone())
             //                    .content_type(content_type)
 
-            curl_part.add().map_err(|_err| HttpError::FormError)?;
+            curl_part.add().map_err(|err| {
+                log::error!("Could not add multipart form parameters");
+                log::error!("Curl form error: {:?}", err);
+                HttpError::FormError
+            })?;
         }
 
         self.handle.httppost(form).unwrap();
@@ -731,13 +738,16 @@ fn split_lines(data: &[u8]) -> Vec<String> {
 }
 
 /// Decodes optionally header value as text with UTF-8 or ISO-8859-1 encoding.
-pub fn decode_header(data: &[u8]) -> Option<String> {
+pub fn decode_header(data: &[u8], logger: &RunLogger) -> Option<String> {
     match std::str::from_utf8(data) {
         Ok(s) => Some(s.to_string()),
         Err(_) => match ISO_8859_1.decode(data, DecoderTrap::Strict) {
             Ok(s) => Some(s),
             Err(_) => {
-                println!("Error decoding header both UTF-8 and ISO-8859-1 {data:?}");
+                logger.log_error(format!(
+                    "Error decoding header both UTF-8 and ISO-8859-1 {:?}",
+                    data
+                ));
                 None
             }
         },

@@ -1,7 +1,7 @@
 import { createClient } from '@rspc/client'
 import { TauriTransport } from '@rspc/tauri'
 import { Procedures, Workspace, Collection, AddCollectionsResult, ImportCollectionResult, LoadRequestsResult, RunRequestCommand, RequestResult, RequestModel, SaveRequestCommand, RequestTreeNode, DragAndDropResult, Environment, ValidateGroupNameResult, LicenseData } from './bindings';
-import { FError } from './common/errorhandling';
+import { catchError, FError } from './common/errorhandling';
 import { CancellationToken } from './model/error';
 
 export const api = createClient<Procedures>({
@@ -28,7 +28,7 @@ class Backend {
       if (result) {
         onSelect(result);
       }
-    });
+    }).catch(catchError);
   }
 
   selectFile(onSelect: (filepath: string) => void) {
@@ -98,15 +98,13 @@ class Backend {
       if (result) {
         onSelected(result);
       }
-    });
+    }).catch(catchError);
   }
 
   validateResponseFilepath(filepath: string): Promise<boolean> {
     return api.query(['validate_response_filepath', filepath])
   }
 
-  // @TODO: check if current request one parameter?
-  // Promise result contains new path??? @TODO
   saveRequest(requests: RequestModel[], collection: Collection, oldName: string): Promise<string> {
     let command: SaveRequestCommand = { requests: requests, collection: collection, old_name: oldName };
     return api.query(['save_request', command]);
@@ -164,7 +162,7 @@ class Backend {
       if (result) {
         onSelect(result);
       }
-    });
+    }).catch(catchError);
   }
 
   loadLicenseData(): Promise<LicenseData> {

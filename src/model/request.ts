@@ -80,7 +80,9 @@ export function newRequestModel(partial: Partial<RequestModel>): RequestModel {
     rest_file_path: "",
     http_version: { value: DEFAULT_HTTP_VERSION, is_replaced: true },
     settings: newRequestSettings(undefined),
-    redirect_response: { save_response: false, save_path: null, overwrite: true }
+    save_response: null,
+    pre_request_script: null,
+    response_handler: null
   }
 
   if (partial) {
@@ -170,23 +172,10 @@ export function getRawText(requestBody: RequestBody): string | undefined {
   return (rawTextBody.Raw.data as DataSourceRaw<string>).Raw
 }
 
-export class RequestBodyWrapper {
 
-  private requestBody: RequestBody;
-
-  constructor(requestBody: RequestBody) {
-    this.requestBody = requestBody;
-  }
-
-  getRawText(): string | undefined {
-    let rawTextBody = this.requestBody as RequestBodyRaw;
-    return (rawTextBody.Raw.data as DataSourceRaw<string>).Raw
-  }
-
-  getRawFilepath(): string | undefined {
-    let rawTextBody = this.requestBody as RequestBodyRaw;
-    return (rawTextBody.Raw.data as DataSourceFromFilepath).FromFilepath;
-  }
+export function isDataSourceFromFile(dataSource: DataSource<String>): boolean {
+  let fileSource = dataSource as DataSourceFromFilepath;
+  return fileSource.FromFilepath !== undefined;
 }
 
 export function newMultipartPart(): Multipart {

@@ -14,7 +14,6 @@ export function CopyToClipboard(props: ComponentProps) {
 
   const copyToClipboard = () => {
     backend.copyToClipboard(props.value).then(() => {
-      console.log('toast: ', toast);
       toast.showInfo(`Copied '${props.value}' to clipboard`, "", 2000);
     }).catch((_err) => {
       toast.showError("Could not copy content to clipboard", "");

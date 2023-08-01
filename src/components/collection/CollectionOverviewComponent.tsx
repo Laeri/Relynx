@@ -68,7 +68,7 @@ export function CollectionOverviewComponent(_props: ComponentProps) {
     updateCollection(newCollection);
     backend.updateWorkspace(newWorkspace).then(() => {
       // do nothing
-    }).catch(catchError(toast));
+    }).catch(catchError);
   }
 
   const clearImportWarnings = () => {
@@ -90,7 +90,7 @@ export function CollectionOverviewComponent(_props: ComponentProps) {
     updateCollection(newCollection);
     backend.updateWorkspace(newWorkspace).then(() => {
       toast.showInfo("Cleared import warnings", "");
-    }).catch(catchError(toast));
+    }).catch(catchError);
   }
 
   return (

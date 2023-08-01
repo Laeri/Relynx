@@ -58,7 +58,7 @@ export function CollectionInfo(props: ComponentProps) {
     updatedWorkspace.collections = newCollections;
     backend.updateWorkspace(updatedWorkspace).then(() => {
       setCurrentEnvironment(selectedEnvironment);
-    }).catch(catchError(toast))
+    }).catch(catchError)
   }
 
 
