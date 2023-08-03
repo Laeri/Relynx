@@ -1,7 +1,21 @@
-# Tauri + React + Typescript
+# Relynx
 
-This template should help get you started developing with Tauri, React and Typescript in Vite.
+Relynx is an HTTP client desktop application that can send the usual HTTP requests for testing API REST endpoints.
 
-## Recommended IDE Setup
+![Relynx Product Screenshot](./assets/screenshot.png)
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+Requests are stored locally on your file system in the same format that the [Jetbrains HTTP client](https://www.jetbrains.com/help/idea/http-client-in-product-code-editor.html)
+uses and is compatible with it although does not provide feature parity.
+
+As Relynx stores requests as files and groups as folders on your file system this allows you to backup and share all requests with
+git.
+
+If you want to use this software get it on [relynx.app](https://relynx.app).
+
+Relynx is written in Rust and React using [tauri](https://github.com/tauri-apps/tauri) to create a desktop application.
+
+It uses parts of [hurl](https://github.com/Orange-OpenSource/hurl) which is a cli request client that uses a different file format.
+
+## Get Relynx
+
+Please visit [relynx.app](https://relynx.app) to obtain a license. There is also a trial version available.
