@@ -4,6 +4,7 @@
 mod client;
 mod commands;
 mod config;
+mod cookie_jar;
 mod environment;
 mod error;
 mod import;
@@ -17,18 +18,20 @@ mod tree;
 use commands::{
     add_existing_collections, add_group_node, add_request_node, choose_file_relative_to,
     copy_logfile_content_to_clipboard, copy_to_clipboard, delete_node, drag_and_drop,
-    get_app_environment, get_log_path_command, get_response_filepath, hide_group,
-    import_jetbrains_folder_command, import_postman_collection, is_directory_empty,
+    get_app_environment, get_cookie_jar_command, get_log_path_command, get_response_filepath,
+    hide_group, import_jetbrains_folder_command, import_postman_collection, is_directory_empty,
     is_signature_valid, load_environments, load_license_data_command, load_requests_for_collection,
     load_workspace, open_folder_native, remove_collection, rename_group,
-    reorder_nodes_within_parent, run_request, save_environments, save_license_data_command,
-    save_request, select_directory, select_file, update_workspace, validate_group_name,
-    validate_response_filepath, AddExistingCollectionsParams, AddGroupNodeParams,
-    AddRequestNodeParams, ChooseFileRelativeToParams, DeleteNodeParams, DragAndDropParams,
-    ImportJetbrainsHttpFolderParams, ImportPostmanCommandParams, RenameGroupParams,
-    ReorderNodesParams, SaveEnvironmentsParams, ValidateGroupNameParams, RELYNX_CONTEXT,
+    reorder_nodes_within_parent, run_request, save_cookie_jar_command, save_environments,
+    save_license_data_command, save_request, select_directory, select_file, update_workspace,
+    validate_group_name, validate_response_filepath, AddExistingCollectionsParams,
+    AddGroupNodeParams, AddRequestNodeParams, ChooseFileRelativeToParams, DeleteNodeParams,
+    DragAndDropParams, ImportJetbrainsHttpFolderParams, ImportPostmanCommandParams,
+    RenameGroupParams, ReorderNodesParams, SaveEnvironmentsParams, ValidateGroupNameParams,
+    RELYNX_CONTEXT,
 };
 use config::get_data_dir;
+use cookie_jar::{GetCookieJarParams, SaveCookieJarParams};
 use license::LicenseData;
 use log::LevelFilter;
 use model::{Collection, RunRequestCommand, SaveRequestCommand, Workspace};
@@ -159,6 +162,12 @@ fn router() -> Arc<Router> {
             .query("get_log_path", |t| t(|_, ()| get_log_path_command()))
             .query("copy_logfile_content_to_clipboard", |t| {
                 t(|_, ()| copy_logfile_content_to_clipboard())
+            })
+            .query("get_cookie_jar", |t| {
+                t(|_, params: GetCookieJarParams| get_cookie_jar_command(params))
+            })
+            .mutation("save_cookie_jar", |t| {
+                t(|_, params: SaveCookieJarParams| save_cookie_jar_command(params))
             })
             .build();
     Arc::new(router)

@@ -18,6 +18,7 @@ import { CollectionOverviewComponent } from './components/collection/CollectionO
 import { Button } from 'primereact/button';
 import { openErrorReportingModal } from './common/modal';
 import { catchError } from './common/errorhandling';
+import { getVersion } from '@tauri-apps/api/app';
 
 export interface ToastContext {
   toast: Ref<any>,
@@ -51,6 +52,8 @@ function App() {
   const toastRef: any = useRef(null);
 
   const [initialized, setInitialized] = useState<boolean>(false);
+
+  const [version, setVersion] = useState<string>("");
 
   const toastContext = {
     toast: toastRef,
@@ -94,6 +97,11 @@ function App() {
 
   // Load workspace initially from backend
   useEffect(() => {
+
+    getVersion().then((version: string) => {
+      setVersion(version);
+    });
+
     ExternalToast = toastContext;
     backend.loadWorkspace()
       .then((workspace: Workspace) => {
@@ -114,9 +122,9 @@ function App() {
     return (
       <div style={{ width: '100%' }}>
         <h3>{props.title}</h3>
-        <p style={{marginTop: '20px'}}>{props.detail}</p>
+        <p style={{ marginTop: '20px', overflowX: 'auto' }}>{props.detail}</p>
 
-        <Button severity='secondary' raised={true} style={{ marginTop: '20px' }} onClick={() => openErrorReportingModal(props. title, props.detail)}>Report Error</Button>
+        <Button severity='secondary' raised={true} style={{ marginTop: '20px' }} onClick={() => openErrorReportingModal(props.title, props.detail)}>Report Error</Button>
       </div>
     )
   }
@@ -148,6 +156,7 @@ function App() {
         {/*Container element for modals using react-modal-promise */}
         <ModalContainer />
       </ToastContext.Provider>
+      <span style={{ position: 'absolute', right: '10px', bottom: '5px', color: '#eee', fontSize: '10px' }}>v{version}</span>
     </div>
 
   );

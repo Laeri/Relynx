@@ -1,24 +1,28 @@
 /*
- * Hurl (https://hurl.dev)
- * Copyright (C) 2023 Orange
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *          http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- */
+* This file has been taken and modified from the project: https://github.com/Orange-OpenSource/hurl.
+* Changes include using our own domain model in certain places and modifying request execute logic
+* to match the requirements of relynx.app.
+* See the copyright below.
+*
+* Hurl (https://hurl.dev)
+* Copyright (C) 2023 Orange
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*          http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*
+*/
 
 mod certificate;
 pub mod client_model;
-mod cookie;
 mod easy_ext;
 pub mod error;
 pub mod options;
@@ -107,14 +111,16 @@ impl Client {
         environment: Option<&Environment>,
         logger: &RunLogger,
     ) -> Result<Vec<Call>, HttpError> {
-        if options.follow_location {
+        let calls = if options.follow_location {
             logger.log_info("Run request: follow location");
             self.execute_with_redirect(request_model, options, environment, logger)
         } else {
             logger.log_info("Run request  no redirect following");
             self.execute_without_redirect(request_model, options, environment, logger)
                 .map(|result_call| vec![result_call])
-        }
+        }?;
+
+        Ok(calls)
     }
 
     // Executes an HTTP request `request_spec`, optionally follows redirection and returns a

@@ -1,13 +1,14 @@
 import { Button } from "primereact/button"
 import { Dialog } from "primereact/dialog"
 import { InputText } from "primereact/inputtext"
-import { useContext } from "react"
+import { useContext, useEffect, useState } from "react"
 import { ToastContext } from "../../App"
 import { RELYNX_MAIL } from "../../common/common"
 import { backend } from "../../rpc"
 import { RelynxState, useRequestModelStore } from "../../stores/requestStore"
 import { CopyToClipboard } from "../CopyToClipboard"
 import { Chip } from "primereact/chip";
+import { getVersion } from '@tauri-apps/api/app';
 
 interface ComponentProps {
   isOpen: boolean
@@ -22,6 +23,14 @@ export function ErrorReportingModal(props: ComponentProps) {
   const logPath = useRequestModelStore((state: RelynxState) => state.logPath);
 
   const toast = useContext(ToastContext);
+
+  const [version, setVersion] = useState<string>("");
+
+  useEffect(() => {
+    getVersion().then((version: string) => {
+      setVersion(version);
+    });
+  }, [])
 
   const copyLogfileContent = () => {
     backend.copy_logfile_content_to_clipboard().then(() => {
@@ -47,8 +56,9 @@ export function ErrorReportingModal(props: ComponentProps) {
         marginTop: '20px'
       }}>
         <h1>{props.title}</h1>
-        <p style={{textAlign: 'left', marginTop: '20px'}}>{props.detail}</p>
-        <p style={{textAlign: 'left', marginTop: '20px'}}>
+        <p>Version: v{version}</p>
+        <p style={{ textAlign: 'left', marginTop: '20px' }}>{props.detail}</p>
+        <p style={{ textAlign: 'left', marginTop: '20px' }}>
           If this error persists you can report it by writing an email to <Chip label={RELYNX_MAIL} /> <CopyToClipboard tooltip="Copy email to clipboard" value={RELYNX_MAIL} /> <br /><br />
           Please mention as well what you were doing before the error occurred and include relevant request files or the collection folder if possible.
         </p>

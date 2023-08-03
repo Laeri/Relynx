@@ -96,5 +96,64 @@ body {
 
 .fade-in-fast { animation: fadeIn 0.5s; }
 
+.cookie-entry {
+  width: 20%;
+}
 
+.cookie-entry + .cookie-entry {
+  margin-left: 5px;
+}
 
+.cookie-entry + .cookie-entry-actions {
+  margin-left: 5px;
+}
+
+.cookie-entry-actions {
+  width: 5%
+}
+
+.cookie-table-header {
+  width: 20%;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.cookie-table-header-actions {
+  width: 5%;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.cookie-table-header + .cookie-table-header {
+  margin-left: 5px;
+}
+
+.cookie-table-header + .cookie-table-header-actions {
+  margin-left: 5px;
+}
+
+.react-datepicker-wrapper {
+  height: 37px;
+}
+
+.react-datepicker__input-container {
+  height: 37px;
+}
+
+.react-datepicker-wrapper {
+  margin-left: 5px;
+}
+.react-datepicker-wrapper input {
+  height: 100%;
+  background-color: rgb(32, 38, 46);
+  border: 2px solid rgb(63, 75, 91);
+  border-radius: 2px;
+  width: 100%;
+}
+
+.react-datepicker-wrapper input:focus {
+outline: 0 none;
+outline-offset: 0;
+box-shadow: 0 0 0 1px #e3f3fe;
+border-color: #8dd0ff;
+}

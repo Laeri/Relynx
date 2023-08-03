@@ -5,6 +5,10 @@ use crate::client::Client;
 use crate::config::{
     get_log_filepath, load_collection_config, save_collection_config, save_workspace,
 };
+use crate::cookie_jar::{
+    load_cookie_jar, save_cookie_jar, update_cookie_jar, update_request_with_cookie_jar,
+    CookieJarPath, GetCookieJarParams, SaveCookieJarParams,
+};
 use crate::error::RelynxError;
 use crate::import::{
     create_jetbrains_collection, import_jetbrains_folder, postman, LoadRequestsResult,
@@ -12,7 +16,7 @@ use crate::import::{
 };
 use crate::license::{self, verify_signature};
 use crate::model::{
-    AddCollectionsResult, AppEnvironment, Collection, CollectionConfig, Environment,
+    AddCollectionsResult, AppEnvironment, Collection, CollectionConfig, CookieJar, Environment,
     ImportCollectionResult, RequestModel, RequestResult, RunLogger, RunRequestCommand,
     SaveRequestCommand, Workspace,
 };
@@ -258,7 +262,7 @@ pub fn import_jetbrains_folder_command(
 }
 
 #[tauri::command]
-pub fn run_request(request_command: RunRequestCommand) -> Result<RequestResult, rspc::Error> {
+pub fn run_request(mut request_command: RunRequestCommand) -> Result<RequestResult, rspc::Error> {
     // @TODO: cookie input file...
     // @TODO: handle intellij redirect options
     let mut client = Client::new(None);
@@ -273,9 +277,32 @@ pub fn run_request(request_command: RunRequestCommand) -> Result<RequestResult, 
         ..Default::default()
     };
 
+    let mut cookie_jar: Option<CookieJar> = None;
+
+    let allow_cookie_jar = !request_command
+        .request
+        .settings
+        .no_cookie_jar
+        .unwrap_or(false);
+
     let no_log = request_command.request.settings.no_log.unwrap_or(false);
     let logger = RunLogger::new(no_log);
-    // @TODO: set options from request settings
+
+    if allow_cookie_jar {
+        cookie_jar = load_cookie_jar(&CookieJarPath::CollectionFolderPath(
+            request_command.collection.path.clone(),
+        ))
+        .ok();
+        if cookie_jar.is_some() {
+            let _ = update_request_with_cookie_jar(
+                &mut request_command.request,
+                cookie_jar.as_ref().unwrap(),
+                request_command.environment.as_ref(),
+                &logger,
+            );
+        }
+    }
+
     let calls = client
         .execute(
             &request_command.request,
@@ -314,6 +341,26 @@ pub fn run_request(request_command: RunRequestCommand) -> Result<RequestResult, 
         })?;
 
     let call = calls.last().unwrap();
+
+    #[allow(clippy::unnecessary_unwrap)]
+    if allow_cookie_jar {
+        let cookie_jar = cookie_jar.or_else(|| {
+            load_cookie_jar(&CookieJarPath::CollectionFolderPath(
+                request_command.collection.path.clone(),
+            ))
+            .ok()
+        });
+
+        if cookie_jar.is_some() {
+            let cookie_jar = cookie_jar.expect("cookie jar is present");
+            let _ = update_cookie_jar(&request_command.collection, &cookie_jar, &calls).map_err(
+                |err| {
+                    logger.log_error("Could not update cookie jar after execute request!");
+                    logger.log_error(format!("Error {:?}", err));
+                },
+            );
+        }
+    }
 
     // @TODO: what if it is not utf, what if the result is just binary, then displaying it would
     // not make sense, maybe add an option that you don't want to see the actual result together
@@ -1021,4 +1068,22 @@ pub fn copy_logfile_content_to_clipboard() -> Result<(), rspc::Error> {
         Into::<rspc::Error>::into(RelynxError::LogFolderMissing)
     })?;
     copy_to_clipboard(log_content)
+}
+
+#[tauri::command]
+pub fn get_cookie_jar_command(params: GetCookieJarParams) -> Result<CookieJar, rspc::Error> {
+    dbg!(
+        load_cookie_jar(&CookieJarPath::CollectionFolderPath(params.collection.path))
+            .map_err(Into::<rspc::Error>::into)
+    )
+}
+
+#[tauri::command]
+pub fn save_cookie_jar_command(params: SaveCookieJarParams) -> Result<(), rspc::Error> {
+    let path = if let Some(ref path) = params.cookie_jar.path {
+        CookieJarPath::CookieJarFilePath(path.clone())
+    } else {
+        CookieJarPath::CollectionFolderPath(params.collection.path)
+    };
+    save_cookie_jar(path, &params.cookie_jar).map_err(Into::<rspc::Error>::into)
 }

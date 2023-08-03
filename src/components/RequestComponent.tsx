@@ -24,6 +24,7 @@ import { ResultDisplay } from "./ResultDisplay";
 import { SendRequestButton } from "./SendRequestButton";
 import { RequestBodyComp } from "./body/RequestBodyComp";
 import { QueryParams } from "./QueryParams";
+import { CookieJarComponent } from "./CookieJarComponent";
 
 interface ComponentProps {
 }
@@ -489,7 +490,7 @@ export function RequestComponent(_props: ComponentProps) {
 
           <TabPanel header="Description">
             <div className="headers-block" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-              <h2 >Description</h2>
+              <h2>Description</h2>
               <p style={{ marginTop: '20px' }}>Describe the current request</p>
               <InputTextarea style={{ marginTop: '20px' }} value={currentRequest.description}
                 onChange={(e) => updateDescription(e.target.value)}
@@ -497,6 +498,11 @@ export function RequestComponent(_props: ComponentProps) {
                 cols={30} autoResize={false} className={'resultText-area'} />
             </div>
           </TabPanel>
+
+          <TabPanel header="Cookies">
+            <CookieJarComponent collection={currentCollection} />
+          </TabPanel>
+
 
           <TabPanel header="RequestSettings">
             <RequestSettingsComponent request={currentRequest} updateRequest={updateRequest} collection={currentCollection} />

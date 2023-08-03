@@ -33,6 +33,7 @@ pub fn load_and_run(
 
     for request_model in request_models {
         let mut client = Client::new(None);
+        // @TODO: we pass no cookie jar here yet
         let calls = client
             .execute(&request_model, options, Some(environment), &logger)
             .map_err(|http_err| {

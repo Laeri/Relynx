@@ -3,6 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use cookie::{time::format_description, Expiration};
 use http_rest_file::model::{
     DataSource, DispositionField, Header as HttpRestFileHeader, HttpMethod, HttpRestFile,
     HttpRestFileExtension, HttpVersion, Multipart as HttpRestfileMultipart, PreRequestScript,
@@ -24,7 +25,7 @@ pub enum AppEnvironment {
     Production,
 }
 
-#[derive(Serialize, Deserialize, Type, Debug, Clone)]
+#[derive(Serialize, Deserialize, Type, Debug, Clone, PartialEq)]
 pub struct Collection {
     pub name: String,
     pub path: PathBuf,
@@ -49,7 +50,7 @@ impl Collection {
     }
 }
 
-#[derive(Serialize, Deserialize, Type, Debug, Clone)]
+#[derive(Serialize, Deserialize, Type, Debug, Clone, PartialEq)]
 pub enum MessageSeverity {
     #[serde(rename = "warn")]
     Info,
@@ -65,7 +66,7 @@ pub enum MessageSeverity {
 }
 
 // @TODO
-#[derive(Serialize, Deserialize, Type, Debug, Clone)]
+#[derive(Serialize, Deserialize, Type, Debug, Clone, PartialEq)]
 pub struct ImportWarning {
     pub rest_file_path: String,
     pub is_group: bool,
@@ -705,8 +706,9 @@ impl Environment {
 
 #[derive(Serialize, Deserialize, Type, Debug)]
 pub struct RunRequestCommand {
+    pub collection: Collection,
     pub request: RequestModel,
-    pub environment: Option<Environment>,
+    pub environment: Option<Environment>
 }
 
 pub type ContentType = String;
@@ -857,5 +859,56 @@ impl RunLogger {
             return;
         }
         log::debug!("{}", msg.as_ref());
+    }
+}
+
+#[derive(Serialize, Deserialize, Type, Debug, PartialEq, Clone)]
+pub struct CookieJar {
+    pub path: Option<PathBuf>,
+    pub cookies: Vec<Cookie>,
+}
+
+#[derive(Serialize, Deserialize, Type, Debug, PartialEq, Clone)]
+pub struct Cookie {
+    pub domain: String,
+    pub path: String,
+    pub name: String,
+    pub value: String,
+    pub expires: String,
+}
+
+impl<'c> From<cookie::Cookie<'c>> for Cookie {
+    fn from(value: cookie::Cookie) -> Self {
+        let binding = format_description::parse("%a, %d %b %Y %H:%M:%S GMT")
+            .expect("valid format description");
+        let format = binding.first().expect("only one format");
+        Self {
+            domain: value
+                .domain()
+                .map(|str| str.to_string())
+                .unwrap_or_default(),
+            name: value.name().to_string(),
+            value: value.value().to_string(),
+            path: value.path().map(|str| str.to_string()).unwrap_or_default(),
+            expires: value
+                .expires()
+                .map(|expiration: Expiration| {
+                    if let Expiration::DateTime(expiration_date) = expiration {
+                        expiration_date.format(format).unwrap_or_default()
+                    } else {
+                        String::new()
+                    }
+                })
+                .unwrap_or_default(),
+        }
+    }
+}
+
+impl ToString for Cookie {
+    fn to_string(&self) -> String {
+        format!(
+            "{} {} {}={} {}",
+            self.domain, self.path, self.name, self.value, self.expires
+        )
     }
 }

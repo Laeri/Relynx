@@ -1,4 +1,9 @@
 /*
+* * This file has been taken and modified from the project: https://github.com/Orange-OpenSource/hurl.
+* Changes include using our own domain model and only inlcuding needed parts if necessary
+* to match the requirements of relynx.app.
+* See the copyright below.
+
  * Hurl (https://hurl.dev)
  * Copyright (C) 2023 Orange
  *

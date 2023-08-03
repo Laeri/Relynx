@@ -1,7 +1,7 @@
 import { createClient } from '@rspc/client'
 import { TauriTransport } from '@rspc/tauri'
-import { Procedures, Workspace, Collection, AddCollectionsResult, ImportCollectionResult, LoadRequestsResult, RunRequestCommand, RequestResult, RequestModel, SaveRequestCommand, RequestTreeNode, DragAndDropResult, Environment, ValidateGroupNameResult, LicenseData } from './bindings';
-import { catchError, FError } from './common/errorhandling';
+import { Procedures, Workspace, Collection, AddCollectionsResult, ImportCollectionResult, LoadRequestsResult, RunRequestCommand, RequestResult, RequestModel, SaveRequestCommand, RequestTreeNode, DragAndDropResult, Environment, ValidateGroupNameResult, LicenseData, CookieJar } from './bindings';
+import { catchError } from './common/errorhandling';
 import { CancellationToken } from './model/error';
 
 export const api = createClient<Procedures>({
@@ -183,6 +183,14 @@ class Backend {
 
   copy_logfile_content_to_clipboard(): Promise<null> {
     return api.query(['copy_logfile_content_to_clipboard'])
+  }
+
+  get_cookie_jar(collection: Collection): Promise<CookieJar> {
+    return api.query(['get_cookie_jar', { collection: collection }])
+  }
+
+  save_cookie_jar(collection: Collection, cookie_jar: CookieJar): Promise<null> {
+    return api.mutation(['save_cookie_jar', { collection: collection, cookie_jar: cookie_jar }])
   }
 
 }

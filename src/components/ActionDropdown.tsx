@@ -5,6 +5,7 @@ import React, { useRef } from "react";
 interface ComponentProps {
   children: React.ReactNode,
   styles: any
+  className?: string
 }
 
 
@@ -29,7 +30,7 @@ export function ActionDropdown(props: ComponentProps) {
   return (
     <ActionDropdownContext.Provider value={{ closeDropdown: handleCloseDropdown }}>
       <div>
-        <Button icon={'pi pi-ellipsis-h'} className={' p-button-text'} style={{ ...(props.styles ?? {}), maxHeight: '10px' }}
+        <Button icon={'pi pi-ellipsis-h'} className={(props.className ?? '') + ' p-button-text'} style={{ ...(props.styles ?? {}), maxHeight: '10px' }}
           onClick={toggleOverlay} />
 
         <OverlayPanel ref={ref}>

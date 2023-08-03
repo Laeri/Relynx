@@ -111,6 +111,24 @@ pub enum RelynxError {
 
     #[error("Could not locate log folder")]
     LogFolderMissing,
+
+    #[error("Could not open cookie jar as there is not 'http-client.cookies' file present")]
+    NoCookieJarFileFound,
+
+    #[error("Could not open cookie jar file from path: '{0}'")]
+    LoadCookieJarError(String),
+
+    #[error("Could not save cookie jar file to path: '{0}'")]
+    SaveCookieJarError(String),
+
+    #[error("Could not save cookie jar file")]
+    SaveCookieJarErrorGeneric,
+
+    #[error("Could not update cookie jar file with new cookies")]
+    UpdateCookieJarError,
+
+    #[error("Could not use cookies from the cookie jar when sending a request")]
+    UpdateRequestWithCookieJar,
 }
 
 impl From<RelynxError> for rspc::Error {
