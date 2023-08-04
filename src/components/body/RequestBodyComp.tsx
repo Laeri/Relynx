@@ -32,26 +32,49 @@ export function RequestBodyComp(props: ComponentProps) {
 
   const [binaryFileBody, setBinaryFileBody] = useState<RequestBodyRaw>({ Raw: { data: { FromFilepath: "" } } });
 
+  const [initialized, setInitialized] = useState<boolean>(false);
+
+  useEffect(() => {
+    updateBodyType();
+    setInitialized(true);
+  }, [props.request.id]);
+
+
   const updateBodyType = () => {
+
+    console.log('BODY: ', JSON.stringify(props.request.body));
 
     if (props.request.body == "None") {
       setCurrentBodyType(BodyTypes.no_body);
       return
     }
-    // @TODO: all from file?
     if ((props.request.body as RequestBodyMultipart).Multipart !== undefined) {
       setCurrentBodyType(BodyTypes.multipart_form);
       setMultipartBody((props.request.body as RequestBodyMultipart));
       return
     }
-    // @TODO: from file?
     if ((props.request.body as RequestBodyUrlEncoded).UrlEncoded !== undefined) {
       setCurrentBodyType(BodyTypes.form_urlencoded);
       setUrlEncodedBody((props.request.body as RequestBodyUrlEncoded));
       return
     }
+
+    if (hasContentType(props.request, "application/json")) {
+      setCurrentBodyType(BodyTypes.json);
+    } else if (hasContentType(props.request, "text/plain")) {
+      setCurrentBodyType(BodyTypes.plain_text);
+    } else if (hasContentType(props.request, "text/yaml")) {
+      setCurrentBodyType(BodyTypes.yaml);
+    } else if (hasContentType(props.request, "application/xml")) {
+      setCurrentBodyType(BodyTypes.xml);
+    } else if (hasContentType(props.request, "application/octet-stream")) {
+      setCurrentBodyType(BodyTypes.binary_file);
+    } else {
+      setCurrentBodyType(BodyTypes.other);
+    }
     // these are only set if some body is present, otherwise the request will have these headers but body None
     if ((props.request.body as RequestBodyRaw).Raw !== undefined) {
+      console.log('here');
       let rawBody = (props.request.body as RequestBodyRaw);
       let isFile = (rawBody.Raw.data as DataSourceFromFilepath).FromFilepath !== undefined;
       if (isFile) {
@@ -61,25 +84,10 @@ export function RequestBodyComp(props: ComponentProps) {
         setRawType("text");
         setRawTextBody(rawBody);
       }
-      if (hasContentType(props.request, "application/json")) {
-        setCurrentBodyType(BodyTypes.json);
-      } else if (hasContentType(props.request, "text/plain")) {
-        setCurrentBodyType(BodyTypes.plain_text);
-      } else if (hasContentType(props.request, "text/yaml")) {
-        setCurrentBodyType(BodyTypes.yaml);
-      } else if (hasContentType(props.request, "application/xml")) {
-        setCurrentBodyType(BodyTypes.xml);
-      } else if (hasContentType(props.request, "application/octet-stream") !== undefined) {
-        setCurrentBodyType(BodyTypes.binary_file);
-      } else if (get_content_type(props.request) !== undefined) {
-        setCurrentBodyType(BodyTypes.other);
-      }
+
     }
   }
 
-  useEffect(() => {
-    updateBodyType();
-  }, [props.request.id]);
 
   const updateContentType = (newType: BodyType, newRequest: RequestModel) => {
     let newMimeType = toMimeType(newType);
@@ -87,11 +95,23 @@ export function RequestBodyComp(props: ComponentProps) {
     if (newMimeType) {
       let header: Header = { key: "Content-Type", value: newMimeType, active: true };
       setHeader(newRequest, header);
+
+      // if we changed to other body type we remove the previous header if it is one of the known types
+      // otherwise if we switch to the body tab it will still display json/xml body as the body type is determined by
+      // the headers
+    } else if (newType == BodyTypes.other) {
+      console.log('new');
+      console.log("current mime", toMimeType(currentBodyType));
+      if (toMimeType(currentBodyType) !== undefined) {
+        console.log("remove header");
+        newRequest.headers = newRequest.headers.filter((header: Header) => header.key.toLowerCase() !== 'content-type');
+      }
     }
   }
 
   const updateType = (newType: BodyType, isText: boolean) => {
 
+    console.log('newType: ', newType);
     let newRequest = structuredClone(props.request);
 
     updateContentType(newType, newRequest);
@@ -209,32 +229,37 @@ export function RequestBodyComp(props: ComponentProps) {
       {
         < div className="headers-block" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }
         }>
-          <h2 style={{ display: 'flex', alignItems: 'center' }}>Body <BodySelectMenu style={{ marginLeft: '20px' }} currentType={currentBodyType} setNewType={(newType: BodyType, isText: boolean) => updateType(newType, isText)} />
-          </h2>
 
-          <Divider type="solid" />
-          {
-            (TextBodyTypes.includes(currentBodyType)) &&
-            <TextBody contentType={get_content_type(props.request)} updateRawType={updateRawType} bodyFile={rawTextFileBody} bodyText={rawTextBody} rawType={rawType} updateBody={updateRawBody} />
-          }
-          {
-            (currentBodyType === BodyTypes.form_urlencoded) &&
-            <UrlEncodedBody body={urlEncodedBody} environment={props.environment} updateBody={updateBodyUrlEncoded} />
-          }
+          {initialized && <div className="fade-in-fast">
+            <h2 style={{ display: 'flex', alignItems: 'center' }}>Body <BodySelectMenu style={{ marginLeft: '20px' }} currentType={currentBodyType} setNewType={(newType: BodyType, isText: boolean) => updateType(newType, isText)} />
+            </h2>
 
-          {
-            (currentBodyType === BodyTypes.multipart_form) &&
-            <MultipartBody body={multipartBody} addPart={addMultipartPart} updateBodyMultipart={updateBodyMultipart} />
-          }
 
-          {
-            (currentBodyType === BodyTypes.binary_file) &&
-            <BinaryFileComp path={(binaryFileBody.Raw.data as DataSourceFromFilepath).FromFilepath} updatePath={updateBinaryFilePath} />
-          }
+            <Divider type="solid" />
+            {
+              (TextBodyTypes.includes(currentBodyType)) &&
+              <TextBody contentType={get_content_type(props.request)} updateRawType={updateRawType} bodyFile={rawTextFileBody} bodyText={rawTextBody} rawType={rawType} updateBody={updateRawBody} />
+            }
+            {
+              (currentBodyType === BodyTypes.form_urlencoded) &&
+              <UrlEncodedBody body={urlEncodedBody} environment={props.environment} updateBody={updateBodyUrlEncoded} />
+            }
 
-          {
-            (currentBodyType === BodyTypes.no_body) &&
-            <p style={{ marginTop: '30px' }}>No request body present</p>
+            {
+              (currentBodyType === BodyTypes.multipart_form) &&
+              <MultipartBody body={multipartBody} addPart={addMultipartPart} updateBodyMultipart={updateBodyMultipart} />
+            }
+
+            {
+              (currentBodyType === BodyTypes.binary_file) &&
+              <BinaryFileComp path={(binaryFileBody.Raw.data as DataSourceFromFilepath).FromFilepath} updatePath={updateBinaryFilePath} />
+            }
+
+            {
+              (currentBodyType === BodyTypes.no_body) &&
+              <p style={{ marginTop: '30px' }}>No request body present</p>
+            }
+          </div>
           }
         </div >
       }

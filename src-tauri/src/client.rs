@@ -597,6 +597,10 @@ impl Client {
     ) -> Result<(), HttpError> {
         let mut form = easy::Form::new();
         for part in parts {
+            if part.disposition.name.is_empty() {
+                logger.log_error("Disposition part has no name, skipping multipart part.");
+                continue;
+            }
             let contents = match part.data {
                 http_rest_file::model::DataSource::Raw(ref raw_data) => {
                     raw_data.as_bytes().to_vec()
@@ -615,7 +619,12 @@ impl Client {
             // @TODO error log
             let mut curl_part = form.part(&part.disposition.name);
             // @TODO: filename
-            curl_part.contents(&contents);
+            let filename = part.disposition.filename.as_ref();
+            if filename.is_none() || filename.unwrap().is_empty() {
+                curl_part.contents(&contents);
+            } else {
+                curl_part.buffer(filename.unwrap(), contents);
+            }
             // @TODO: set multipart boundary yourself!
 
             if !part.headers.is_empty() {
@@ -626,6 +635,8 @@ impl Client {
                 }
                 curl_part.content_header(list);
             }
+
+            //curl_part.buffer(name, data)
 
             //@TODO what about this... .buffer(filename, data.clone())
             //                    .content_type(content_type)

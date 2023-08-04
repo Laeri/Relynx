@@ -13,6 +13,7 @@ import { ImportPostmanModal } from "../components/modals/ImportPostmanModal";
 import { ImportJetbrainsHttpFolder } from "../components/modals/ImportJetbrainsHttpFolder";
 import { ErrorReportingModal } from "../components/modals/ErrorReportingModal";
 import { EditRequestNameModal } from "../components/modals/EditRequestNameModal";
+import { AddCookieHeaderModal } from "../components/modals/AddCookieHeaderModal";
 
 
 export const addCollectionToWorkspace = (newCollection: Collection) => {
@@ -163,5 +164,12 @@ export const openEditRequestNameModal = (request: RequestModel, collection: Coll
   });
   modalPromise().then(() => {
   })
-
 }
+
+export const openAddCookieModal = (): Promise<[key: string, value: string] | undefined> => {
+  const modalPromise = create(({ onResolve, onReject, isOpen }) => {
+    return <AddCookieHeaderModal isOpen={isOpen} onResolve={onResolve} onReject={() => onReject()} />
+  });
+  return modalPromise()
+}
+

@@ -77,8 +77,6 @@ export function EditRequestNameModal(props: ComponentProps) {
               <span className={"invalid mt-2"} style={{ textAlign: 'left' }}>{nameError}</span>
             }
 
-
-
             <div style={{ marginTop: '10px', minHeight: '50px' }}>
               {
                 (sanitizedName !== undefined && sanitizedName !== newRequestName) &&

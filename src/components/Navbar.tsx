@@ -32,7 +32,7 @@ export function Navbar() {
   }
 
   const onBackClicked = () => {
-    if (location.pathname == routes.environment) {
+    if (location.pathname == routes.environment || location.pathname == routes.cookieJar) {
       navigate(-1);
     } else {
       navigate(-2);

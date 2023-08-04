@@ -8,12 +8,14 @@ import { ActionDropdown } from "./ActionDropdown";
 import { CopyToClipboard } from "./CopyToClipboard";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { RelynxState, useRequestModelStore } from "../stores/requestStore";
 
 interface ComponentProps {
-  collection: Collection
 }
 
-export function CookieJarComponent(props: ComponentProps) {
+export function CookieJarComponent(_props: ComponentProps) {
+
+  const collection = useRequestModelStore((state: RelynxState) => state.currentCollection) as Collection;
 
   const [cookieJar, setCookieJar] = useState<CookieJar>({
     path: null,
@@ -21,11 +23,13 @@ export function CookieJarComponent(props: ComponentProps) {
   });
 
   useEffect(() => {
-    backend.get_cookie_jar(props.collection).then((cookieJar: CookieJar) => {
-      console.log('got cookie jar: ', cookieJar);
+    if (!collection) {
+      return
+    }
+    backend.get_cookie_jar(collection).then((cookieJar: CookieJar) => {
       setCookieJar(cookieJar);
     }).catch(catchError);
-  }, []);
+  }, [collection?.path]);
 
   const updateCookieDomain = (index: number, newDomain: string) => {
     updateCookieJarCookie(index, { domain: newDomain });
@@ -41,11 +45,6 @@ export function CookieJarComponent(props: ComponentProps) {
 
   const updateCookieValue = (index: number, newValue: string) => {
     updateCookieJarCookie(index, { value: newValue });
-  }
-
-  const updateCookieExpires = (index: number, newExpires: string) => {
-    console.log('new expires: ', newExpires);
-    updateCookieJarCookie(index, { expires: newExpires });
   }
 
   const addCookie = () => {
@@ -78,7 +77,7 @@ export function CookieJarComponent(props: ComponentProps) {
   }
 
   const updateCookieJar = (newCookieJar: CookieJar) => {
-    backend.save_cookie_jar(props.collection, newCookieJar).then(() => {
+    backend.save_cookie_jar(collection, newCookieJar).then(() => {
       setCookieJar(newCookieJar);
     }).catch(catchError);
   }
@@ -104,18 +103,37 @@ export function CookieJarComponent(props: ComponentProps) {
   }
 
   return (
-    <div className="headers-block" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-      <h2 style={{ marginBottom: '20px' }}>Cookie Jar</h2>
+    <div className={'fade-in-fast'}
+      style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '100%' }}>
+
+      <h1 style={{ marginTop: '20px', marginBottom: '50px' }}>Cookie Jar</h1>
+
       {
         cookieJar.path !== null &&
-        <div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
           <label>Cookie Jar Path: </label>
-          <div style={{ display: 'flex', alignItems: 'center', marginLeft: '10px' }}>
-            <InputText disabled={true} value={cookieJar.path} />
+          <div style={{ display: 'flex', alignItems: 'center', marginTop: '5px' }}>
+            <InputText tooltip={cookieJar.path} value={cookieJar.path} style={{ width: '100%', direction: 'rtl' }} />
             <CopyToClipboard value={cookieJar.path} tooltip={"Copy path to cookie jar"} />
           </div>
         </div>
       }
+      <p style={{ marginTop: '20px', marginBottom: '20px', textAlign: 'left' }}>
+        The cookie jar is a file that contains cookies that will be sent with a request if the domain and path matches.
+        All cookies returned by a response that should be set will also be saved in this cookie jar folder.
+        <br />
+        <br />
+        At most 300 cookies can be saved within this file.
+        <br />
+        <br />
+        If you do not want to send cookies with a request you can set the request settings to not allow the cookie jar.
+        <br />
+        <br />
+        In case you want to specify cookies manually for a request you can just set the `Cookie` header and pass key value pairs like this:
+        <br />
+        <br />
+        `Cookie: keyone=valueone; keytwo=valuetwo`.
+      </p>
       <div style={{ marginTop: '20px', width: '100%' }}>
         {
           cookieJar.cookies.length === 0 &&

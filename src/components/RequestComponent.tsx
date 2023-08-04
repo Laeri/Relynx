@@ -26,6 +26,7 @@ import { RequestBodyComp } from "./body/RequestBodyComp";
 import { QueryParams } from "./QueryParams";
 import { CookieJarComponent } from "./CookieJarComponent";
 import { openEditRequestNameModal } from "../common/modal";
+import { Headers } from "./Headers";
 
 interface ComponentProps {
 }
@@ -66,10 +67,6 @@ export function RequestComponent(_props: ComponentProps) {
   const [resultHistory, setResultHistory] = useState<RequestResult[]>([]);
 
   const [url, setUrl] = useState<string>();
-
-
-  useEffect(() => {
-  }, [])
 
   useEffect(() => {
     setIsSendingRequest(false);
@@ -241,15 +238,6 @@ export function RequestComponent(_props: ComponentProps) {
   }
 
 
-  function updateRequestHeader(oldHeader: Header, newHeader: Header) {
-    let newRequestHeaders = [...currentRequest.headers];
-    let index = newRequestHeaders.indexOf(oldHeader);
-    newRequestHeaders[index] = newHeader;
-
-    let newRequestModel = updatedRequestModel(currentRequest, { headers: newRequestHeaders });
-    updateRequest(newRequestModel);
-  }
-
   function addQueryParam() {
     // let newRequestModel: RequestModel = updatedRequestModel(currentRequest, {
     //   query_params: [...currentRequest.query_params, newQueryParam(undefined)]
@@ -269,37 +257,7 @@ export function RequestComponent(_props: ComponentProps) {
     updateRequest(newRequestModel);
   }
 
-  function addHeader() {
-    let newRequestModel: RequestModel = updatedRequestModel(
-      currentRequest, {
-      headers: [...currentRequest.headers, newRequestHeader(undefined)]
-    });
-    updateRequest(newRequestModel);
-  }
 
-  function removeHeader(requestHeader: Header) {
-    let newRequestHeaders = currentRequest.headers.filter((current: Header) => current !== requestHeader)
-    let newRequestModel: RequestModel = updatedRequestModel(
-      currentRequest, {
-      headers: newRequestHeaders
-    });
-    updateRequest(newRequestModel);
-  }
-
-  function updateHeaderKey(requestHeader: Header, key: string) {
-    let header = newRequestHeader({ ...requestHeader, key: key });
-    updateRequestHeader(requestHeader, header);
-  }
-
-  function updateHeaderValue(requestHeader: Header, value: string) {
-    let header = newRequestHeader({ ...requestHeader, value: value });
-    updateRequestHeader(requestHeader, header);
-  }
-
-  function updateHeaderActive(requestHeader: Header, active: boolean) {
-    let header = newRequestHeader({ ...requestHeader, active: active });
-    updateRequestHeader(requestHeader, header);
-  }
 
   const requestTypeOptions: { name: string, value: string }[] = Object.entries(HTTP_METHODS).map(([key, value]) => {
     return { name: key, value: value as string };
@@ -418,7 +376,6 @@ export function RequestComponent(_props: ComponentProps) {
             <RequestImportMessages absolutePath={currentRequest.rest_file_path} messages={importWarnings} collection={currentCollection} />
           </AccordionTab>
         </Accordion>
-
       }
       <div className="requestTabView"
         style={{ marginTop: '50px', width: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -439,29 +396,7 @@ export function RequestComponent(_props: ComponentProps) {
           </TabPanel>
 
           <TabPanel header="Headers">
-            <div className="headers-block"
-              style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-              <h2 style={{ marginBottom: '20px' }}>Headers</h2>
-              {
-                currentRequest.headers?.map((header: Header, index: number) => {
-                  return <KeyValueRow key={index} keyProperty={header.key}
-                    valueProperty={header.value}
-                    active={header.active}
-                    keyLabel={"Header Name"} valueLabel={"Header Value"}
-                    updateKey={(key: string) => updateHeaderKey(header, key)}
-                    updateValue={(value: string) => updateHeaderValue(header, value)}
-                    updateActive={(active: boolean) => updateHeaderActive(header, active)}
-                    remove={() => removeHeader(header)}
-                    style={{ marginTop: '20px' }}
-                    currentEnvironment={currentEnvironment}
-                    withHeader={index == 0 ? { keyHeader: 'Name', valueHeader: "Value" } : undefined}
-                  />
-                })
-              }
-              <Button icon={'pi pi-plus'} label={"Header"} onClick={addHeader}
-                className={"p-button-sm"}
-                style={{ margin: '40px 0px' }} />
-            </div>
+            <Headers updateRequest={updateRequest} request={currentRequest} />
           </TabPanel>
 
           <TabPanel header={"Body"}>
@@ -479,19 +414,12 @@ export function RequestComponent(_props: ComponentProps) {
             </div>
           </TabPanel>
 
-          <TabPanel header="Cookies">
-            <CookieJarComponent collection={currentCollection} />
-          </TabPanel>
-
-
           <TabPanel header="RequestSettings">
             <RequestSettingsComponent request={currentRequest} updateRequest={updateRequest} collection={currentCollection} />
           </TabPanel>
 
         </TabView>
       </div>
-
-      {/*TODO: only show body if request type allows body???*/}
     </div>
   )
 }

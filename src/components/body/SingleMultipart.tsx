@@ -105,6 +105,18 @@ export function SingleMultipart(props: ComponentProps) {
     props.updatePart(newPart);
   }
 
+  const updateDispositionName = (newName: string) => {
+    let newPart = structuredClone(props.part);
+    newPart.disposition.name = newName;
+    props.updatePart(newPart);
+  }
+
+  const updateDispositionFilename = (newFilename: string) => {
+    let newPart = structuredClone(props.part);
+    newPart.disposition.filename = newFilename;
+    props.updatePart(newPart);
+  }
+
   return (
     <Accordion style={{ width: '100%', ...(props.style ?? {}) }} activeIndex={0}>
       <AccordionTab header={"Multipart"} tabIndex={0}>
@@ -112,11 +124,11 @@ export function SingleMultipart(props: ComponentProps) {
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
           <div style={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'flex-start' }}>
             <label style={{ flexBasis: '15%', textAlign: 'start' }}>Name: </label>
-            <InputText style={{ marginLeft: '20px' }} value={props.part.disposition.name} />
+            <InputText style={{ marginLeft: '20px' }} value={props.part.disposition.name} onChange={(event) => updateDispositionName(event.target.value)} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'flex-start', marginTop: '20px' }}>
             <label style={{ flexBasis: '15%', textAlign: 'start' }}>Filename: </label>
-            <InputText style={{ marginLeft: '20px' }} value={props.part.disposition.filename ?? ""} />
+            <InputText style={{ marginLeft: '20px' }} value={props.part.disposition.filename ?? ""} onChange={(event) => updateDispositionFilename(event.target.value)} />
           </div>
           {/* <div style={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'flex-start', marginTop: '20px'}}> */}
           {/*   <label style={{flexBasis: '15%', textAlign: 'start'}}>Filename*: </label> */}

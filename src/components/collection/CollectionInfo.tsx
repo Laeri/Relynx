@@ -5,7 +5,7 @@ import { Dropdown } from "primereact/dropdown";
 import { useContext } from "react";
 import { useRequestModelStore } from "../../stores/requestStore";
 import { catchError } from "../../common/errorhandling";
-import { ToastContext } from "../../App";
+import { routes, ToastContext } from "../../App";
 import { useLocation, useNavigate } from "react-router";
 import { Collection, Environment } from '../../bindings';
 import { environmentsToOptions, envDropdownStyle } from "../../model/environment";
@@ -22,20 +22,31 @@ export function CollectionInfo(props: ComponentProps) {
   const environments = useRequestModelStore((state) => state.environments);
   const hasEnvironments = environments.length > 0;
   const workspace = useRequestModelStore((state) => state.workspace);
-  const toast = useContext(ToastContext);
   const navigate = useNavigate();
   const location = useLocation();
 
   const editEnvironments = () => {
     // if we are already in the environment view, then do not push state again
-    if (location.pathname == '/collection/environment') {
+    if (location.pathname == routes.environment) {
       return;
     }
     let options = { replace: true };
-    if (location.pathname == '/collection') {
+    if (location.pathname == routes.collection) {
       options.replace = false;
     }
-    navigate('/collection/environment', options);
+    navigate(routes.environment, options);
+  }
+
+  const navigateToCookieJar = () => {
+    // if we are already in the cookieJar view, then do not push state again
+    if (location.pathname == routes.cookieJar) {
+      return;
+    }
+    let options = { replace: true };
+    if (location.pathname == routes.cookieJar) {
+      options.replace = false;
+    }
+    navigate(routes.cookieJar, options);
   }
 
   const selectEnvironment = (selected: string) => {
@@ -92,8 +103,10 @@ export function CollectionInfo(props: ComponentProps) {
           </div>
         </div>
 
+        <Button onClick={navigateToCookieJar} style={{ marginTop: '10px' }} raised={true} text={true} icon={"pi pi-circle-off"} label="Cookie Jar" />
 
-        <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '100%' }}>
+
+        <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '100%' }}>
           {props.displayPathTitle && <h3>Environment</h3>}
 
           {

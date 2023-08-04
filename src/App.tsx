@@ -19,6 +19,7 @@ import { Button } from 'primereact/button';
 import { openErrorReportingModal } from './common/modal';
 import { catchError } from './common/errorhandling';
 import { getVersion } from '@tauri-apps/api/app';
+import { CookieJarComponent } from './components/CookieJarComponent';
 
 export interface ToastContext {
   toast: Ref<any>,
@@ -40,6 +41,7 @@ export const routes = {
   collection: "/collection",
   request: "/collection/request",
   environment: "/collection/environment",
+  cookieJar: "/collection/cookieJar"
 }
 
 
@@ -142,8 +144,9 @@ function App() {
             <Routes>
               <Route element={<OverviewComponent />} path={routes.root} />
               <Route element={<CollectionOverviewComponent />} path={routes.collection} />
-              <Route element={<RequestComponent key={1} />} path={routes.request} />
+              <Route element={<RequestComponent />} path={routes.request} />
               <Route element={<EnvironmentComponent />} path={routes.environment} />
+              <Route element={<CookieJarComponent />} path={routes.cookieJar} />
             </Routes>
           </main>
           {/*Container element for toast rendering: https://primereact.org/toast/*/}
