@@ -1,7 +1,7 @@
 import { create } from "react-modal-promise";
 import { AddExistingCollectionsModal } from "../components/modals/AddExistingCollectionsModal";
 import { useRequestModelStore } from "../stores/requestStore";
-import { Workspace, Collection, AddCollectionsResult, ImportCollectionResult } from "../bindings";
+import { Workspace, Collection, AddCollectionsResult, ImportCollectionResult, RequestModel } from "../bindings";
 import { newWorkspace, newCollection } from "../model/model";
 import { backend } from "../rpc";
 import { catchError } from "./errorhandling";
@@ -12,6 +12,7 @@ import { ImportResultModal } from "../components/modals/ImportResultModal";
 import { ImportPostmanModal } from "../components/modals/ImportPostmanModal";
 import { ImportJetbrainsHttpFolder } from "../components/modals/ImportJetbrainsHttpFolder";
 import { ErrorReportingModal } from "../components/modals/ErrorReportingModal";
+import { EditRequestNameModal } from "../components/modals/EditRequestNameModal";
 
 
 export const addCollectionToWorkspace = (newCollection: Collection) => {
@@ -150,6 +151,15 @@ export const openImportCollectionModal = (workspace: Workspace) => {
 export const openErrorReportingModal = (title: string, detail: string) => {
   const modalPromise = create(({ onResolve, onReject, isOpen }) => {
     return <ErrorReportingModal title={title} detail={detail} isOpen={isOpen} onResolve={onResolve} onReject={() => onReject()} />
+  });
+  modalPromise().then(() => {
+  })
+
+}
+
+export const openEditRequestNameModal = (request: RequestModel, collection: Collection, updateRequest: (newName: string) => Promise<void>) => {
+  const modalPromise = create(({ onResolve, onReject, isOpen }) => {
+    return <EditRequestNameModal collection={collection} request={request} updateRequest={updateRequest} isOpen={isOpen} onResolve={onResolve} onReject={() => onReject()} />
   });
   modalPromise().then(() => {
   })

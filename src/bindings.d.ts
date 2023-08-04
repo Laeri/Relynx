@@ -45,15 +45,13 @@ export type LoadRequestsResult = { request_tree: RequestTree; errs: ParseErrorMs
 
 export type Header = { key: string; value: string; active: boolean }
 
+export type DeleteNodeParams = { collection: Collection; node: RequestTreeNode; file_node: RequestTreeNode | null }
+
 export type Environment = { name: string; variables: EnvironmentVariable[]; secrets: EnvironmentSecret[] }
 
 export type Workspace = { collections: Collection[] }
 
 export type ImportWarning = { rest_file_path: string; is_group: boolean; message: string | null; severity: MessageSeverity | null }
-
-export type DeleteNodeParams = { collection: Collection; node: RequestTreeNode; file_node: RequestTreeNode | null }
-
-export type RenameGroupParams = { collection_path: string; old_path: string; new_name: string }
 
 export type HttpVersion = { major: number; minor: number }
 
@@ -65,15 +63,23 @@ export type AddCollectionsResult = { workspace: Workspace; num_imported: number;
 
 export type AppEnvironment = "Development" | "Production"
 
-export type SaveEnvironmentsParams = { collection_path: string; environments: Environment[] }
+export type ChooseFileRelativeToParams = { base_path: string }
 
-export type ValidateGroupNameResult = { sanitized_name: string; new_path: string; path_exists_already: boolean }
+export type ValidateGroupNameParams = { old_path: string; new_name: string }
+
+export type RenameGroupParams = { collection_path: string; old_path: string; new_name: string }
+
+export type ParseErrorMsg = { filepath: string; filename: string; msg: string }
+
+export type SaveEnvironmentsParams = { collection_path: string; environments: Environment[] }
 
 export type CookieJar = { path: string | null; cookies: Cookie[] }
 
 export type RunRequestCommand = { collection: Collection; request: RequestModel; environment: Environment | null }
 
 export type GetCookieJarParams = { collection: Collection }
+
+export type AddGroupNodeParams = { collection: Collection; parent: RequestTreeNode; group_name: string }
 
 export type RequestTree = { root: RequestTreeNode }
 
@@ -82,8 +88,6 @@ export type EnvironmentVariable = { name: string; initial_value: string; current
 export type Cookie = { domain: string; path: string; name: string; value: string; expires: string }
 
 export type LicenseData = { license_key?: string | null; license_signature?: string | null; license_start?: string | null }
-
-export type ChooseFileRelativeToParams = { base_path: string }
 
 export type PreRequestScript = { FromFilepath: string } | { Script: string }
 
@@ -97,15 +101,11 @@ export type ImportPostmanCommandParams = { workspace: Workspace; import_postman_
 
 export type AddExistingCollectionsParams = { path: string; workspace: Workspace }
 
-export type ParseErrorMsg = { filepath: string; filename: string; msg: string }
+export type ValidateGroupNameResult = { sanitized_name: string; new_path: string; path_exists_already: boolean }
 
 export type DragAndDropResult = { new_drop_node: RequestTreeNode; remove_drag_node_parent: boolean }
 
-export type AddRequestNodeParams = { collection: Collection; parent: RequestTreeNode; request_name: string; requests_in_same_file: RequestModel[] }
-
 export type ImportCollectionResult = { collection: Collection }
-
-export type ValidateGroupNameParams = { old_path: string; new_name: string }
 
 export type SaveCookieJarParams = { cookie_jar: CookieJar; collection: Collection }
 
@@ -114,8 +114,6 @@ export type RequestModel = { id: string; name: string; description: string; meth
 export type Collection = { name: string; path: string; current_env_name: string; description: string; import_warnings: ImportWarning[]; path_exists?: boolean }
 
 export type RequestSettings = { no_redirect: boolean | null; no_log: boolean | null; no_cookie_jar: boolean | null }
-
-export type AddGroupNodeParams = { collection: Collection; parent: RequestTreeNode; group_name: string }
 
 export type ResponseHandler = { FromFilepath: string } | { Script: string }
 
@@ -134,6 +132,8 @@ export type RequestBody = "None" | { Multipart: { boundary: string; parts: Multi
 export type RequestTreeNode = { id: string; name: string; request: RequestModel | null; children: RequestTreeNode[]; filepath: string; is_file_group: boolean }
 
 export type Replaced<T> = { value: T; is_replaced: boolean }
+
+export type AddRequestNodeParams = { collection: Collection; parent: RequestTreeNode; request_name: string; requests_in_same_file: RequestModel[] }
 
 export type SaveRequestCommand = { requests: RequestModel[]; collection: Collection; old_name: string }
 

@@ -3,7 +3,7 @@ use std::{path::PathBuf, str::FromStr};
 use crate::{
     client::client_model::Call,
     error::RelynxError,
-    model::{Collection, Cookie, CookieJar, Environment, RequestModel, RunLogger},
+    model::{Collection, Cookie, CookieJar, Environment, RequestModel, RunLogger}, import::RELYNX_IGNORE_FILE,
 };
 use http_rest_file::parser::Uri;
 use serde::{Deserialize, Serialize};
@@ -127,6 +127,12 @@ pub fn save_cookie_jar(
             log::error!("Io Error: {:?}", err);
             RelynxError::SaveCookieJarErrorGeneric
         })?;
+        // also create ignore file
+        let ignore_file = path.join(RELYNX_IGNORE_FILE);
+        let _ = std::fs::write(ignore_file, "").map_err(|err| {
+            log::error!("Could not create ignore file in new cookie jar folder");
+            log::error!("Error: {:?}", err);
+        });
     }
 
     let cookie_strings: Vec<String> = cookie_jar

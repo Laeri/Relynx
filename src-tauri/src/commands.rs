@@ -422,7 +422,8 @@ pub fn save_request(command: SaveRequestCommand) -> Result<PathBuf, rspc::Error>
         requests,
         collection,
         old_name,
-    } = command;
+    } = dbg!(command);
+    log::debug!("SAVE_REQUEST");
 
     if requests.is_empty() {
         log::error!("Tried to save empty request list");
@@ -451,10 +452,12 @@ pub fn save_request(command: SaveRequestCommand) -> Result<PathBuf, rspc::Error>
 
         // if the new path exists already keep the old one
         if new_path.exists() {
-            requests[0].rest_file_path.clone()
-        } else {
-            new_path
+            return Err(RelynxError::RequestFileAlreadyExists(
+                new_path.to_string_lossy().to_string(),
+            )
+            .into());
         }
+        new_path
     } else {
         requests[0].rest_file_path.clone()
     };
@@ -499,7 +502,7 @@ pub fn save_request(command: SaveRequestCommand) -> Result<PathBuf, rspc::Error>
         })?;
     }
 
-    Ok(file_path)
+    Ok(dbg!(file_path))
 }
 
 #[tauri::command]

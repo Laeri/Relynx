@@ -25,6 +25,7 @@ import { SendRequestButton } from "./SendRequestButton";
 import { RequestBodyComp } from "./body/RequestBodyComp";
 import { QueryParams } from "./QueryParams";
 import { CookieJarComponent } from "./CookieJarComponent";
+import { openEditRequestNameModal } from "../common/modal";
 
 interface ComponentProps {
 }
@@ -54,10 +55,6 @@ export function RequestComponent(_props: ComponentProps) {
 
   const [isSendingRequest, setIsSendingRequest] = useState<boolean>(false);
 
-  const [nameError, setNameError] = useState<string | undefined>(undefined);
-
-  const [tmpRequestName, setTmpRequestName] = useState<string>('');
-
   const [importWarnings, setImportWarnings] = useState<ImportWarning[]>([]);
 
   const [customRequestType, setCustomRequestType] = useState<string>("CUSTOM");
@@ -69,6 +66,7 @@ export function RequestComponent(_props: ComponentProps) {
   const [resultHistory, setResultHistory] = useState<RequestResult[]>([]);
 
   const [url, setUrl] = useState<string>();
+
 
   useEffect(() => {
   }, [])
@@ -82,7 +80,6 @@ export function RequestComponent(_props: ComponentProps) {
     if (!currentRequest) {
       return
     }
-    setTmpRequestName(currentRequest.name);
 
     let importWarnings: ImportWarning[] = (currentCollection as Collection).import_warnings.filter((import_warning: ImportWarning) => {
       return import_warning.rest_file_path === currentRequest.rest_file_path;
@@ -96,19 +93,19 @@ export function RequestComponent(_props: ComponentProps) {
 
   }, [currentRequest?.id]);
 
+
   // send request data to backend and perform libcurl request
   function doRequest() {
-    // TODO: validate model
     let backendRequest: RunRequestCommand = {
       request: currentRequest,
-      environment: null  //@TODO: check
+      collection: currentCollection,
+      environment: null
     }
 
     // filter out variables with duplicated key names (keep the first one)
     if (currentEnvironment) {
       let backendEnvironment = structuredClone(currentEnvironment);
 
-      // @TODO: check
       let presentVarNames: { [name: string]: boolean } = {};
       backendEnvironment.variables = backendEnvironment.variables.filter((variable: EnvironmentVariable) => {
         if (presentVarNames[variable.name]) {
@@ -159,9 +156,19 @@ export function RequestComponent(_props: ComponentProps) {
     });
   }
 
-  function updateRequest(newRequest: RequestModel) {
+  function editRequestName() {
+    openEditRequestNameModal(currentRequest, currentCollection, (newName: string) => {
+      console.log('h1');
+      let newRequest = updatedRequestModel(currentRequest, { name: newName });
+      console.log('h2');
+      return updateRequest(newRequest);
+    });
+  }
+
+  function updateRequest(newRequest: RequestModel): Promise<void> {
+    console.log('h3');
     if (!currentCollection || !currentRequest) {
-      return
+      return Promise.resolve();
     }
     let allRequests: RequestModel[] = [];
     if (requestTree) {
@@ -182,37 +189,15 @@ export function RequestComponent(_props: ComponentProps) {
     });
 
     setUrl(newRequest.url);
-    backend.saveRequest(requestsInSameFile, currentCollection, currentRequest.name).then(() => {
-      storeUpdateRequestAndTree(newRequest)
-    }).catch(catchError);
-
-  }
-
-  function updateRequestName(name: string) {
-    if (!currentRequest) {
-      return
-    }
-    let newRequest = updatedRequestModel(currentRequest, { name: name });
-    setTmpRequestName(name);
-    let valid = validateRequestName(name);
-    if (valid) {
-      updateRequest(newRequest);
-    }
-  }
-
-  function validateRequestName(name: string): boolean {
-    if (name === '') {
-      setNameError("The name cannot be empty");
-      return false;
-    }
-
-    let requests: RequestModel[] = [] // @TODO getRequestsInSameGroup(currentRequest.Id, requestTree)
-    if (requests.map((request: RequestModel) => request.name).includes(name)) {
-      setNameError('There exists already a request with the same name in this group')
-      return false;
-    }
-    setNameError(undefined);
-    return true;
+    console.log('before call');
+    return new Promise<void>((resolve: any, _reject: any) => {
+      backend.saveRequest(requestsInSameFile, currentCollection, currentRequest.name).then((newPath: string) => {
+        newRequest.rest_file_path = newPath;
+        console.log('got reslut from backend a ok');
+        storeUpdateRequestAndTree(newRequest)
+        resolve();
+      }).catch(catchError);
+    });
   }
 
   function updateUrl(url: string) {
@@ -385,14 +370,9 @@ export function RequestComponent(_props: ComponentProps) {
         marginTop: '50px',
         marginBottom: '20px'
       }}>
-        <div style={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
-          <InputText style={{ maxWidth: '500px' }} value={tmpRequestName}
-            onChange={(e) => updateRequestName(e.target.value)}
-            placeholder={"Name"} />
-          {nameError !== '' &&
-            <span className={"invalid mt-2"} style={{ textAlign: 'left' }}>{nameError}</span>
-
-          }
+        <div style={{ width: '100%', display: 'flex', alignItems: 'center' }}>
+          <h2>{currentRequest.name}</h2>
+          <Button className="ml-2" size="small" text={true} tooltip="Edit Name" icon={"pi pi-pencil"} onClick={editRequestName} />
         </div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'row', marginTop: '30px', maxWidth: '100%', width: '100%' }}>
