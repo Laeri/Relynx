@@ -138,14 +138,14 @@ pub fn add_existing_collections(
     let mut configs: Vec<CollectionConfig> = Vec::new();
     let mut collections: Vec<Collection> = Vec::new();
 
-    for config_path in collection_config_files.iter() {
+    for config_path in dbg!(collection_config_files).iter() {
         let content = std::fs::read_to_string(config_path);
         if content.is_err() {
             errored_paths.push(config_path.clone());
             continue;
         }
         let content = content.unwrap();
-        let deserialized = serde_json::from_str::<CollectionConfig>(&content);
+        let deserialized = dbg!(serde_json::from_str::<CollectionConfig>(&content));
         if let Ok(config) = deserialized {
             let path_buf = config_path
                 .parent()
@@ -195,6 +195,8 @@ pub fn add_existing_collections(
 
     let mut num_imported = collections.len() as u32;
 
+    let collection_names: Vec<String> = collections.iter().map(|col| col.name.clone()).collect();
+
     // @TODO check that none are already within the workspace!
     workspace.collections.append(&mut collections);
 
@@ -208,8 +210,9 @@ pub fn add_existing_collections(
 
     Ok(AddCollectionsResult {
         workspace,
-        num_imported, // @TODO error?
+        num_imported,
         errored_collections: errored_paths,
+        collection_names,
     })
 }
 
@@ -1008,21 +1011,23 @@ pub fn choose_file_relative_to(
         Some(params.base_path.as_path())
     } else {
         params.base_path.parent().to_owned()
-    };
-    let chosen_file = select_file(base_path_folder)?;
+    }
+    .unwrap();
+    let chosen_file = select_file(Some(&base_path_folder))?;
     // nothing chosen, cancelled
     if chosen_file.is_none() {
         return Ok(None);
     }
     let chosen_file = chosen_file.unwrap();
 
-    if let Some(relative_path) = diff_paths(&chosen_file, &params.base_path) {
+    if let Some(relative_path) = diff_paths(&chosen_file, &base_path_folder) {
         Ok(Some(relative_path))
     } else {
         log::error!(
-            "Could not create relative file paths for: '{}', and '{}",
+            "Could not create relative file paths for chosen_file: '{}', params.base_path: '{}', basepath_folder: '{}'",
             chosen_file.display(),
-            params.base_path.display()
+            params.base_path.display(),
+            base_path_folder.display()
         );
         return Err(RelynxError::RelativePathChoiceError(
             chosen_file.to_string_lossy().to_string(),

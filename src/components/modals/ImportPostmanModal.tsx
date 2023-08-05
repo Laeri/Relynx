@@ -1,10 +1,8 @@
 import { Dialog } from "primereact/dialog";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
-import { useContext, useState } from "react";
+import { useState } from "react";
 import { backend } from "../../rpc";
-import { ToastContext } from "../../App";
-import { catchError } from "../../common/errorhandling";
 import { Message } from "primereact/message";
 import { ScrollPanel } from 'primereact/scrollpanel';
 
@@ -19,8 +17,6 @@ export function ImportPostmanModal(props: ComponentProps) {
   const [collectionName, _setCollectionName] = useState<string>("");
   const [collectionPath, setCollectionPath] = useState<string>("");
   const [importCollectionFilepath, setImportCollectionFilepath] = useState<string>("");
-
-  const toast = useContext(ToastContext);
 
   const importCollectionFilePicker = () => {
     backend.selectFile((result: string) => {

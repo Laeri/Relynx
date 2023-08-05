@@ -65,8 +65,7 @@ class Backend {
   }
 
   importPostmanCollection(workspace: Workspace, import_postman_path: string, import_result_path: string): Promise<ImportCollectionResult> {
-    let result = api.query(['import_postman_collection', { workspace, import_postman_path, import_result_path }]);
-    return result;
+    return api.query(['import_postman_collection', { workspace, import_postman_path, import_result_path }]);
   }
 
   importJetbrainsFolder(workspace: Workspace, import_jetbrains_folder: string, collection_name: string): Promise<Workspace> {

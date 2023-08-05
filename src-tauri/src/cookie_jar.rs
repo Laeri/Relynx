@@ -3,7 +3,8 @@ use std::{path::PathBuf, str::FromStr};
 use crate::{
     client::client_model::Call,
     error::RelynxError,
-    model::{Collection, Cookie, CookieJar, Environment, RequestModel, RunLogger}, import::RELYNX_IGNORE_FILE,
+    import::RELYNX_IGNORE_FILE,
+    model::{Collection, Cookie, CookieJar, Environment, RequestModel, RunLogger},
 };
 use http_rest_file::parser::Uri;
 use serde::{Deserialize, Serialize};
@@ -166,10 +167,7 @@ pub fn parse_cookie_str(str: &str) -> Result<Cookie, ()> {
         })
         .flatten()
         .ok_or(())?;
-    let expires: String = parts
-        .map(str::to_string)
-        .collect::<Vec<String>>()
-        .join(" ");
+    let expires: String = parts.map(str::to_string).collect::<Vec<String>>().join(" ");
     if expires.is_empty() {
         return Err(());
     }
@@ -206,8 +204,9 @@ pub fn save_cookies_to_jar(
         .path
         .clone()
         .unwrap_or_else(|| find_idea_cookie_jar_path(&collection.path));
-    save_cookie_jar(CookieJarPath::CookieJarFilePath(path), &cookie_jar).map_err(|_err| {
+    save_cookie_jar(CookieJarPath::CookieJarFilePath(path), &cookie_jar).map_err(|err| {
         log::error!("Could not update new cookies to cookie jar in 'save cookies to jar'");
+        log::error!("Error: {:?}", err);
         RelynxError::UpdateCookieJarError
     })?;
 

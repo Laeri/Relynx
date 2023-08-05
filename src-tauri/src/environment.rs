@@ -272,8 +272,9 @@ fn load_env_structure(env_path: &PathBuf) -> Result<EnvFileStructure, RelynxErro
         return Err(RelynxError::LoadEnvironmentError);
     }
     let env_file_content = env_file_content.unwrap();
-    let env_structure = serde_json::from_str::<EnvFileStructure>(&env_file_content).map_err(|_err| {
-                log::error!("Error in load_env_structure deserialize, could not load environment file at path: '{}', it seems to be malformed", env_path.display());
+    let env_structure = serde_json::from_str::<EnvFileStructure>(&env_file_content).map_err(|err| {
+        log::error!("Error in load_env_structure deserialize, could not load environment file at path: '{}', it seems to be malformed", env_path.display());
+        log::error!("Serde Error: {:?}", err);
         RelynxError::LoadEnvironmentError
     })?;
 

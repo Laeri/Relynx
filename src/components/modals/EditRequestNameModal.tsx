@@ -22,9 +22,7 @@ export function EditRequestNameModal(props: ComponentProps) {
   const [nameError, setNameError] = useState<string | undefined>();
 
   const renameRequest = () => {
-    console.log('start rename')
     props.updateRequest(newRequestName).then(() => {
-      console.log('then RENAMED');
       props.onResolve();
     })
   }

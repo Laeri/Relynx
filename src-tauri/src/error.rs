@@ -101,8 +101,10 @@ pub enum RelynxError {
 
     #[error("Import for postman collection version v1.0.0 is not supported. Try the import with a collection that uses the v2.1.0 json format.")]
     TriedPostmanImportV1_0_0,
+
     #[error("Import for postman collection version v2.0.0 is not supported. Try the import with a collection that uses the v2.1.0 json format.")]
     TriedPostmanImportV2_0_0,
+
     #[error("The Postman collection has an invalid format. Could not import collection.")]
     InvalidPostmanCollection,
 

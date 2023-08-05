@@ -2,10 +2,9 @@ import { InputText } from "primereact/inputtext";
 import { Button } from "primereact/button";
 import { backend } from '../../rpc';
 import { Dropdown } from "primereact/dropdown";
-import { useContext } from "react";
 import { useRequestModelStore } from "../../stores/requestStore";
 import { catchError } from "../../common/errorhandling";
-import { routes, ToastContext } from "../../App";
+import { routes } from "../../App";
 import { useLocation, useNavigate } from "react-router";
 import { Collection, Environment } from '../../bindings';
 import { environmentsToOptions, envDropdownStyle } from "../../model/environment";
@@ -103,11 +102,11 @@ export function CollectionInfo(props: ComponentProps) {
           </div>
         </div>
 
-        <Button onClick={navigateToCookieJar} style={{ marginTop: '10px' }} raised={true} text={true} icon={"pi pi-circle-off"} label="Cookie Jar" />
+        <Button onClick={navigateToCookieJar} style={{ marginTop: '20px' }} raised={true} text={true} icon={"pi pi-circle-off"} label="Cookie Jar" />
 
 
         <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '100%' }}>
-          {props.displayPathTitle && <h3>Environment</h3>}
+          {props.displayPathTitle && <h3 style={{marginTop: '40px', marginBottom: '10px'}}>Environment</h3>}
 
           {
             hasEnvironments &&

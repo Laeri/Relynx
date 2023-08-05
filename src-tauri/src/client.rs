@@ -35,7 +35,8 @@ use self::error::HttpError;
 use self::options::{ClientOptions, Verbosity};
 use self::timings::Timings;
 use crate::model::{
-    Environment, GetHeadersOption, Header, Multipart, RequestBody, RequestModel, RunLogger,
+    DataSource, Environment, GetHeadersOption, Header, Multipart, RequestBody, RequestModel,
+    RunLogger,
 };
 use base64::engine::general_purpose;
 use base64::Engine;
@@ -43,7 +44,7 @@ use chrono::Utc;
 use curl::easy::{self, List, SslOpt};
 use encoding::all::ISO_8859_1;
 use encoding::{DecoderTrap, Encoding};
-use http_rest_file::model::{DataSource, HttpMethod, HttpVersion, UrlEncodedParam};
+use http_rest_file::model::{HttpMethod, HttpVersion, UrlEncodedParam};
 use std::io::Read;
 use std::path::PathBuf;
 
@@ -238,15 +239,17 @@ impl Client {
             ref parts,
         } = request_model.body
         {
-            self.set_multipart(boundary, parts, logger)?;
+            self.set_multipart(request_model, boundary, parts, logger)?;
         }
 
         let request_body_bytes: Option<Vec<u8>> = match request_model.body {
             RequestBody::None => None,
             RequestBody::Raw { ref data } => match data {
                 DataSource::Raw(ref raw_data) => Some(raw_data.as_bytes().to_vec()),
-                DataSource::FromFilepath(ref filepath) => {
-                    let filepath = PathBuf::from(filepath);
+                ref filepath => {
+                    let filepath = filepath
+                        .get_abs_path_relative_to(&request_model)
+                        .expect("path should be present");
                     let content = std::fs::read(&filepath).map_err(|err| {
                         log::error!(
                             "File not present for multipart body, path: {}",
@@ -591,6 +594,7 @@ impl Client {
     /// Sets multipart form data.
     fn set_multipart(
         &mut self,
+        request: &RequestModel,
         _boundary: &str,
         parts: &[Multipart],
         logger: &RunLogger,
@@ -602,14 +606,15 @@ impl Client {
                 continue;
             }
             let contents = match part.data {
-                http_rest_file::model::DataSource::Raw(ref raw_data) => {
-                    raw_data.as_bytes().to_vec()
-                }
-                http_rest_file::model::DataSource::FromFilepath(ref path) => {
-                    std::fs::read(&std::path::PathBuf::from(path)).map_err(|err| {
+                DataSource::Raw(ref raw_data) => raw_data.as_bytes().to_vec(),
+                ref filepath => {
+                    let path = filepath
+                        .get_abs_path_relative_to(&request)
+                        .expect("should be present");
+                    std::fs::read(&path).map_err(|err| {
                         logger.log_error(format!(
                             "Could not read of file: '{}'. Check if the file exists!",
-                            path
+                            path.display()
                         ));
                         logger.log_error(format!("Error: {:?}", err));
                         HttpError::CouldNotReadBodyPartFromFile(PathBuf::from(path))

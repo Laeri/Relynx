@@ -42,8 +42,6 @@ export function RequestBodyComp(props: ComponentProps) {
 
   const updateBodyType = () => {
 
-    console.log('BODY: ', JSON.stringify(props.request.body));
-
     if (props.request.body == "None") {
       setCurrentBodyType(BodyTypes.no_body);
       return
@@ -74,7 +72,6 @@ export function RequestBodyComp(props: ComponentProps) {
     }
     // these are only set if some body is present, otherwise the request will have these headers but body None
     if ((props.request.body as RequestBodyRaw).Raw !== undefined) {
-      console.log('here');
       let rawBody = (props.request.body as RequestBodyRaw);
       let isFile = (rawBody.Raw.data as DataSourceFromFilepath).FromFilepath !== undefined;
       if (isFile) {
@@ -84,6 +81,7 @@ export function RequestBodyComp(props: ComponentProps) {
         setRawType("text");
         setRawTextBody(rawBody);
       }
+      setBinaryFileBody(rawBody);
 
     }
   }
@@ -100,10 +98,7 @@ export function RequestBodyComp(props: ComponentProps) {
       // otherwise if we switch to the body tab it will still display json/xml body as the body type is determined by
       // the headers
     } else if (newType == BodyTypes.other) {
-      console.log('new');
-      console.log("current mime", toMimeType(currentBodyType));
       if (toMimeType(currentBodyType) !== undefined) {
-        console.log("remove header");
         newRequest.headers = newRequest.headers.filter((header: Header) => header.key.toLowerCase() !== 'content-type');
       }
     }
@@ -111,7 +106,6 @@ export function RequestBodyComp(props: ComponentProps) {
 
   const updateType = (newType: BodyType, isText: boolean) => {
 
-    console.log('newType: ', newType);
     let newRequest = structuredClone(props.request);
 
     updateContentType(newType, newRequest);

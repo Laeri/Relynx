@@ -5,14 +5,14 @@ use std::{
 
 use cookie::{time::format_description, Expiration};
 use http_rest_file::model::{
-    DataSource, DispositionField, Header as HttpRestFileHeader, HttpMethod, HttpRestFile,
+    DispositionField, Header as HttpRestFileHeader, HttpMethod, HttpRestFile,
     HttpRestFileExtension, HttpVersion, Multipart as HttpRestfileMultipart, PreRequestScript,
     Request, RequestBody as HttpRestFileBody, RequestLine, RequestSettings, ResponseHandler,
     SaveResponse as RestFileSaveResponse, UrlEncodedParam, WithDefault,
 };
-
 use rspc::Type;
 use serde::{Deserialize, Serialize};
+use typed_path::{UnixEncoding, UnixPath, UnixPathBuf, WindowsEncoding, WindowsPathBuf};
 
 #[derive(Serialize, Deserialize, Type, Default, Debug)]
 pub struct Workspace {
@@ -78,7 +78,8 @@ pub struct ImportWarning {
 pub struct AddCollectionsResult {
     pub workspace: Workspace,
     pub num_imported: u32,
-    pub errored_collections: Vec<PathBuf>, // @TODO
+    pub errored_collections: Vec<PathBuf>,
+    pub collection_names: Vec<String>, // all added collections
 }
 
 #[derive(Serialize, Deserialize, Type, Debug)]
@@ -212,7 +213,6 @@ pub struct Header {
     pub active: bool,
 }
 
-//@TODO: put this into http_header
 impl Header {
     /// Parses an HTTP header line received from the server
     /// It does not panic. Just returns `None` if it can not be parsed.
@@ -223,6 +223,14 @@ impl Header {
                 Some(Header::new(name.trim(), value[1..].trim()))
             }
             None => None,
+        }
+    }
+
+    pub fn content_type_multipart(boundary: &str) -> Self {
+        Header {
+            key: "Content-Type".to_string(),
+            value: format!("multipart/form-data; boundary=\"{}\"", boundary),
+            active: true,
         }
     }
 }
@@ -261,7 +269,6 @@ pub enum RequestBody {
     UrlEncoded {
         url_encoded_params: Vec<UrlEncodedParam>,
     },
-    //@TODO
     Raw {
         data: DataSource<String>,
     },
@@ -293,7 +300,103 @@ impl From<&HttpRestFileBody> for RequestBody {
             HttpRestFileBody::UrlEncoded { url_encoded_params } => RequestBody::UrlEncoded {
                 url_encoded_params: url_encoded_params.clone(),
             },
-            HttpRestFileBody::Raw { data } => RequestBody::Raw { data: data.clone() },
+            HttpRestFileBody::Raw { data } => RequestBody::Raw {
+                data: data.clone().into(),
+            },
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Type, Serialize, Deserialize)]
+pub enum DataSource<T> {
+    Raw(T),
+    FromFilepath(String),
+}
+
+impl ToString for DataSource<String> {
+    fn to_string(&self) -> String {
+        match self {
+            Self::Raw(str) => str.to_string(),
+            Self::FromFilepath(path) => format!("< {}", path),
+        }
+    }
+}
+
+impl DataSource<String> {
+    pub fn get_abs_path_relative_to(&self, request: &RequestModel) -> Option<PathBuf> {
+        let request_folder = request.rest_file_path.parent()?;
+        return self.get_abs_path(request_folder);
+    }
+    pub fn get_abs_path(&self, base: &Path) -> Option<PathBuf> {
+        if let DataSource::FromFilepath(ref pathstr) = self {
+            let mut abs_path = PathBuf::from(pathstr);
+            if abs_path.is_relative() {
+                abs_path = base.join(abs_path);
+            }
+            // workaround, if the path does not exist try a
+            if !abs_path.exists() {
+                abs_path = base.to_owned();
+                if cfg!(windows) {
+                    // we are on windows, so the request path is a regular windows path but the
+                    // datasources filepath may be from linux
+                    let unix_path = UnixPathBuf::from(pathstr);
+                    let path_parts: Vec<String> = unix_path
+                        .components()
+                        .map(|c| {
+                            c.as_path::<WindowsEncoding>()
+                                .to_str()
+                                .unwrap_or("")
+                                .to_string()
+                        })
+                        .collect();
+                    abs_path.extend(path_parts.into_iter());
+                } else if cfg!(unix) {
+                    // we are on linux, so the request path is a regular linux path but the
+                    // datasources filepath may be from windows
+                    let win_path = typed_path::PathBuf::<WindowsEncoding>::from(pathstr);
+                    let path_parts: Vec<String> = win_path
+                        .components()
+                        .map(|c| {
+                            let part = c
+                                .as_path::<UnixEncoding>()
+                                .to_str()
+                                .unwrap_or("")
+                                .to_string();
+                            if part.starts_with("\"") && part.ends_with("\"") {
+                                part[1..(part.len() - 2)].to_string()
+                            } else {
+                                part
+                            }
+                        })
+                        .collect();
+                    abs_path.extend(path_parts.into_iter());
+                }
+            }
+            Some(dbg!(abs_path))
+        } else {
+            None
+        }
+    }
+}
+
+impl<T> From<http_rest_file::model::DataSource<T>> for DataSource<T> {
+    fn from(value: http_rest_file::model::DataSource<T>) -> Self {
+        match value {
+            http_rest_file::model::DataSource::FromFilepath(filepath) => {
+                Self::FromFilepath(filepath)
+            }
+            http_rest_file::model::DataSource::Raw(raw) => Self::Raw(raw),
+        }
+    }
+}
+
+impl<T> From<DataSource<T>> for http_rest_file::model::DataSource<T> {
+    fn from(value: DataSource<T>) -> Self {
+        match value {
+            DataSource::Raw(raw) => http_rest_file::model::DataSource::Raw(raw),
+            DataSource::FromFilepath(filepath) => {
+                http_rest_file::model::DataSource::FromFilepath(filepath)
+            }
         }
     }
 }
@@ -308,7 +411,7 @@ pub struct Multipart {
 impl From<&HttpRestfileMultipart> for Multipart {
     fn from(value: &HttpRestfileMultipart) -> Self {
         Multipart {
-            data: value.data.clone(),
+            data: value.data.clone().into(),
             disposition: value.disposition.clone(),
             headers: value.headers.iter().map(Into::into).collect(),
         }
@@ -708,7 +811,7 @@ impl Environment {
 pub struct RunRequestCommand {
     pub collection: Collection,
     pub request: RequestModel,
-    pub environment: Option<Environment>
+    pub environment: Option<Environment>,
 }
 
 pub type ContentType = String;
@@ -745,7 +848,7 @@ impl From<&Header> for http_rest_file::model::Header {
 impl From<&Multipart> for http_rest_file::model::Multipart {
     fn from(value: &Multipart) -> Self {
         http_rest_file::model::Multipart {
-            data: value.data.clone(),
+            data: value.data.clone().into(),
             headers: value.headers.iter().map(Into::into).collect(),
             disposition: value.disposition.clone(),
         }
@@ -761,7 +864,7 @@ impl From<RequestBody> for http_rest_file::model::RequestBody {
     fn from(value: RequestBody) -> Self {
         match value {
             RequestBody::None => RestFileBody::None,
-            RequestBody::Raw { data } => RestFileBody::Raw { data },
+            RequestBody::Raw { data } => RestFileBody::Raw { data: data.into() },
             RequestBody::UrlEncoded { url_encoded_params } => {
                 RestFileBody::UrlEncoded { url_encoded_params }
             }

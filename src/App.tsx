@@ -105,6 +105,10 @@ function App() {
     });
 
     ExternalToast = toastContext;
+
+    // window.addEventListener('unhandledrejection', function(event) {
+    //   console.error('Unhandled rejection (promise: ', event.promise, ', reason: ', event.reason, ').');
+    // });
     backend.loadWorkspace()
       .then((workspace: Workspace) => {
         updateWorkspace(workspace);

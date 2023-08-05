@@ -124,7 +124,7 @@ export function CollectionOverviewComponent(_props: ComponentProps) {
                 onClearWarnings={clearImportWarnings} />
             }
 
-            <Accordion style={{ marginTop: '30px' }} className={"p-accordion-thin"}>
+            <Accordion style={{ marginTop: '50px' }} className={"p-accordion-thin"}>
               <AccordionTab header={"Description"}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', flexDirection: 'column' }}>
                   <p style={{ marginTop: '5px', marginBottom: '5px' }}> Describe the purpose of this

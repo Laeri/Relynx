@@ -165,20 +165,21 @@ pub fn verify_signature(license_data: &LicenseData) -> Result<bool, RelynxError>
     }
 
     let decoded_payload_str =
-        std::str::from_utf8(base64_decoded_payload.as_slice()).map_err(|_err| {
+        std::str::from_utf8(base64_decoded_payload.as_slice()).map_err(|err| {
             log::error!(
                 "License signature can not be decoded. Payload cannot be converted into a string."
             );
             log::error!("Base64 Payload: {:?}", base64_decoded_payload);
             log::error!("License Data: {:?}", license_data);
+            log::error!("Error: {:?}", err);
             RelynxError::LicenseInvalid
         })?;
 
-    let _ = serde_json::from_str::<License>(decoded_payload_str).map_err(|_err| {
+    let _ = serde_json::from_str::<License>(decoded_payload_str).map_err(|err| {
         log::error!("License signature can not be decoded. Cannot convert payload to json.");
         log::error!("Decoded Payload: {:?}", decoded_payload_str);
         log::error!("License Data: {:?}", license_data);
-
+        log::error!("Serde Error: {:?}", err);
         RelynxError::LicenseInvalid
     })?;
 

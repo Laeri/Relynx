@@ -43,102 +43,102 @@ export type Procedures = {
 
 export type LoadRequestsResult = { request_tree: RequestTree; errs: ParseErrorMsg[] }
 
-export type Header = { key: string; value: string; active: boolean }
+export type ImportPostmanCommandParams = { workspace: Workspace; import_postman_path: string; import_result_path: string }
 
-export type DeleteNodeParams = { collection: Collection; node: RequestTreeNode; file_node: RequestTreeNode | null }
+export type RunRequestCommand = { collection: Collection; request: RequestModel; environment: Environment | null }
 
-export type Environment = { name: string; variables: EnvironmentVariable[]; secrets: EnvironmentSecret[] }
+export type RequestBody = "None" | { Multipart: { boundary: string; parts: Multipart[] } } | { UrlEncoded: { url_encoded_params: UrlEncodedParam[] } } | { Raw: { data: DataSource<string> } }
 
 export type Workspace = { collections: Collection[] }
 
 export type ImportWarning = { rest_file_path: string; is_group: boolean; message: string | null; severity: MessageSeverity | null }
 
-export type HttpVersion = { major: number; minor: number }
-
-export type UrlEncodedParam = { key: string; value: string }
-
-export type ImportJetbrainsHttpFolderParams = { workspace: Workspace; import_jetbrains_folder: string; collection_name: string }
-
-export type AddCollectionsResult = { workspace: Workspace; num_imported: number; errored_collections: string[] }
-
-export type AppEnvironment = "Development" | "Production"
-
-export type ChooseFileRelativeToParams = { base_path: string }
-
-export type ValidateGroupNameParams = { old_path: string; new_name: string }
-
-export type RenameGroupParams = { collection_path: string; old_path: string; new_name: string }
-
-export type ParseErrorMsg = { filepath: string; filename: string; msg: string }
+export type ResponseHandler = { FromFilepath: string } | { Script: string }
 
 export type SaveEnvironmentsParams = { collection_path: string; environments: Environment[] }
 
-export type CookieJar = { path: string | null; cookies: Cookie[] }
-
-export type RunRequestCommand = { collection: Collection; request: RequestModel; environment: Environment | null }
-
-export type GetCookieJarParams = { collection: Collection }
-
-export type AddGroupNodeParams = { collection: Collection; parent: RequestTreeNode; group_name: string }
-
-export type RequestTree = { root: RequestTreeNode }
-
-export type EnvironmentVariable = { name: string; initial_value: string; current_value: string | null; description: string | null }
-
-export type Cookie = { domain: string; path: string; name: string; value: string; expires: string }
-
-export type LicenseData = { license_key?: string | null; license_signature?: string | null; license_start?: string | null }
+export type SaveCookieJarParams = { cookie_jar: CookieJar; collection: Collection }
 
 export type PreRequestScript = { FromFilepath: string } | { Script: string }
 
-export type MessageSeverity = "warn" | "warn" | "success" | "error"
+export type AddCollectionsResult = { workspace: Workspace; num_imported: number; errored_collections: string[]; collection_names: string[] }
 
-export type QueryParam = { key: string; value: string; active: boolean }
+export type Header = { key: string; value: string; active: boolean }
 
-export type DataSource<T> = { Raw: T } | { FromFilepath: string }
-
-export type ImportPostmanCommandParams = { workspace: Workspace; import_postman_path: string; import_result_path: string }
-
-export type AddExistingCollectionsParams = { path: string; workspace: Workspace }
-
-export type ValidateGroupNameResult = { sanitized_name: string; new_path: string; path_exists_already: boolean }
-
-export type DragAndDropResult = { new_drop_node: RequestTreeNode; remove_drag_node_parent: boolean }
-
-export type ImportCollectionResult = { collection: Collection }
-
-export type SaveCookieJarParams = { cookie_jar: CookieJar; collection: Collection }
-
-export type RequestModel = { id: string; name: string; description: string; method: HttpMethod; url: string; query_params: QueryParam[]; headers: Header[]; body: RequestBody; rest_file_path: string; http_version: Replaced<HttpVersion>; settings: RequestSettings; save_response: SaveResponse | null; pre_request_script: PreRequestScript | null; response_handler: ResponseHandler | null }
-
-export type Collection = { name: string; path: string; current_env_name: string; description: string; import_warnings: ImportWarning[]; path_exists?: boolean }
-
-export type RequestSettings = { no_redirect: boolean | null; no_log: boolean | null; no_cookie_jar: boolean | null }
-
-export type ResponseHandler = { FromFilepath: string } | { Script: string }
-
-export type Multipart = { data: DataSource<string>; disposition: DispositionField; headers: Header[] }
-
-export type EnvironmentSecret = { name: string; initial_value: string; current_value: string | null; description: string | null; persist_to_file: boolean }
+export type AppEnvironment = "Development" | "Production"
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" | "TRACE" | "OPTIONS" | "CONNECT" | { CUSTOM: string }
 
-export type DispositionField = { name: string; filename: string | null; filename_star: string | null }
+export type ParseErrorMsg = { filepath: string; filename: string; msg: string }
 
-export type DragAndDropParams = { collection: Collection; drag_node_parent: RequestTreeNode; drag_node: RequestTreeNode; drop_node: RequestTreeNode; drop_index: number }
+export type Environment = { name: string; variables: EnvironmentVariable[]; secrets: EnvironmentSecret[] }
 
-export type RequestBody = "None" | { Multipart: { boundary: string; parts: Multipart[] } } | { UrlEncoded: { url_encoded_params: UrlEncodedParam[] } } | { Raw: { data: DataSource<string> } }
+export type RequestTree = { root: RequestTreeNode }
 
-export type RequestTreeNode = { id: string; name: string; request: RequestModel | null; children: RequestTreeNode[]; filepath: string; is_file_group: boolean }
+export type LicenseData = { license_key?: string | null; license_signature?: string | null; license_start?: string | null }
 
-export type Replaced<T> = { value: T; is_replaced: boolean }
+export type MessageSeverity = "warn" | "warn" | "success" | "error"
 
-export type AddRequestNodeParams = { collection: Collection; parent: RequestTreeNode; request_name: string; requests_in_same_file: RequestModel[] }
+export type AddExistingCollectionsParams = { path: string; workspace: Workspace }
 
-export type SaveRequestCommand = { requests: RequestModel[]; collection: Collection; old_name: string }
+export type Cookie = { domain: string; path: string; name: string; value: string; expires: string }
 
-export type ReorderNodesParams = { collection: Collection; drag_node: RequestTreeNode; drop_node: RequestTreeNode; drop_index: number }
+export type RequestSettings = { no_redirect: boolean | null; no_log: boolean | null; no_cookie_jar: boolean | null }
 
 export type RequestResult = { id: string; result: string; status_code: string; total_time: number; total_result_size: number; content_type: string | null; warnings: string[]; result_file: string | null; result_file_folder: string | null }
 
+export type DragAndDropResult = { new_drop_node: RequestTreeNode; remove_drag_node_parent: boolean }
+
 export type SaveResponse = { NewFileIfExists: string } | { RewriteFile: string }
+
+export type DeleteNodeParams = { collection: Collection; node: RequestTreeNode; file_node: RequestTreeNode | null }
+
+export type RequestModel = { id: string; name: string; description: string; method: HttpMethod; url: string; query_params: QueryParam[]; headers: Header[]; body: RequestBody; rest_file_path: string; http_version: Replaced<HttpVersion>; settings: RequestSettings; save_response: SaveResponse | null; pre_request_script: PreRequestScript | null; response_handler: ResponseHandler | null }
+
+export type DispositionField = { name: string; filename: string | null; filename_star: string | null }
+
+export type CookieJar = { path: string | null; cookies: Cookie[] }
+
+export type Multipart = { data: DataSource<string>; disposition: DispositionField; headers: Header[] }
+
+export type Collection = { name: string; path: string; current_env_name: string; description: string; import_warnings: ImportWarning[]; path_exists?: boolean }
+
+export type Replaced<T> = { value: T; is_replaced: boolean }
+
+export type AddGroupNodeParams = { collection: Collection; parent: RequestTreeNode; group_name: string }
+
+export type ValidateGroupNameResult = { sanitized_name: string; new_path: string; path_exists_already: boolean }
+
+export type DragAndDropParams = { collection: Collection; drag_node_parent: RequestTreeNode; drag_node: RequestTreeNode; drop_node: RequestTreeNode; drop_index: number }
+
+export type SaveRequestCommand = { requests: RequestModel[]; collection: Collection; old_name: string }
+
+export type RenameGroupParams = { collection_path: string; old_path: string; new_name: string }
+
+export type ChooseFileRelativeToParams = { base_path: string }
+
+export type EnvironmentSecret = { name: string; initial_value: string; current_value: string | null; description: string | null; persist_to_file: boolean }
+
+export type EnvironmentVariable = { name: string; initial_value: string; current_value: string | null; description: string | null }
+
+export type DataSource<T> = { Raw: T } | { FromFilepath: string }
+
+export type ValidateGroupNameParams = { old_path: string; new_name: string }
+
+export type RequestTreeNode = { id: string; name: string; request: RequestModel | null; children: RequestTreeNode[]; filepath: string; is_file_group: boolean }
+
+export type UrlEncodedParam = { key: string; value: string }
+
+export type AddRequestNodeParams = { collection: Collection; parent: RequestTreeNode; request_name: string; requests_in_same_file: RequestModel[] }
+
+export type GetCookieJarParams = { collection: Collection }
+
+export type QueryParam = { key: string; value: string; active: boolean }
+
+export type ReorderNodesParams = { collection: Collection; drag_node: RequestTreeNode; drop_node: RequestTreeNode; drop_index: number }
+
+export type ImportJetbrainsHttpFolderParams = { workspace: Workspace; import_jetbrains_folder: string; collection_name: string }
+
+export type HttpVersion = { major: number; minor: number }
+
+export type ImportCollectionResult = { collection: Collection }

@@ -44,7 +44,7 @@ pub fn load_workspace() -> Result<Workspace, RelynxError> {
             "Config dir: '{}' does not exist yet when loading workspace. Creating new one.",
             config_dir.display()
         );
-        fs::create_dir(config_dir).map_err(|io_err| {
+        fs::create_dir_all(config_dir).map_err(|io_err| {
             log::error!("Io Error: {:?}", io_err);
             log::error!("Could not create config dir when loading the workspace");
             RelynxError::LoadWorkspaceError

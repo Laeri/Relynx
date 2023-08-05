@@ -57,11 +57,11 @@ export const openAddExistingCollectionsModal = (workspace: Workspace, toast: Toa
     return backend.addExistingCollections(result.collectionPath, workspace).then((result: AddCollectionsResult) => {
       if (result.num_imported == 0) {
         toast.showWarn("No results found", "No collections found that can be imported. Try another location.");
-        return { workspace: result.workspace, any_collections_found: false, num_imported: 0, errored_collections: result.errored_collections } as AddCollectionsResult
+        return { collection_names: [], workspace: result.workspace, any_collections_found: false, num_imported: 0, errored_collections: result.errored_collections } as AddCollectionsResult
       }
       if (!result.workspace) {
         toast.showError("", "Could not add collections to workspace.");
-        return { workspace: result.workspace, num_imported: 0, errored_collections: result.errored_collections } as AddCollectionsResult
+        return { collection_names: [], workspace: result.workspace, num_imported: 0, errored_collections: result.errored_collections } as AddCollectionsResult
       }
       useRequestModelStore.getState().updateWorkspace(result.workspace);
       if (result.errored_collections && result.errored_collections.length > 0) {
@@ -70,7 +70,7 @@ export const openAddExistingCollectionsModal = (workspace: Workspace, toast: Toa
         toast.showInfo(`${result.num_imported} collections have been added`, "");
       } else {
         if (result.num_imported == 1) {
-          toast.showSuccess(`${result.num_imported} collection has been added`, "");
+          toast.showSuccess(`The collection '${result.collection_names[0]}' has been added successfully`, "");
         } else {
           toast.showSuccess(`${result.num_imported} collections have been added`, "");
         }
@@ -103,8 +103,8 @@ const doPostmanImport = (toast: ToastContext, workspace: Workspace, collectionNa
       } else {
         toast.showSuccess(`Collection: \"${importResult.collection?.name}\" has been imported`, "")
       }
-    })
-  }).catch(catchError);
+    }).catch(catchError);
+  })
 }
 
 const doJetbrainsHttpImport = (toast: ToastContext, workspace: Workspace, collectionName: string) => {

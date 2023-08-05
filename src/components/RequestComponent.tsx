@@ -155,15 +155,12 @@ export function RequestComponent(_props: ComponentProps) {
 
   function editRequestName() {
     openEditRequestNameModal(currentRequest, currentCollection, (newName: string) => {
-      console.log('h1');
       let newRequest = updatedRequestModel(currentRequest, { name: newName });
-      console.log('h2');
       return updateRequest(newRequest);
     });
   }
 
   function updateRequest(newRequest: RequestModel): Promise<void> {
-    console.log('h3');
     if (!currentCollection || !currentRequest) {
       return Promise.resolve();
     }
@@ -186,11 +183,9 @@ export function RequestComponent(_props: ComponentProps) {
     });
 
     setUrl(newRequest.url);
-    console.log('before call');
     return new Promise<void>((resolve: any, _reject: any) => {
       backend.saveRequest(requestsInSameFile, currentCollection, currentRequest.name).then((newPath: string) => {
         newRequest.rest_file_path = newPath;
-        console.log('got reslut from backend a ok');
         storeUpdateRequestAndTree(newRequest)
         resolve();
       }).catch(catchError);

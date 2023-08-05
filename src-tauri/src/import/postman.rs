@@ -4,14 +4,13 @@ use std::path::{Path, PathBuf};
 use crate::config::save_workspace;
 use crate::error::RelynxError;
 use crate::model::{
-    Collection, ImportCollectionResult, ImportWarning, MessageSeverity, Multipart, Replaced,
-    RequestBody, RequestModel, Workspace,
+    query_params_from_url, Collection, DataSource, ImportCollectionResult, ImportWarning,
+    MessageSeverity, Multipart, Replaced, RequestBody, RequestModel, Workspace,
 };
 use crate::sanitize::sanitize_filename;
 use crate::tree::{GroupOptions, RequestTreeNode};
 use http_rest_file::model::{
-    DataSource, DispositionField, HttpMethod, HttpVersion, RequestSettings, UrlEncodedParam,
-    WithDefault,
+    DispositionField, HttpMethod, HttpVersion, RequestSettings, UrlEncodedParam, WithDefault,
 };
 use http_rest_file::Serializer;
 use postman_collection::v2_1_0::*;
@@ -25,14 +24,18 @@ pub fn import(
     match postman_collection::from_path(import_path) {
         Ok(collection) => {
             match collection {
-                PostmanCollection::V1_0_0(_spec) => {
+                PostmanCollection::V1_0_0(spec) => {
                     log::error!("Cannot import v1_0_0 collection!");
+                    log::error!("Spec: {:?}", spec);
                     Err(RelynxError::TriedPostmanImportV1_0_0)
                 }
-                PostmanCollection::V2_0_0(_spec) => {
-                    log::error!("Cannot import v1_0_0 collection!");
+
+                PostmanCollection::V2_0_0(spec) => {
+                    log::error!("Cannot import v2_0_0 collection!");
+                    log::error!("Spec: {:?}", spec);
                     Err(RelynxError::TriedPostmanImportV2_0_0)
                 }
+
                 PostmanCollection::V2_1_0(spec) => {
                     let collection = postman_to_request_tree(result_path, spec);
                     // @TODO: handle not being able to save requests on file system
@@ -68,8 +71,11 @@ fn into_request_tree_node(
             path.clone(),
         );
 
-        let file_model = (&request_node).try_into().map_err(|_err| {
-            // @TODO: error handling
+        let file_model = (&request_node).try_into().map_err(|err| {
+            log::error!("Coul dnot convert request node to file model during postman import!");
+            log::error!("Request Node: '{:?}'", request_node);
+            log::error!("Error: {:?}", err);
+
             import_warnings.push(ImportWarning {
                 rest_file_path: path.to_string_lossy().to_string(),
                 is_group: false,
@@ -79,8 +85,13 @@ fn into_request_tree_node(
             ()
         })?;
 
-        Serializer::serialize_to_file(&file_model).map_err(|_err| {
-            // @TODO: error handling
+        Serializer::serialize_to_file(&file_model).map_err(|err| {
+            log::error!(
+                "Could not serialize file_model during postman import, file_model: '{:?}'",
+                file_model
+            );
+            log::error!("Serialization error: {:?}", err);
+
             import_warnings.push(ImportWarning {
                 rest_file_path: path.to_string_lossy().to_string(),
                 is_group: false,
@@ -96,8 +107,12 @@ fn into_request_tree_node(
     let mut group = RequestTreeNode::new_group(GroupOptions::FullPath(path.clone()));
 
     if !path.exists() {
-        std::fs::create_dir(&path).map_err(|_err| {
-            // @TODO: error handling
+        std::fs::create_dir(&path).map_err(|err| {
+            log::error!(
+                "Could not create imported postman group at path {}",
+                path.display()
+            );
+            log::error!("Io Error: {:?}", err);
             import_warnings.push(ImportWarning {
                 rest_file_path: path.to_string_lossy().to_string(),
                 is_group: true,
@@ -209,6 +224,7 @@ fn transform_request(
     request_path: &Path,
     import_warnings: &mut Vec<ImportWarning>,
 ) -> RequestModel {
+    log::debug!("Postman Request: {:?}", postman_request);
     match postman_request {
         postman_collection::v2_1_0::RequestUnion::String(url) => RequestModel {
             id: uuid::Uuid::new_v4().to_string(),
@@ -286,14 +302,18 @@ fn transform_request(
                                 RequestBody::Raw { data }
                             },
                             Some(Mode::Raw) => RequestBody::Raw {
-                                data: http_rest_file::model::DataSource::Raw(
+                                data: DataSource::Raw(
                                     postman_body.raw.clone().unwrap_or_default(),
                                 ),
                             },
                             Some(Mode::Formdata) => {
+
+                                let default_boundary = "--boundary--";
+                                headers.push(crate::model::Header::content_type_multipart(default_boundary));
                                 let mut parts: Vec<crate::model::Multipart> = Vec::new();
 
                                 if let Some(formdata) = postman_body.formdata.clone() {
+
                                     formdata.iter().for_each(|form_param| {
                                         let mut headers = vec![];
                                         if let Some(content_type) = form_param.content_type.clone()
@@ -360,7 +380,7 @@ fn transform_request(
                                 }
 
                                 RequestBody::Multipart {
-                                    boundary: "----boundary----".to_string(),
+                                    boundary: default_boundary.to_string(),
                                     parts,
                                 }
                             },
@@ -419,8 +439,9 @@ fn transform_request(
 
             let http_version: Replaced<HttpVersion> = http_version.into();
 
-            // @TODO: query params :(
-            RequestModel {
+            let query_params = query_params_from_url(&url);
+
+            dbg!(RequestModel {
                 id: uuid::Uuid::new_v4().to_string(),
                 name: name.to_string(),
                 description,
@@ -430,12 +451,12 @@ fn transform_request(
                 method: method.unwrap_or_default(),
                 headers,
                 settings: RequestSettings::default(),
-                query_params: vec![],
+                query_params,
                 http_version, // scripts are not imported from postman
                 pre_request_script: None,
                 response_handler: None,
                 save_response: None,
-            }
+            })
         }
     }
 }

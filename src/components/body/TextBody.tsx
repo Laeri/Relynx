@@ -33,6 +33,10 @@ export function TextBody(props: ComponentProps) {
   const currentRequest = useRequestModelStore((state: RelynxState) => state.currentRequest as RequestModel);
 
   useEffect(() => {
+    console.log('props', props);
+  }, [props]);
+
+  useEffect(() => {
     setText((props.bodyText.Raw.data as DataSourceRaw<string>).Raw);
   }, [props.bodyText.Raw.data]);
 

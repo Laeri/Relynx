@@ -114,12 +114,13 @@ export function CollectionEntry(props: ComponentProps) {
         </OverlayPanel>
       </div>
 
-      <Dialog header="Remove Collection" visible={dialogVisible} style={{ padding: 0 }} footer={
+      <Dialog header="Remove Collection" visible={dialogVisible} style={{ padding: 0, width: '50vw' }} footer={
         <div>
           <Button label="No" icon="pi pi-times" onClick={() => onHide()} className="p-button-text" />
           <Button label="Remove" icon="pi pi-check" onClick={() => doRemove()} autoFocus />
         </div>
-      } onHide={() => onHide()}>
+      } onHide={() => onHide()}
+      >
         <div>
           <p>
             Are you sure you want to remove the collection <b>"{props.collection.name}"</b>?
