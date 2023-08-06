@@ -210,18 +210,15 @@ fn main() {
     } else {
         "resources/prod.pub_key.pem"
     };
-    if cfg!(debug_assertions) {
-        let settings_resource_path = app
-            .path_resolver()
-            .resolve_resource(pub_key_path)
-            .expect("failed to resolve resource for public key");
-        let content = std::fs::read_to_string(settings_resource_path).unwrap_or(String::new());
-        unsafe {
-            LICENSE_PUB_KEY = content;
-        }
-    } else {
-        // @TODO:
+    let settings_resource_path = app
+        .path_resolver()
+        .resolve_resource(pub_key_path)
+        .expect("failed to resolve resource for public key");
+    let content = std::fs::read_to_string(settings_resource_path).unwrap_or(String::new());
+    unsafe {
+        LICENSE_PUB_KEY = content;
     }
+
     //
     app.run(|_, _| {});
 }

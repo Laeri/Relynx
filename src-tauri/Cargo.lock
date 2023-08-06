@@ -2507,6 +2507,7 @@ dependencies = [
 [[package]]
 name = "postman_collection"
 version = "0.4.0"
+source = "git+https://github.com/Laeri/postman-collection-rs?branch=fix_tests#9a1ebddab5769d188c72d513f12c935b9d78dae9"
 dependencies = [
  "error-chain",
  "semver",

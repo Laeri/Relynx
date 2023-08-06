@@ -35,7 +35,7 @@
       "identifier": "app.relynx",
       "targets": "all",
       "resources": [
-        "./resources/*"
+        "./resources/"
       ]
     },
     "security": {
@@ -47,7 +47,7 @@
         "https://download.relynx.app/app/{{target}}/{{arch}}/{{current_version}}"
       ],
       "dialog": true,
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEJBNjQ5NDE5NkUwNUE1MwpSV1JUV3VDV1FVbW1DMnpvOGZyM1V0cldpSGdqVlB3c0dTczdYZE43a2RjeXZBaXlYTGN0YkZaWgo=",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDZBQUI4RTBDNERFRDRBMjIKUldRaVN1MU5ESTZyYW40clhHaVZMbG1oUTNpZGpyNEF3V2ptU3I1bk4xN3BNSjNlMjRRTThrVHUK",
        "windows": {
         "installMode": "basicUi"
       }

@@ -118,14 +118,14 @@ export function OverviewComponent(props: ComponentProps) {
       <TrialModal setActivated={() => setJustActivated(true)} updateLicenseData={updateLicenseData} licenseData={licenseData} isTrialValid={isTrialValid} isOpen={showTrial} onResolve={() => setShowTrial(false)} onReject={() => { }} />
 
       {
-        justActivated && <Message style={{marginTop: '40px'}} severity="success" text="Your license has been activated successfully! Thank you for using Relynx! If you have any suggestions or feedback in general please write an email to info@relynx.app." />
+        justActivated && <Message style={{ marginTop: '40px' }} severity="success" text="Your license has been activated successfully! Thank you for using Relynx! If you have any suggestions or feedback in general please write an email to info@relynx.app." />
       }
 
       <div style={{ marginTop: '50px', display: 'flex', justifyContent: 'space-between', width: '100%' }}>
         <Card title={<><i className={"pi pi-pencil mr-2"} />New Collection</>}
           subTitle={"Create a new collection in an empty folder"} style={cardStyle}
           className={"main-card"}
-          footer={<Button label="New Collection" icon="pi pi-plus" onClick={() => openCreateCollectionModal(workspace)}
+          footer={<Button label="New Collection" icon="pi pi-plus" onClick={() => openCreateCollectionModal()}
             style={{ minWidth: 0 }} />}
         />
         <Card title={<><i className={"pi pi-plus mr-2"} />Add Existing</>}

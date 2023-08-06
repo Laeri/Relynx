@@ -12,7 +12,7 @@ use http_rest_file::model::{
 };
 use rspc::Type;
 use serde::{Deserialize, Serialize};
-use typed_path::{UnixEncoding, UnixPath, UnixPathBuf, WindowsEncoding, WindowsPathBuf};
+use typed_path::{UnixEncoding, UnixPathBuf, WindowsEncoding};
 
 #[derive(Serialize, Deserialize, Type, Default, Debug)]
 pub struct Workspace {
